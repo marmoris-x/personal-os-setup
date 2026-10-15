@@ -82,7 +82,7 @@ that a single check can be made to fail on purpose (the repo rule: every check f
 seeded defect before its pass counts). A run that uses either of them can never print the
 acceptance line: it ends with VERIFY-ALL: <n> OF 28 CHECKS PASSED (partial run) and exits 3, so
 a filtered run cannot be mistaken for the real one. The number in that line is the count the
-run really had (32 since v3.0.1, 33 from v3.0.0 until check T left), never a constant.
+run really had (32), never a constant.
 
 -WorkRoot is NOT one of those switches any more (order item 3, 2026-10-14). It used to be: review
 7 showed that pointing it at a folder of one's own let a run print VERIFY-ALL: ALL CHECKS PASSED
