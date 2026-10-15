@@ -1229,6 +1229,14 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/research/scripts/ai_patterns.py'; Reason = 'v3.0.1: the German lists are the source''s own lists again, restored verbatim from the pinned commit' }
         @{ Path = 'HOME/.claude/skills/research/references/style-rules.md'; Reason = 'v3.0.1: the German example sentences are the source''s own again, restored verbatim' }
         @{ Path = 'HOME/.claude/docs/research-standard.md'; Reason = 'v3.0.1: the style section names both sources of the condensed rules again' }
+        @{ Path = 'HOME/.claude/hooks/no-license-files.ps1'; Reason = 'the owner''s task of 2026-10-15 (Part 3.1): a PreToolUse guard refuses an attribution file by name inside the project folder, the vault and .claude - measured red first (25 of 51 cases against a copy whose name list was emptied), green after' }
+        @{ Path = 'HOME/.claude/setup/tests/test-no-license-files.ps1'; Reason = 'the suite of that guard: 51 cases, each a whole tool call, including the relative-path and dot-dot cases the review asked for' }
+        @{ Path = 'HOME/.claude/skills/reuse-first/SKILL.md'; Reason = 'the same task (Part 2): the skill that says look for a proven solution before writing your own, with its form taken from anthropics/skills and the source line in the body' }
+        @{ Path = 'HOME/.claude/settings.json'; Reason = 'the same task (Part 3.1): one PreToolUse entry for the file tools names the new guard - a hook file that no settings file names protects nothing' }
+        @{ Path = 'HOME/.claude/setup/powershell/claude-profile-functions.ps1'; Reason = 'the same task (Part 3.3): version 12 sets CLAUDE_CODE_GOAL_CHECKIN_MINUTES=0 above the launcher functions, so an idle goal check-in no longer wakes a session nobody is waiting for' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/check_note.py'; Reason = 'the same task (Part 0.1): the guard that skipped a version standing behind a licence word is gone' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_check_note.py'; Reason = 'the same task (Part 0.1): the test case for that removed guard is gone' }
+        @{ Path = 'HOME/.claude/setup/tests/research/run_mutations.py'; Reason = 'the same task (Part 0.1): the mutation entry for the removed guard is gone; the runner still catches 109 of 109' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null
