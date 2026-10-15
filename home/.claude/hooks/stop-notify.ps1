@@ -26,6 +26,8 @@
 #   That is safe specifically because this script always exits 0; it never
 #   uses the "block the stop and keep going" exit-2 mechanism, so there is no
 #   risk of an async hook's exit code being checked too late to matter.
+#   With the toast below there is no sleep left at all - the shell owns the
+#   notification the moment Show() returns.
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -48,29 +50,36 @@ try {
 }
 
 # ---------------------------------------------------------------------------
-# Show a Windows balloon notification announcing the turn/task is complete.
+# Show a Windows notification announcing the turn/task is complete.
+#
+# Since 2026-10-16 this is a real WINDOWS TOAST (WinRT), not the old
+# NotifyIcon "balloon tip". Measured on Windows 11 build 26300: a balloon tip
+# from this hook reaches the notification platform NEVER (no entry in
+# %LOCALAPPDATA%\Microsoft\Windows\Notifications\wpndatabase.db for any of the
+# 14 NotifyIcon handlers on this machine, while the same process's toast does),
+# so the owner saw nothing. The toast is sent under the AUMID of Windows
+# PowerShell, whose notifications Windows shows; the owner confirmed both test
+# toasts on screen.
+#
+# The process does NOT have to stay alive any more: Show() hands the toast to
+# the shell, which replaces the old Start-Sleep 5 + Dispose() dance. The
+# "async": true in settings.json still applies and still costs nothing.
 # ---------------------------------------------------------------------------
 try {
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
-    $notify = New-Object System.Windows.Forms.NotifyIcon
-    $notify.Icon = [System.Drawing.SystemIcons]::Information
-    $notify.Visible = $true
-    $notify.ShowBalloonTip(
-        0,
-        'Claude Code',
-        'Task completed.',
-        [System.Windows.Forms.ToolTipIcon]::Info
-    )
-
-    # Keep the balloon visible for 5 seconds before disposing the icon. This
-    # blocks THIS SCRIPT for 5 seconds (see the changelog note above for why
-    # that's fine now that settings.json marks this hook as async).
-    Start-Sleep -Seconds 5
-    $notify.Dispose()
+    $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $xml.LoadXml('<toast duration="long"><visual><binding template="ToastText02">' +
+        '<text id="1">' + [System.Security.SecurityElement]::Escape('Claude Code') + '</text>' +
+        '<text id="2">' + [System.Security.SecurityElement]::Escape('Task completed.') + '</text>' +
+        '</binding></visual></toast>')
+    $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
+    $aumid = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\{{PWSH_HOST}}'
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($aumid).Show($toast)
 } catch {
-    # Fallback if the GUI notification APIs are unavailable: a single beep.
+    # Fallback if the toast APIs are unavailable: a single beep.
     [System.Console]::Beep(800, 300)
 }
 

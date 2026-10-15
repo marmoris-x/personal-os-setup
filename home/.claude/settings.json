@@ -50,7 +50,10 @@
       "Read(//c/**/*.pem)",
       "Read(/{{DEV_BASH}}/Projects/**/Server Keys/**)",
       "Read(//c/Users/*/.claude/profiles/**)",
-      "Edit(//c/Users/*/.claude/profiles/**)"
+      "Edit(//c/Users/*/.claude/profiles/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push --force-with-lease*)"
     ],
     "defaultMode": "auto"
   },

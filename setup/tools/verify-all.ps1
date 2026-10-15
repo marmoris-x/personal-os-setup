@@ -1237,6 +1237,9 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/research/scripts/check_note.py'; Reason = 'the same task (Part 0.1): the guard that skipped a version standing behind a licence word is gone' }
         @{ Path = 'HOME/.claude/setup/tests/research/test_check_note.py'; Reason = 'the same task (Part 0.1): the test case for that removed guard is gone' }
         @{ Path = 'HOME/.claude/setup/tests/research/run_mutations.py'; Reason = 'the same task (Part 0.1): the mutation entry for the removed guard is gone; the runner still catches 109 of 109' }
+        @{ Path = 'HOME/.claude/hooks/stop-notify.ps1'; Reason = '2026-10-16: the notification is a real Windows toast (WinRT) under the PowerShell AUMID instead of a NotifyIcon balloon tip. Measured: a balloon from this hook never reaches the notification platform on this Windows build (no row for any of the machine''s 14 NotifyIcon handlers in wpndatabase.db), the toast does' }
+        @{ Path = 'HOME/.claude/hooks/notification-idle.ps1'; Reason = 'the same change as stop-notify.ps1 (2026-10-16), for the idle_prompt notification' }
+        @{ Path = 'HOME/.claude/hooks/notification-events.ps1'; Reason = 'the same change as stop-notify.ps1 (2026-10-16), for permission_prompt/agent_needs_input/agent_completed; the two texts are XML-escaped now, a message may contain <, > or &' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

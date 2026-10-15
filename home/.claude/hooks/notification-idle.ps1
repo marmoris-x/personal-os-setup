@@ -11,37 +11,32 @@
 #   {{HOME}}\.claude\hooks\notification-idle.ps1
 #
 # WHY "async": true IN settings.json MATTERS HERE:
-#   This script intentionally sleeps for 5 seconds so the balloon stays
-#   visible for a moment before it's cleaned up (Start-Sleep + Dispose()
-#   below). Start-Sleep is a genuinely BLOCKING call -- the script itself
-#   does not return until those 5 seconds are up. Marking this hook as
-#   "async": true in settings.json tells Claude Code not to wait for the
-#   hook process to finish before continuing, so this 5-second internal
-#   delay does not translate into a 5-second delay for the user/agent.
-#   (This mirrors the exact same reasoning as stop-notify.ps1 -- see that
-#   file, and TROUBLESHOOTING.md Bug 9, for the fuller writeup.)
+#   It mattered because the old balloon needed Start-Sleep + Dispose() to stay
+#   on screen: a genuinely BLOCKING call that would have delayed every idle
+#   notification by 5 seconds without it. The toast below has no sleep left -
+#   the shell owns the notification the moment Show() returns - so "async"
+#   costs nothing either way and stays set. (Same reasoning as stop-notify.ps1;
+#   see that file, and TROUBLESHOOTING.md Bug 9, for the fuller writeup.)
 
 $ErrorActionPreference = 'SilentlyContinue'
 
 try {
-    # System.Windows.Forms / System.Drawing give us access to the classic
-    # Windows "balloon tip" notification via a NotifyIcon in the system tray.
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
+    # A real Windows TOAST (WinRT), not the old NotifyIcon "balloon tip" - see
+    # stop-notify.ps1 for the measurement behind that change (2026-10-16): a
+    # balloon from this hook never reaches the notification platform on this
+    # Windows build, a toast under the Windows PowerShell AUMID does.
+    [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+    [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 
-    $notify = New-Object System.Windows.Forms.NotifyIcon
-    $notify.Icon = [System.Drawing.SystemIcons]::Question
-    $notify.Visible = $true
-    $notify.ShowBalloonTip(
-        0,
-        'Claude Code',
-        'Waiting for your input.',
-        [System.Windows.Forms.ToolTipIcon]::Warning
-    )
-
-    # Keep the balloon visible for 5 seconds before disposing the icon.
-    Start-Sleep -Seconds 5
-    $notify.Dispose()
+    $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+    $xml.LoadXml('<toast duration="long"><visual><binding template="ToastText02">' +
+        '<text id="1">' + [System.Security.SecurityElement]::Escape('Claude Code') + '</text>' +
+        '<text id="2">' + [System.Security.SecurityElement]::Escape('Waiting for your input.') + '</text>' +
+        '</binding></visual></toast>')
+    $toast = New-Object Windows.UI.Notifications.ToastNotification $xml
+    $aumid = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\{{PWSH_HOST}}'
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($aumid).Show($toast)
 } catch {
     # Fallback if the GUI notification APIs are unavailable for some reason
     # (e.g. running in a context without a desktop session): play two short
