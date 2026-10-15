@@ -15,7 +15,7 @@
 # Flip `published` to true in the same change that runs the publish command - not before, and
 # never without checking that the scans are clean.
 visibility: public
-published: false
+published: true
 
 # What the check demands of the repository settings once it is public, and checks with
 # `gh api` for both states. The names are the API's own, so a reader can look them up.
