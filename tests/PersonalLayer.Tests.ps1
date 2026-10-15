@@ -137,7 +137,15 @@ Describe 'the scalar reader' {
         Get-ConfigScalar -ConfigPath $script:scalars -Key 'nope' | Should -BeNullOrEmpty
     }
     It 'reads the key of repo.yaml that decides which state is demanded' {
-        Get-ConfigScalar -ConfigPath (Join-Path $script:repoRoot 'setup/config/repo.yaml') -Key 'published' | Should -Be 'false'
+        # The value belongs to repo.yaml and flips when a release happens. Pinning the literal
+        # 'false' here made this test red the moment the release was recorded - on ubuntu and on
+        # macOS in CI run 38710712333, while it had been green a minute earlier. What the test is
+        # about is the READER, so it takes the value from the file and demands two things: that
+        # the file carries the key at all, and that the reader hands back exactly that value.
+        $yaml = [IO.File]::ReadAllText((Join-Path $script:repoRoot 'setup/config/repo.yaml'))
+        $inFile = [regex]::Match($yaml, '(?m)^\s*published:\s*(\S+)\s*$').Groups[1].Value
+        $inFile | Should -BeIn @('true', 'false') -Because 'repo.yaml carries the key this test is about, and check S accepts only these two states'
+        Get-ConfigScalar -ConfigPath (Join-Path $script:repoRoot 'setup/config/repo.yaml') -Key 'published' | Should -Be $inFile
     }
 }
 
