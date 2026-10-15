@@ -100,4 +100,7 @@ start CI on purpose, not in a loop.
 Everything in English (this repo is meant to be published): docs for humans in plain words;
 code, comments, filenames and commit messages likewise. Keep changes small and in the existing
 style; one commit per finished step, Conventional Commits. When the tree changes, update
-`docs/structure.md` (`pwsh setup/tools/check-structure.ps1 -Write`) in the same commit.
+`docs/structure.md` (`pwsh setup/tools/check-structure.ps1 -Write`) in the same commit. When a
+file in a mirror folder is added or changed, name it in the `$intended` list of check J
+(`setup/tools/verify-all.ps1`) in the same commit: that check compares a test install against the
+v2.1.2 baseline and calls every difference it is not told about a defect.
