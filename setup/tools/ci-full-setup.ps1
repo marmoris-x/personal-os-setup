@@ -22,7 +22,10 @@ silently:
     windows-latest runner in the first run of 2026-10-14; the JSON import lists installed all
     12 programs and the verify check `winget-core` was green. The stage now reports winget's
     own words for it and names the manual step (install.ps1 once from an elevated PowerShell);
-  * no runner has Claude Code installed, so the two MCP checks cannot pass there.
+  * no runner has Claude Code installed, so the two MCP checks cannot pass there;
+  * macos-latest is Apple Silicon, and ctranslate2==4.8.2 publishes no macOS arm64 wheel, so the
+    Life OS venv cannot be built there. The install stage says so as a WARN and the verify then
+    calls the venv incomplete - one machine limit seen at two steps.
 
 Measured in that first run, and not on any expectation list: the task checks PASSED on all
 three runners - windows-latest registers the scheduled task with its logon trigger (the runner
@@ -95,6 +98,13 @@ $script:expectedFails = @{
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
     macos = @(
+        # Measured in run 38711843191, the first run that ever got this far (every earlier ci run
+        # died at billing). ctranslate2==4.8.2 publishes no macOS arm64 wheel, so pip cannot build
+        # the Life OS venv on macos-latest; nothing about that improves on a machine with nobody
+        # logged in. The install stage already reports the same failure as a WARN - this entry is
+        # the same machine limit seen one step later, in the verify. The detail must match, so a
+        # venv that breaks for another reason still turns the job red.
+        @{ Id = 'life-os-venv'; Detail = 'venv present but incomplete: faster-whisper is not installed'; Why = 'ctranslate2==4.8.2 has no macOS arm64 wheel, so the venv cannot be built on macos-latest (Apple Silicon); the install stage reports the same thing as a WARN' }
         @{ Id = 'mcp-exa'; Detail = 'claude is not on PATH'; Why = 'no Claude Code on a CI machine; installing and signing in needs a person' }
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
