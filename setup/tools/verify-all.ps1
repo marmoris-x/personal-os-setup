@@ -17,7 +17,9 @@ exactly "VERIFY-ALL: ALL CHECKS PASSED".
   4  privacy-scan: worktree and history clean; the scan proves it can fail (red fixture)
   5  setup/tools/check.ps1: analyzer, Pester, guard suites, docs freshness
   6  a test install into a NEW empty target, then verify
-  7  the latest CI run on GitHub is for the current commit and success
+  7  the latest CI run on GitHub is for the newest commit that changed something other than
+     documentation (*.md, docs/, CHANGELOG.md) and success. A documentation-only commit on top
+     needs no run of its own - the matrix runs the same code either way (AGENTS.md, "CI")
   8  export writes nothing new; git status is empty
   9  before/after fingerprint: only the logged live changes, nothing unexpected
  10  every hook command the live settings.json names exists, every hook file is named there,
@@ -53,7 +55,8 @@ exactly "VERIFY-ALL: ALL CHECKS PASSED".
   M  bootstrap.ps1 and bootstrap.sh exist, pass the analyzer / the shell syntax check, and the
      README has a "Start from zero" section for all three systems
   N  the CI matrix is defined for windows, ubuntu and macOS, and the newest run on windows and
-     ubuntu (and on macOS when it ran) is green for this commit
+     ubuntu (and on macOS when it ran) is green for the newest commit that changed code - the
+     same commit 7 uses, so a documentation-only commit on top needs no run
   O  every CI job ran the idempotency step ("second install changes nothing") and it passed
   P  a live dry run of install.ps1 reaches the summary, so the code paths that only a real
      machine uses (the OS stages and the summary) are exercised too
@@ -108,6 +111,22 @@ param(
 $ErrorActionPreference = 'Stop'
 $script:results = New-Object System.Collections.Generic.List[object]
 $script:checkCount = 32
+
+function Get-LastCodeCommit {
+    # The newest commit that changed something a CI run can fail on. Checks 7 and N compare the
+    # newest run against THIS commit and not against HEAD, because a commit that only touches
+    # documentation cannot turn a matrix job red or green: it runs the same code. The owner's
+    # rule is "start CI on purpose, not in a loop" (AGENTS.md, "CI"), and a documentation commit
+    # that has to wait for a run is exactly the loop that rule is about.
+    # Excluded: every *.md at any depth, everything under docs/, and CHANGELOG.md.
+    Push-Location $RepoRoot
+    try {
+        $sha = (& git rev-list -1 HEAD -- . ':(exclude)*.md' ':(exclude)docs/**' ':(exclude)CHANGELOG.md' 2>&1 | Out-String).Trim()
+    }
+    finally { Pop-Location }
+    if ($sha -notmatch '^[0-9a-f]{40}$') { throw ('git rev-list returned no commit for the code pathspec: ' + $sha) }
+    return $sha
+}
 $script:acceptanceWorkRoot = 'C:\Dev\Temp\folder-structure'
 # acceptanceWorkRoot is the DEFAULT of -WorkRoot; it is no longer part of the guard (see below).
 # What it still does is name the folder a tool must not come from: $script:toolDirs keeps the
@@ -154,7 +173,25 @@ $script:workRootObjection = Get-WorkRootObjection -Path $WorkRoot
 $isAcceptanceCall = ($Only.Count -eq 0) -and ($HomeRoot -eq $script:realProfile) -and
                     (-not $script:workRootObjection) -and ($RepoRoot -eq $script:acceptanceRepoRoot) -and
                     ($env:USERPROFILE -eq $script:realProfile) -and ($PSCommandPath -eq $script:selfPath)
-if ($isAcceptanceCall) { Write-Host ('Checks: all ' + $script:checkCount + ', live profile, repo root and the work root below (this is the acceptance run)') }
+# --- output: failures plus one line per check on the console, everything in the log ----------
+# Owner's order (agent-upgrade-task.md, Part 4.1). A green run used to print 32 blocks of command
+# lines and outputs - a wall of text with two interesting lines in it. Now the console carries one
+# line per check plus the full block of every FAILED check, and the complete output (every block,
+# this header, the tools line and the summary) goes to <WorkRoot>\verify-all.log. `-Verbose`
+# restores the old console output; it is a switch every advanced script already has, so no new
+# name has to be remembered.
+$script:verboseOutput = ($VerbosePreference -ne 'SilentlyContinue')
+$script:logPath = Join-Path $WorkRoot 'verify-all.log'
+$script:log = $null
+try {
+    $script:log = New-Object System.IO.StreamWriter($script:logPath, $false, (New-Object System.Text.UTF8Encoding($false)))
+    $script:log.AutoFlush = $true
+} catch { $script:log = $null }
+function Write-Log([string]$line) { if ($null -ne $script:log) { try { $script:log.WriteLine($line) } catch { } } }
+function Write-Both([string]$line) { Write-Log $line; Write-Host $line }
+function Close-Log { if ($null -ne $script:log) { try { $script:log.Flush(); $script:log.Close() } catch { }; $script:log = $null } }
+
+if ($isAcceptanceCall) { Write-Both ('Checks: all ' + $script:checkCount + ', live profile, repo root and the work root below (this is the acceptance run)') }
 else {
     $why = New-Object System.Collections.Generic.List[string]
     if ($Only.Count -gt 0) { $why.Add('only ' + ($Only -join ', ')) }
@@ -163,10 +200,10 @@ else {
     if ($RepoRoot -ne $script:acceptanceRepoRoot) { $why.Add('repo root ' + $RepoRoot) }
     if ($env:USERPROFILE -ne $script:realProfile) { $why.Add('USERPROFILE is ' + $env:USERPROFILE + ', the profile of this account is ' + $script:realProfile) }
     if ($PSCommandPath -ne $script:selfPath) { $why.Add('the script is not the repository copy (' + $PSCommandPath + ')') }
-    Write-Host ('Checks: NOT the acceptance run (' + ($why -join '; ') + ')')
+    Write-Both ('Checks: NOT the acceptance run (' + ($why -join '; ') + ')')
 }
-Write-Host ('Home:   ' + $HomeRoot)
-Write-Host ('Work:   ' + $WorkRoot)
+Write-Both ('Home:   ' + $HomeRoot)
+Write-Both ('Work:   ' + $WorkRoot)
 
 # The evidence of checks 2, 3 and 4 comes from programs, and a program is found on PATH: review 9
 # put three .cmd shims in front of the PATH and the checks reported the shims' answers. The
@@ -190,9 +227,9 @@ function Get-ToolReport([string[]]$names) {
 }
 $script:tools = Get-ToolReport @('gh', 'gitleaks', 'trufflehog', 'git')
 $script:toolsOk = ($script:tools.Bad.Count -eq 0)
-Write-Host ('Tools:  ' + $script:tools.Text)
-foreach ($b in $script:tools.Bad) { Write-Host ('        REFUSED: ' + $b) }
-if (-not $script:toolsOk) { Write-Host '        A check whose tool is not the system''s tool cannot certify anything: every check that calls one of them fails.' }
+Write-Both ('Tools:  ' + $script:tools.Text)
+foreach ($b in $script:tools.Bad) { Write-Both ('        REFUSED: ' + $b) }
+if (-not $script:toolsOk) { Write-Both '        A check whose tool is not the system''s tool cannot certify anything: every check that calls one of them fails.' }
 
 function Add-Result([string]$nr, [string]$name, [string]$cmd, [string]$out, [string]$exitCode, [bool]$ok) {
     # A run whose tools are not the system's tools certifies nothing - not even a check that
@@ -201,12 +238,25 @@ function Add-Result([string]$nr, [string]$name, [string]$cmd, [string]$out, [str
     if ($ok -and (-not $script:toolsOk)) { $ok = $false; $out = $out + ' [FAIL: a tool of this run is not the system''s tool - see the Tools line above]' }
     $script:results.Add([pscustomobject]@{ Nr = $nr; Name = $name; OK = $ok })
     $verdict = if ($ok) { 'PASS' } else { 'FAIL' }
-    Write-Host ('CHECK {0,2}: {1}' -f $nr, $name)
-    Write-Host ('  Command: ' + $cmd)
-    Write-Host ('  Output:  ' + $out)
-    Write-Host ('  Exit:    ' + $exitCode)
-    Write-Host ('  Result:  ' + $verdict)
-    Write-Host ''
+    # The log gets the whole block, always. The console gets it for a failure, and for a passing
+    # check only when -Verbose asked for the old output.
+    Write-Log ('CHECK {0,2}: {1}' -f $nr, $name)
+    Write-Log ('  Command: ' + $cmd)
+    Write-Log ('  Output:  ' + $out)
+    Write-Log ('  Exit:    ' + $exitCode)
+    Write-Log ('  Result:  ' + $verdict)
+    Write-Log ''
+    if ($script:verboseOutput -or (-not $ok)) {
+        Write-Host ('CHECK {0,2}: {1}' -f $nr, $name)
+        Write-Host ('  Command: ' + $cmd)
+        Write-Host ('  Output:  ' + $out)
+        Write-Host ('  Exit:    ' + $exitCode)
+        Write-Host ('  Result:  ' + $verdict)
+        Write-Host ''
+    }
+    else {
+        Write-Host ('{0,2}  PASS  {1}' -f $nr, $name)
+    }
 }
 
 function Test-Selected([string]$nr) { return (($Only.Count -eq 0) -or ($Only -contains $nr)) }
@@ -354,7 +404,11 @@ if (Test-Selected '5') { try {
     # and the worker) would otherwise share tests\_tmp\check and delete each other's rendered tree
     # while a guard suite is running in it (measured by review 5)
     $checkWork = Join-Path $WorkRoot ('check-' + $PID)
-    $coOut = (& pwsh -NoProfile -File setup/tools/check.ps1 -WorkDir $checkWork 2>&1 | Out-String)
+    # the log of this check.ps1 run goes NEXT TO verify-all.log into the task folder, per-run
+    # named: two runs at the same time (a reviewer and the worker) must not truncate each other's
+    # log, and the task folder is where a report looks (owner's order, Part 4.1)
+    $coLog = Join-Path $WorkRoot ('check-' + $PID + '.log')
+    $coOut = (& pwsh -NoProfile -File setup/tools/check.ps1 -WorkDir $checkWork -LogPath $coLog 2>&1 | Out-String)
     $coExit = $LASTEXITCODE
     Pop-Location
     $pesterLine = ([regex]::Match($coOut, 'PESTER: [^\r\n]+')).Value
@@ -393,10 +447,11 @@ if (Test-Selected '7') { try {
     # report success for the same commit and would let this check pass without ci ever finishing
     $runJson = (& gh run list --workflow ci --limit 1 --json headSha,status,conclusion 2>&1 | Out-String)
     Pop-Location
+    $code = Get-LastCodeCommit
     $run = ($runJson | ConvertFrom-Json)[0]
-    $ok = ($run.headSha -eq $head) -and ($run.status -eq 'completed') -and ($run.conclusion -eq 'success')
-    Add-Result 7 'CI: current commit, success' 'gh run list --workflow ci --limit 1 --json headSha,status,conclusion' ($run.headSha.Substring(0, 7) + ' ' + $run.status + ' ' + $run.conclusion + ' (HEAD ' + $head.Substring(0, 7) + ')') '0' $ok
-} catch { Add-Result 7 'CI: current commit, success' 'gh run list' $_.Exception.Message '2' $false } }
+    $ok = ($run.headSha -eq $code) -and ($run.status -eq 'completed') -and ($run.conclusion -eq 'success')
+    Add-Result 7 'CI: newest code commit, success' 'gh run list --workflow ci --limit 1 --json headSha,status,conclusion' ($run.headSha.Substring(0, 7) + ' ' + $run.status + ' ' + $run.conclusion + ' (newest code commit ' + $code.Substring(0, 7) + ', HEAD ' + $head.Substring(0, 7) + ')') '0' $ok
+} catch { Add-Result 7 'CI: newest code commit, success' 'gh run list' $_.Exception.Message '2' $false } }
 
 # ----------------------------------------------------------------- 8 export ---
 if (Test-Selected '8') { try {
@@ -1411,10 +1466,11 @@ if (Test-Selected 'N') { try {
     $head = (& git rev-parse HEAD | Out-String).Trim()
     $runJson = (& gh run list --workflow ci --limit 1 --json headSha,status,conclusion,databaseId 2>&1 | Out-String)
     Pop-Location
+    $code = Get-LastCodeCommit
     $run = @($runJson | ConvertFrom-Json)[0]
     $bad = New-Object System.Collections.Generic.List[string]
     if (-not $run) { throw 'gh returned no run for the ci workflow' }
-    if ($run.headSha -ne $head) { $bad.Add('the newest run is not for this commit (' + ([string]$run.headSha).Substring(0, 7) + ' vs ' + $head.Substring(0, 7) + ')') }
+    if ($run.headSha -ne $code) { $bad.Add('the newest run is not for the newest code commit (' + ([string]$run.headSha).Substring(0, 7) + ' vs ' + $code.Substring(0, 7) + ')') }
     if ($run.status -ne 'completed') { $bad.Add('the newest run is still ' + $run.status) }
     elseif ($run.conclusion -ne 'success') { $bad.Add('the newest run concluded ' + $run.conclusion) }
     Push-Location $RepoRoot
@@ -1669,23 +1725,35 @@ if (Test-Selected 'V') { try {
 } catch { Add-Result 'V' 'no personal value in the newest CI log' 'download the CI log and scan it' $_.Exception.Message '2' $false } }
 
 # ----------------------------------------------------------------- summary ---
-Write-Host '== Result =='
-foreach ($r in $script:results) {
-    Write-Host ('{0,2}  {1,-46} {2}' -f $r.Nr, $r.Name, $(if ($r.OK) { 'PASS' } else { 'FAIL' }))
-}
+Write-Both '== Result =='
 $bad = @($script:results | Where-Object { -not $_.OK }).Count
+if ($bad -eq 0) {
+    # A green run prints the count and the one line that is not a list of names; the names are in
+    # the log. A failed run prints the table, because a reader has to see which check turned red.
+    Write-Host ('{0} of {1} checks passed.' -f $script:results.Count, $script:checkCount)
+    Write-Log ('{0} of {1} checks passed.' -f $script:results.Count, $script:checkCount)
+    foreach ($r in $script:results) { Write-Log ('{0,2}  {1,-46} PASS' -f $r.Nr, $r.Name) }
+}
+else {
+    foreach ($r in $script:results) { Write-Both ('{0,2}  {1,-46} {2}' -f $r.Nr, $r.Name, $(if ($r.OK) { 'PASS' } else { 'FAIL' })) }
+}
 # A filtered run must not be able to print the acceptance line: -Only, -HomeRoot or a work root
 # of one's own are tools for red proofs, not a way to a green result (review 6 and review 7 both
 # showed what a green claim without the work behind it is worth).
+# The log line goes BEFORE the verdict: the last line the run prints is the verdict, and the
+# acceptance run's last line stays exactly "VERIFY-ALL: ALL CHECKS PASSED".
+Write-Both ''
+Write-Both ('full output: ' + $script:logPath)
 if ($bad -eq 0) {
-    Write-Host ''
     if ($isAcceptanceCall -and ($script:results.Count -eq $script:checkCount)) {
-        Write-Host 'VERIFY-ALL: ALL CHECKS PASSED'
+        Write-Both 'VERIFY-ALL: ALL CHECKS PASSED'
+        Close-Log
         exit 0
     }
-    Write-Host ('VERIFY-ALL: ' + $script:results.Count + ' OF ' + $script:checkCount + ' CHECKS PASSED (partial run - not the acceptance run)')
+    Write-Both ('VERIFY-ALL: ' + $script:results.Count + ' OF ' + $script:checkCount + ' CHECKS PASSED (partial run - not the acceptance run)')
+    Close-Log
     exit 3
 }
-Write-Host ''
-Write-Host ('VERIFY-ALL: ' + $bad + ' CHECK(S) FAILED')
+Write-Both ('VERIFY-ALL: ' + $bad + ' CHECK(S) FAILED')
+Close-Log
 exit 1

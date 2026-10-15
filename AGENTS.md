@@ -78,6 +78,11 @@ platform map and every file it promises, no Windows literals in the portable eng
 install byte-identical to v2.1.2, the hook wiring, the agent instructions, the two bootstrap
 files, and the CI run itself.
 
+## CI
+
+CI is free (public repo). Do not hold back commits to save runs. Still check locally first;
+start CI on purpose, not in a loop.
+
 ## Layout
 
 - `home/`, `vault/`, `dev/` — the mirror folders: files exactly as they land on a target

@@ -21,7 +21,10 @@ Parts:
   pwsh setup/tools/check.ps1
   switches for debugging: -SkipAnalyzer -SkipPester -SkipHooks
 
-Output: per part a summary; last line CHECK-OK or CHECK: ERRORS. Exit 0/1.
+Output: one line per part on the console, plus the detail of anything that failed; the full
+output (every Pester test, every guard suite case) goes to -LogPath, by default
+<WorkDir>\check.log. -Verbose restores the long output. Last line CHECK-OK or CHECK: ERRORS.
+Exit 0/1.
 ASCII-only on purpose (same reason as install.ps1).
 #>
 [CmdletBinding()]
@@ -29,14 +32,38 @@ param(
     [switch]$SkipAnalyzer,
     [switch]$SkipPester,
     [switch]$SkipHooks,
-    [string]$WorkDir
+    [string]$WorkDir,
+    # where the full output goes; the default sits in the same per-run folder as the render, and
+    # the acceptance run points it at the task folder so a report can find it
+    [string]$LogPath
 )
 
 $ErrorActionPreference = 'Stop'
 $setupDir = Split-Path -Parent $PSScriptRoot          # setup/
 $repoRoot = Split-Path -Parent $setupDir              # the repo
 if (-not $WorkDir) { $WorkDir = Join-Path $repoRoot 'tests\_tmp\check' }
+if (-not $LogPath) { $LogPath = Join-Path $WorkDir 'check.log' }
 $errorCount = 0
+
+# --- output: one summary line per part on the console, everything in the log ------------------
+# Owner's order (agent-upgrade-task.md, Part 4.1), the same rule as verify-all.ps1: a green run
+# prints one line per part and the detail of what failed; the full output - every part, every
+# Pester test, every guard suite - goes to -LogPath. `-Verbose` restores the old output, and with
+# it Pester's own per-test listing.
+$verboseOutput = ($VerbosePreference -ne 'SilentlyContinue')
+$log = $null
+try {
+    # the folder may not exist yet: -WorkDir is created by the first check that needs it, and a
+    # StreamWriter on a missing folder throws (measured: the first run of this version wrote no
+    # log at all, and only the "full output:" line said where one was expected)
+    $logDir = Split-Path -Parent $LogPath
+    if ($logDir -and -not (Test-Path -LiteralPath $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+    $log = New-Object System.IO.StreamWriter($LogPath, $false, (New-Object System.Text.UTF8Encoding($false)))
+    $log.AutoFlush = $true
+} catch { $log = $null }
+function Write-Log([string]$line) { if ($null -ne $script:log) { try { $script:log.WriteLine($line) } catch { } } }
+function Write-Both([string]$line) { Write-Log $line; Write-Host $line }
+function Close-Log { if ($null -ne $script:log) { try { $script:log.Flush(); $script:log.Close() } catch { }; $script:log = $null } }
 
 . (Join-Path $setupDir 'lib/manifest.ps1')
 . (Join-Path $setupDir 'lib/platform.ps1')
@@ -45,7 +72,7 @@ $checkOs = Get-PlatformId
 
 # --- 1. PSScriptAnalyzer -----------------------------------------------------
 if (-not $SkipAnalyzer) {
-    Write-Host '== PSScriptAnalyzer (severity ParseError and Error) ==' -ForegroundColor Cyan
+    Write-Both '== PSScriptAnalyzer (severity ParseError and Error) =='
     if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) { Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -Repository PSGallery }
     Import-Module PSScriptAnalyzer -ErrorAction Stop
     # the mirror folders hold exported live content, not repo-authored code (see the header)
@@ -60,15 +87,14 @@ if (-not $SkipAnalyzer) {
     # invisible to this step (severity ParseError) and only CI on Linux noticed, because only
     # Linux loads that file. Parse errors belong in the list a check calls an error.
     foreach ($f in $files) { $issues += @(Invoke-ScriptAnalyzer -Path $f.FullName -Severity ParseError, Error) }
-    foreach ($i in $issues) { Write-Host ('  ' + $i.ScriptName + ':' + $i.Line + '  ' + $i.RuleName + '  ' + $i.Message) -ForegroundColor Red }
+    foreach ($i in $issues) { Write-Both ('  ' + $i.ScriptName + ':' + $i.Line + '  ' + $i.RuleName + '  ' + $i.Message) }
     if ($issues.Count -eq 0) { Write-Host '  ANALYZER-OK (0 errors)' -ForegroundColor Green }
     else { Write-Host ('  ANALYZER: ' + $issues.Count + ' errors') -ForegroundColor Red; $errorCount += $issues.Count }
 }
 
 # --- 2. Pester ---------------------------------------------------------------
 if (-not $SkipPester) {
-    Write-Host '== Pester ' -NoNewline -ForegroundColor Cyan
-    Write-Host '(tests/) ==' -ForegroundColor Cyan
+    Write-Both '== Pester (tests/) =='
     if (-not (Get-Module -ListAvailable Pester | Where-Object { $_.Version -eq '5.9.1' })) {
         Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -Repository PSGallery -SkipPublisherCheck
     }
@@ -77,21 +103,43 @@ if (-not $SkipPester) {
     # folder under tests\_tmp, and two runs at the same time (a reviewer and the worker, say) would
     # delete each other's target while the other suite is installing into it (review 5, finding 7)
     $env:PERSONAL_OS_CHECK_WORKDIR = $WorkDir
-    $r = Invoke-Pester (Join-Path $repoRoot 'tests') -Output Normal -PassThru
+    # Pester's own listing is the longest part of this output and says "passed" 100 times. It goes
+    # to the log one line per test; the console gets the count and, for a failure, the message.
+    # The `6>&1` is what keeps the console clean: several test files print their own warnings with
+    # Write-Host, and Write-Host is not silenceable through a preference - it writes to the
+    # information stream, so the stream is captured here and the lines go to the log instead.
+    if ($verboseOutput) {
+        $r = Invoke-Pester (Join-Path $repoRoot 'tests') -Output Normal -PassThru
+    }
+    else {
+        $pesterItems = @(Invoke-Pester (Join-Path $repoRoot 'tests') -Output None -PassThru 6>&1)
+        foreach ($it in $pesterItems) {
+            if ($it -is [System.Management.Automation.InformationRecord]) { Write-Log ('  ' + [string]$it.MessageData) }
+        }
+        $r = @($pesterItems | Where-Object { $_ -isnot [System.Management.Automation.InformationRecord] })[-1]
+    }
+    if (-not $r) { Write-Host '  PESTER: the run returned no result object' -ForegroundColor Red; $errorCount++; $r = [pscustomobject]@{ PassedCount = 0; FailedCount = 0; SkippedCount = 0; Tests = @(); Failed = @() } }
+    foreach ($t in @($r.Tests)) { Write-Log ('  ' + $(if ($t.Result -eq 'Passed') { 'PASS' } else { 'FAIL' }) + '  ' + [string]$t.ExpandedPath) }
+    foreach ($f in @($r.Failed)) {
+        $msg = ([string]$f.FailureMessage -split "`r?`n")[0]
+        Write-Log ('  FAILURE ' + [string]$f.ExpandedPath + ': ' + $msg)
+        Write-Host ('  FAILED  ' + [string]$f.ExpandedPath + ': ' + $msg) -ForegroundColor Red
+    }
     Write-Host ('  PESTER: ' + $r.PassedCount + ' passed, ' + $r.FailedCount + ' failed, ' + $r.SkippedCount + ' skipped') -ForegroundColor $(if ($r.FailedCount -gt 0) { 'Red' } else { 'Green' })
+    Write-Log ('  PESTER: ' + $r.PassedCount + ' passed, ' + $r.FailedCount + ' failed, ' + $r.SkippedCount + ' skipped')
     $errorCount += $r.FailedCount
     if ($r.PassedCount -eq 0) { Write-Host '  PESTER: no test ran - that counts as an error' -ForegroundColor Red; $errorCount++ }
 }
 
 # --- 3. docs freshness --------------------------------------------------------
-Write-Host '== docs current (components.md from the manifest) ==' -ForegroundColor Cyan
+Write-Both '== docs current (components.md from the manifest) =='
 $null = & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'generate-docs.ps1') -Check
-if ($LASTEXITCODE -ne 0) { Write-Host '  docs/components.md is outdated - run setup/tools/generate-docs.ps1' -ForegroundColor Red; $errorCount++ }
-else { Write-Host '  COMPONENTS-OK' -ForegroundColor Green }
+if ($LASTEXITCODE -ne 0) { Write-Both '  docs/components.md is outdated - run setup/tools/generate-docs.ps1'; $errorCount++ }
+else { Write-Both '  COMPONENTS-OK' }
 
 # --- 4. guard suites from the rendered tree ----------------------------------
 if (-not $SkipHooks) {
-    Write-Host '== guard suites (from the rendered tree, dummy values) ==' -ForegroundColor Cyan
+    Write-Both '== guard suites (from the rendered tree, dummy values) =='
     $renderDir = Join-Path $WorkDir 'render'
     if (Test-Path -LiteralPath $renderDir) { Remove-Item -LiteralPath $renderDir -Recurse -Force }
     # folder names only, joined at runtime - never a literal path in the repo
@@ -168,6 +216,10 @@ if (-not $SkipHooks) {
         $out = & pwsh -NoProfile -File $path 2>&1 | Out-String
         # measured formats: "Errors: 0 of 120" / "0 errors" / "0 failed" - exit code decides too
         $ok = ($LASTEXITCODE -eq 0) -and ($out -match '(?m)(Errors:\s*0\b|\b0 (failed|errors)\b)') -and ($out -notmatch '(?m)(Errors:\s*[1-9]\d*\b|[1-9]\d*\s+(failed|errors)\b)')
+        # The suite prints one line per case. The log keeps all of them; the console keeps the
+        # suite's own count line, and for a failure the failing cases.
+        Write-Log ('  == ' + $suite.Name)
+        foreach ($l in ($out -split "`r?`n")) { if ($l.Trim() -ne '') { Write-Log ('     ' + $l) } }
         if ($ok) {
             $line = ($out -split "`n" | Where-Object { $_ -match '(errors|failed)' } | Select-Object -Last 1).Trim()
             Write-Host ('  OK    ' + $suite.Name + '  ' + $line) -ForegroundColor Green
@@ -182,6 +234,10 @@ if (-not $SkipHooks) {
 }
 
 Write-Host ''
-if ($errorCount -gt 0) { Write-Host ('CHECK: ' + $errorCount + ' errors') -ForegroundColor Red; exit 1 }
+Write-Both ('full output: ' + $LogPath)
+# The verdict stays the LAST line, so a reader (and verify-all's check 5) can take the tail.
+if ($errorCount -gt 0) { Write-Host ('CHECK: ' + $errorCount + ' errors') -ForegroundColor Red; Write-Log ('CHECK: ' + $errorCount + ' errors'); Close-Log; exit 1 }
 Write-Host 'CHECK-OK' -ForegroundColor Green
+Write-Log 'CHECK-OK'
+Close-Log
 exit 0
