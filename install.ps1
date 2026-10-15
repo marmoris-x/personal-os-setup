@@ -669,7 +669,21 @@ try {
                         # and this stage still reported OK - nobody asked pip how it ended. Two things
                         # came out of that: the CUDA-only pins carry a marker now, and pip's exit code
                         # is read here like any other program's.
-                        $pipOut = (& $venvPy -m pip install --quiet --disable-pip-version-check -r $req 2>&1 | Out-String)
+                        # A pip that never reached the index is not a property of this machine.
+                        # Measured 2026-10-15: the same commit built this venv on the macos-latest
+                        # runner of one CI run and failed on the next with "Could not find a
+                        # version that satisfies the requirement ctranslate2==4.8.2 (from
+                        # versions: none)" - the index answered nothing at all - and that package
+                        # ships macOS arm64 wheels for every Python from 3.9 to 3.14. Three
+                        # attempts with a growing pause, then the stage reports what pip said.
+                        # A bounded retry, never a loop. $LASTEXITCODE still carries the last
+                        # attempt, which is what the block below reads.
+                        $pipOut = ''
+                        foreach ($attempt in 1..3) {
+                            $pipOut = (& $venvPy -m pip install --quiet --disable-pip-version-check -r $req 2>&1 | Out-String)
+                            if ($LASTEXITCODE -eq 0) { break }
+                            if ($attempt -lt 3) { Start-Sleep -Seconds (10 * $attempt) }
+                        }
                         if ($LASTEXITCODE -ne 0) {
                             $tail = (@($pipOut -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 3) -join ' | ')
                             if ($tail.Length -gt 300) { $tail = $tail.Substring(0, 300) + '...' }

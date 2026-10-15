@@ -29,6 +29,19 @@ five more, and all five are fixed here:
 | check D | It asked for the release history only while `git rev-list --count HEAD` was exactly 1, so every commit after v3.0.0 turned it red - the repository's own normal state. The discriminator is whether the old baseline `41c583d` is in this lineage at all, which is what decides whether `git log --follow` can be asked. Both release-history branches keep the same demands: a release tag HEAD builds on, the `history` remote naming the archive, and the archive answering `ls-remote`. Red-proved on a clone: no `history` remote, a `history` remote pointing nowhere and a deleted release tag each turn it red; the real state turns it green |
 | the install target's bytecode caches | `home/.claude/setup/tests/research/__pycache__/` sat in the working tree (git-ignored, never committed) and the install copies the working tree, so eight `*.pyc` files landed in the target and check J reported them as undocumented additions. Removed; the manifest's `exclude` already keeps them out, and the export writes nothing afterwards. Target: 132 files against the 132 of the v2.1.2 baseline, 0 added, 0 gone |
 
+**A wrong diagnosis is corrected, and the flake it hid is fixed.** The entry added for
+`life-os-venv` on macOS said `ctranslate2==4.8.2` publishes no macOS arm64 wheel. Measured against
+PyPI on 2026-10-15: it publishes one for every Python from 3.9 to 3.14, `cp313-macosx_11_0_arm64`
+included. What the failing runs actually saw was pip answering `from versions: none` — the index
+returned nothing at all — while the **same commit** built the same venv on the `macos-latest`
+runner of run `38721167335`. Three macOS runs: fail, pass, fail. The check even said so itself
+(`STALE: it passed this time - take it out of the list`). So the entry is gone — it never helped
+anyway, because the files-only verify exits non-zero on the same failure and is not covered by
+that list — and the install stage now retries pip up to three times with a growing pause before it
+reports what pip said. Bounded, never a loop. The retry's behaviour under a real index outage can
+only be seen in CI; what is measured here is that `$LASTEXITCODE` survives the pause and that the
+existing Pester guard on that block still passes.
+
 ## 3.0.0 (2026-10-15) – this construction kit is a public repository now
 
 The kit is shared: `personal-os-setup` is public since this version. It is a **new repository

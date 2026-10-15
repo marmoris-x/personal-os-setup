@@ -22,10 +22,15 @@ silently:
     windows-latest runner in the first run of 2026-10-14; the JSON import lists installed all
     12 programs and the verify check `winget-core` was green. The stage now reports winget's
     own words for it and names the manual step (install.ps1 once from an elevated PowerShell);
-  * no runner has Claude Code installed, so the two MCP checks cannot pass there;
-  * macos-latest is Apple Silicon, and ctranslate2==4.8.2 publishes no macOS arm64 wheel, so the
-    Life OS venv cannot be built there. The install stage says so as a WARN and the verify then
-    calls the venv incomplete - one machine limit seen at two steps.
+  * no runner has Claude Code installed, so the two MCP checks cannot pass there.
+
+The Life OS venv on macos-latest is NOT on that list, and it never belonged there. An entry once
+stood for it that blamed a missing macOS arm64 wheel for ctranslate2==4.8.2; measured 2026-10-15,
+that wheel exists for every Python from 3.9 to 3.14. What the failing runs saw was pip answering
+"from versions: none" - the index returned nothing - while the same commit built the venv on the
+macos-latest runner of run 38721167335. Three runs, fail, pass, fail. That is a flaky index
+lookup, so the install stage retries pip a bounded number of times instead and the verify stays
+strict.
 
 Measured in that first run, and not on any expectation list: the task checks PASSED on all
 three runners - windows-latest registers the scheduled task with its logon trigger (the runner
@@ -98,13 +103,17 @@ $script:expectedFails = @{
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
     macos = @(
-        # Measured in run 38711843191, the first run that ever got this far (every earlier ci run
-        # died at billing). ctranslate2==4.8.2 publishes no macOS arm64 wheel, so pip cannot build
-        # the Life OS venv on macos-latest; nothing about that improves on a machine with nobody
-        # logged in. The install stage already reports the same failure as a WARN - this entry is
-        # the same machine limit seen one step later, in the verify. The detail must match, so a
-        # venv that breaks for another reason still turns the job red.
-        @{ Id = 'life-os-venv'; Detail = 'venv present but incomplete: faster-whisper is not installed'; Why = 'ctranslate2==4.8.2 has no macOS arm64 wheel, so the venv cannot be built on macos-latest (Apple Silicon); the install stage reports the same thing as a WARN' }
+        # The life-os-venv entry that stood here until 2026-10-15 is gone, and the reason it gave
+        # was wrong. It said ctranslate2==4.8.2 publishes no macOS arm64 wheel. Measured against
+        # PyPI: it publishes one for every Python from 3.9 to 3.14, cp313-macosx_11_0_arm64
+        # included. What the failing runs actually saw was pip answering "from versions: none" -
+        # the index returned nothing at all - and the same commit built the same venv on the
+        # macos-latest runner of run 38721167335. Three macos runs, fail, pass, fail: that is a
+        # flaky index lookup, not a machine limit, and this check even said so itself ("STALE: it
+        # passed this time - take it out of the list"). The remedy is a bounded retry in the
+        # install stage, not an entry that hides the failure. Keeping it would not have helped
+        # anyway: the files-only verify below exits non-zero on the same failure and is not
+        # covered by this list.
         @{ Id = 'mcp-exa'; Detail = 'claude is not on PATH'; Why = 'no Claude Code on a CI machine; installing and signing in needs a person' }
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
