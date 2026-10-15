@@ -1,0 +1,18 @@
+# personal-os-morning.timer - when the morning run happens (install.ps1 renders this template
+# into ~/.config/systemd/user/personal-os-morning.timer).
+#
+# OnCalendar      = the daily run at {{MORNING_TIME}} (the Windows task's CalendarTrigger)
+# Persistent=true = a run missed while the machine was off happens at the next start
+#                   (systemd.timer(5); the equivalent of StartWhenAvailable on Windows)
+# OnStartupSec    = the run shortly after login (the Windows task's LogonTrigger)
+[Unit]
+Description=Life OS morning run, daily at {{MORNING_TIME}} and shortly after login
+
+[Timer]
+OnCalendar=*-*-* {{MORNING_TIME}}:00
+Persistent=true
+OnStartupSec=2min
+Unit=personal-os-morning.service
+
+[Install]
+WantedBy=timers.target

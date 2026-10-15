@@ -1,0 +1,741 @@
+# personal-os-setup - the single manifest (see docs/decisions/0002-manifest.md).
+# Every component of the system is listed exactly once. export, install, verify and the docs
+# generator read only this file.
+#
+# Source roots (resolved at runtime, never a literal user path):
+#   {HOME}       %USERPROFILE%
+#   {DOCUMENTS}  [Environment]::GetFolderPath('MyDocuments')   (OneDrive may redirect it)
+#   {VAULT}      personal.yaml -> vault_path
+#   {DEV}        personal.yaml -> dev_root
+#
+# Target roots mirror the same names and land in the repo mirror folders:
+#   HOME/ -> home/   DOCUMENTS/ -> home/Documents/   VAULT/ -> vault/   DEV/ -> dev/
+# The mapping and the file-name rules live in ONE place: setup/lib/manifest.ps1.
+# Files of type template and doc-only carry {{PLACEHOLDERS}}; install.ps1 renders them
+# into the same layout on the target machine (type doc-only only if the file is absent).
+#
+# Types:
+#   copy             live file/tree -> the mirror (verbatim; a copied file that still carries
+#                    known placeholder tokens - the export replaces paths even in copy-typed
+#                    files - is rendered at install time exactly like a template)
+#   template         live file      -> the repo mirror folder (replace filters, placeholders stay)
+#   doc-only         repo-authored, no live source; export never touches it
+#   dir              target directory to create (no source)
+#   winget           programs from windows/winget-*.json (see file)
+#   task             scheduled task from windows/scheduled-tasks/*.xml.tmpl
+#   mcp              MCP server, registered via `claude mcp add-json --scope user`
+#   obsidian-plugin  loaded by install.ps1 from the id/repo/version of the entry itself
+#
+# replace rules run in order at export time:
+#   { root: HOME }        replaces the live home path (both slash styles)
+#   { var: USER_NAME }    replaces the value of personal.yaml:user_name with a placeholder
+# store_as: the name a file is STORED under when it differs from the installed name. A dotted
+#   name git would interpret inside this repo (.gitignore, .gitattributes, .gitleaksignore,
+#   .kopiaignore, .stignore) needs no store_as: that rule is automatic and lives in
+#   setup/lib/manifest.ps1. store_as is only for a starter template, stored as <name>.tmpl.
+version: 1
+
+components:
+
+# -------------------------------------------------------------------------------------------------
+# AREA claude - global Claude Code configuration (~/.claude)
+# -------------------------------------------------------------------------------------------------
+  - id: claude-md
+    area: claude
+    type: template
+    core: true
+    source: "{HOME}/.claude/CLAUDE.md"
+    target: "HOME/.claude/CLAUDE.md"
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { var: GITHUB_ACCOUNT, to: "{{GITHUB_ACCOUNT}}" }
+      - { var: USER_NAME, to: "{{USER_NAME}}" }
+    append: "\n<!-- personal-os-setup: personal additions stay local (never in this repo) -->\n@~/.personal-os/instructions.local.md\n"
+    test: template
+
+  - id: claude-settings
+    area: claude
+    type: template
+    core: true
+    source: "{HOME}/.claude/settings.json"
+    target: "HOME/.claude/settings.json"
+    replace:
+      - { root: HOME, to: "{{HOME_FWD}}", slash: forward }
+      - { root: HOME, to: "{{HOME}}" }
+    test: template
+
+  - id: claude-statusline
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/statusline.ps1"
+    target: "HOME/.claude/statusline.ps1"
+
+  - id: claude-troubleshooting
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/TROUBLESHOOTING.md"
+    target: "HOME/.claude/TROUBLESHOOTING.md"
+
+  - id: claude-gitattributes
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/.gitattributes"
+    target: "HOME/.claude/.gitattributes"
+
+  - id: claude-gitignore
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/.gitignore"
+    target: "HOME/.claude/.gitignore"
+
+  - id: claude-gitleaksignore
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/.gitleaksignore"
+    target: "HOME/.claude/.gitleaksignore"
+
+  - id: claude-kopiaignore
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/.kopiaignore"
+    target: "HOME/.claude/.kopiaignore"
+
+  - id: claude-hooks
+    area: guards
+    type: copy
+    core: true
+    source: "{HOME}/.claude/hooks"
+    target: "HOME/.claude/hooks"
+    recursive: true
+    test: hook-tests
+
+  - id: claude-hook-tests
+    area: guards
+    type: copy
+    core: true
+    source: "{HOME}/.claude/setup/tests"
+    target: "HOME/.claude/setup/tests"
+    recursive: true
+    # notes-* holds the owner's own research results. They stay on his PC and never enter the
+    # repo (skeleton rule), so this entry must not mirror that folder either.
+    exclude: ["__pycache__", "*.pyc", "*test-results*.txt", "notes-*"]
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { var: USER_NAME, to: "{{USER_NAME}}" }
+    test: hook-tests
+
+  - id: claude-agents
+    area: research
+    type: copy
+    core: true
+    source: "{HOME}/.claude/agents"
+    target: "HOME/.claude/agents"
+    recursive: true
+
+  - id: claude-rules
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/rules"
+    target: "HOME/.claude/rules"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+
+  - id: claude-skill-research
+    area: research
+    type: copy
+    core: true
+    source: "{HOME}/.claude/skills/research"
+    target: "HOME/.claude/skills/research"
+    recursive: true
+    exclude: ["__pycache__", "*.pyc"]
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
+  - id: claude-skill-docs-import
+    area: research
+    type: copy
+    core: true
+    source: "{HOME}/.claude/skills/docs-import"
+    target: "HOME/.claude/skills/docs-import"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+
+  - id: claude-skill-life-os-morning
+    area: life-os
+    type: copy
+    core: true
+    source: "{HOME}/.claude/skills/life-os-morning"
+    target: "HOME/.claude/skills/life-os-morning"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+
+  - id: claude-docs-research-standard
+    area: research
+    type: copy
+    core: true
+    source: "{HOME}/.claude/docs/research-standard.md"
+    target: "HOME/.claude/docs/research-standard.md"
+
+  - id: claude-docs-agent-tooling
+    area: research
+    type: copy
+    core: false
+    source: "{HOME}/.claude/docs/agent-tooling.md"
+    target: "HOME/.claude/docs/agent-tooling.md"
+
+  - id: claude-lessons-skeleton
+    area: claude
+    type: doc-only
+    core: true
+    target: "HOME/.claude/docs/lessons.md"
+
+  - id: claude-changelog-skeleton
+    area: claude
+    type: doc-only
+    core: true
+    target: "HOME/.claude/docs/CHANGELOG.md"
+
+  - id: claude-setup-scripts
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/setup/powershell"
+    target: "HOME/.claude/setup/powershell"
+    recursive: true
+    exclude: ["__pycache__"]
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: DOCUMENTS, to: "{{DOCUMENTS}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { var: USER_NAME, to: "{{USER_NAME}}" }
+
+  - id: claude-repair-script
+    area: claude
+    type: copy
+    core: false
+    source: "{HOME}/.claude/setup/repair-claude-code.ps1"
+    target: "HOME/.claude/setup/repair-claude-code.ps1"
+
+  - id: claude-profiles-template
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/profiles-template"
+    target: "HOME/.claude/profiles-template"
+    recursive: true
+
+  - id: claude-life-os
+    area: life-os
+    type: copy
+    core: true
+    source: "{HOME}/.claude/life-os"
+    target: "HOME/.claude/life-os"
+    recursive: true
+    # requirements.txt is repo-authored (claude-life-os-requirements below): it has no live
+    # source of its own, so the recursive export must never claim or remove it.
+    exclude: ["requirements.txt", "__pycache__"]
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { var: USER_NAME, to: "{{USER_NAME}}" }
+
+  - id: claude-life-os-requirements
+    area: life-os
+    type: doc-only
+    core: true
+    target: "HOME/.claude/life-os/requirements.txt"
+
+  - id: claude-other-harnesses
+    area: claude
+    type: copy
+    core: false
+    source: "{HOME}/.claude/setup/other-harnesses"
+    target: "HOME/.claude/setup/other-harnesses"
+    recursive: true
+
+  - id: claude-setup-security
+    area: git
+    type: copy
+    core: true
+    source: "{HOME}/.claude/setup/security"
+    target: "HOME/.claude/setup/security"
+    recursive: true
+
+  - id: home-githooks
+    area: git
+    type: copy
+    core: true
+    source: "{HOME}/.githooks"
+    target: "HOME/.githooks"
+    recursive: true
+
+  - id: home-gitleaks-config
+    area: git
+    type: copy
+    core: true
+    source: "{HOME}/.config/gitleaks/gitleaks.toml"
+    target: "HOME/.config/gitleaks/gitleaks.toml"
+    drop_lines:
+      - "former vault imports"
+      - "user decision 2026-10-08"
+      - "botghost"
+      - "harpa-ai"
+
+  - id: dev-external-templates
+    area: dev
+    type: copy
+    core: true
+    source: "{HOME}/.claude/setup/external"
+    target: "DEV/External"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
+  - id: dev-external-templates-mirror
+    area: dev
+    type: copy
+    core: true
+    source: "{HOME}/.claude/setup/external"
+    target: "HOME/.claude/setup/external"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
+  - id: dev-dirs
+    area: dev
+    type: dir
+    core: true
+    dirs:
+      - "DEV"
+      - "DEV/Projects"
+      - "DEV/Temp"
+
+# -------------------------------------------------------------------------------------------------
+# AREA powershell - profiles in the Documents folder
+# -------------------------------------------------------------------------------------------------
+  - id: pwsh7-profile
+    area: powershell
+    type: copy
+    core: true
+    source: "{DOCUMENTS}/PowerShell/Microsoft.PowerShell_profile.ps1"
+    target: "DOCUMENTS/PowerShell/Microsoft.PowerShell_profile.ps1"
+
+  - id: pwsh51-profile
+    area: powershell
+    type: copy
+    core: true
+    source: "{DOCUMENTS}/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"
+    target: "DOCUMENTS/WindowsPowerShell/Microsoft.PowerShell_profile.ps1"
+
+  # macOS and Linux have no documents folder that pwsh reads; the all-users profile lives in
+  # ~/.config/powershell/profile.ps1 there. The Windows entry above is `unsupported` for those
+  # two systems and this one is `unsupported` for Windows (setup/platforms.yaml).
+  - id: pwsh-profile-unix
+    area: powershell
+    type: copy
+    core: true
+    source: "{HOME}/.config/powershell/profile.ps1"
+    target: "HOME/.config/powershell/profile.ps1"
+
+  - id: pwsh7-config
+    area: powershell
+    type: copy
+    core: true
+    source: "{DOCUMENTS}/PowerShell/powershell.config.json"
+    target: "DOCUMENTS/PowerShell/powershell.config.json"
+
+# -------------------------------------------------------------------------------------------------
+# AREA vault - PersonalOS skeleton (everything personal stays out)
+# -------------------------------------------------------------------------------------------------
+  - id: vault-agents
+    area: vault
+    type: template
+    core: true
+    source: "{VAULT}/AGENTS.md"
+    target: "VAULT/AGENTS.md"
+    replace:
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { root: HOME, to: "{{HOME}}" }
+      - { var: GITHUB_ACCOUNT, to: "{{GITHUB_ACCOUNT}}" }
+      - { var: USER_NAME, to: "{{USER_NAME}}" }
+    test: template
+
+  - id: vault-claude
+    area: vault
+    type: template
+    core: true
+    source: "{VAULT}/CLAUDE.md"
+    target: "VAULT/CLAUDE.md"
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+    test: template
+
+  - id: vault-readme
+    area: vault
+    type: template
+    core: false
+    source: "{VAULT}/README.md"
+    target: "VAULT/README.md"
+    replace:
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { var: GITHUB_ACCOUNT, to: "{{GITHUB_ACCOUNT}}" }
+    test: template
+
+  - id: vault-gitignore
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.gitignore"
+    target: "VAULT/.gitignore"
+
+  - id: vault-stignore
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.stignore"
+    target: "VAULT/.stignore"
+
+  - id: vault-skills-lock
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/skills-lock.json"
+    target: "VAULT/skills-lock.json"
+
+  - id: vault-obsidian-core-plugins
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/core-plugins.json"
+    target: "VAULT/.obsidian/core-plugins.json"
+
+  - id: vault-obsidian-community-plugins
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/community-plugins.json"
+    target: "VAULT/.obsidian/community-plugins.json"
+
+  - id: vault-obsidian-app
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/app.json"
+    target: "VAULT/.obsidian/app.json"
+
+  - id: vault-obsidian-appearance
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.obsidian/appearance.json"
+    target: "VAULT/.obsidian/appearance.json"
+
+  - id: vault-obsidian-daily-notes
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/daily-notes.json"
+    target: "VAULT/.obsidian/daily-notes.json"
+
+  - id: vault-obsidian-templates
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/templates.json"
+    target: "VAULT/.obsidian/templates.json"
+
+  - id: vault-obsidian-graph
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.obsidian/graph.json"
+    target: "VAULT/.obsidian/graph.json"
+
+  - id: vault-obsidian-types
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.obsidian/types.json"
+    target: "VAULT/.obsidian/types.json"
+
+  - id: vault-obsidian-git-data
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.obsidian/plugins/obsidian-git/data.json"
+    target: "VAULT/.obsidian/plugins/obsidian-git/data.json"
+
+  - id: vault-claude-settings
+    area: vault
+    type: template
+    core: true
+    source: "{VAULT}/.claude/settings.json"
+    target: "VAULT/.claude/settings.json"
+    replace:
+      - { root: DOCUMENTS, to: "{{DOCUMENTS}}" }
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+    test: template
+
+  - id: vault-rule-sources
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.claude/rules/sources.md"
+    target: "VAULT/.claude/rules/sources.md"
+
+  - id: vault-skill-vault-lint
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/.claude/skills/vault-lint"
+    target: "VAULT/.claude/skills/vault-lint"
+    recursive: true
+    exclude: ["__pycache__", "*.pyc"]
+
+  - id: vault-skill-json-canvas
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.claude/skills/json-canvas"
+    target: "VAULT/.claude/skills/json-canvas"
+    recursive: true
+
+  - id: vault-skill-obsidian-bases
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.claude/skills/obsidian-bases"
+    target: "VAULT/.claude/skills/obsidian-bases"
+    recursive: true
+
+  - id: vault-skill-obsidian-cli
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.claude/skills/obsidian-cli"
+    target: "VAULT/.claude/skills/obsidian-cli"
+    recursive: true
+
+  - id: vault-skill-obsidian-markdown
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/.claude/skills/obsidian-markdown"
+    target: "VAULT/.claude/skills/obsidian-markdown"
+    recursive: true
+
+  - id: vault-meta-overview-base
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/000-meta/overview.base"
+    target: "VAULT/000-meta/overview.base"
+
+  - id: vault-meta-templates
+    area: vault
+    type: copy
+    core: true
+    source: "{VAULT}/000-meta/templates"
+    target: "VAULT/000-meta/templates"
+    recursive: true
+
+  - id: vault-meta-laptop-setup
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/000-meta/laptop-setup.md"
+    target: "VAULT/000-meta/laptop-setup.md"
+    replace:
+      - { root: VAULT, to: "{{VAULT}}" }
+
+  - id: vault-meta-backup-doc
+    area: backup
+    type: template
+    core: true
+    source: "{VAULT}/000-meta/backup.md"
+    target: "VAULT/000-meta/backup.md"
+    replace:
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+      - { root: HOME, to: "{{HOME}}" }
+      - { var: BACKUP_TIME, to: "{{BACKUP_TIME}}" }
+    test: template
+
+  - id: vault-meta-script-setup-laptop
+    area: vault
+    type: copy
+    core: false
+    source: "{VAULT}/000-meta/scripts/setup-laptop.ps1"
+    target: "VAULT/000-meta/scripts/setup-laptop.ps1"
+    replace:
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: HOME, to: "{{HOME}}" }
+
+  # Starter templates: the working file's structure matters, its content is the owner's.
+  # Stored with a trailing .tmpl, installed without it (see setup/lib/manifest.ps1).
+  - id: vault-meta-index-skeleton
+    area: vault
+    type: doc-only
+    core: true
+    target: "VAULT/000-meta/index.md"
+    store_as: "index.md.tmpl"
+
+  - id: vault-meta-todo-skeleton
+    area: vault
+    type: doc-only
+    core: true
+    target: "VAULT/000-meta/todo.md"
+    store_as: "todo.md.tmpl"
+
+  - id: vault-meta-log-skeleton
+    area: vault
+    type: doc-only
+    core: true
+    target: "VAULT/000-meta/log.md"
+    store_as: "log.md.tmpl"
+
+  - id: vault-archive-readme
+    area: vault
+    type: doc-only
+    core: true
+    target: "VAULT/600-archive/README.md"
+
+  - id: vault-dirs
+    area: vault
+    type: dir
+    core: true
+    dirs:
+      - "VAULT/000-meta/todo-archive"
+      - "VAULT/100-daily"
+      - "VAULT/200-projects"
+      - "VAULT/300-areas"
+      - "VAULT/400-knowledge"
+      - "VAULT/400-knowledge/research"
+      - "VAULT/500-sources"
+      - "VAULT/500-sources/docs"
+      - "VAULT/500-sources/research"
+      - "VAULT/600-archive"
+      - "VAULT/900-inactive"
+      - "VAULT/inbox"
+      - "VAULT/inbox/audio"
+      - "VAULT/inbox/audio/erledigt"
+      - "VAULT/outbox"
+      - "VAULT/trash"
+
+# -------------------------------------------------------------------------------------------------
+# AREA windows - programs, tasks, MCP, obsidian plugins, engine room
+# -------------------------------------------------------------------------------------------------
+  - id: winget-core
+    area: windows
+    type: winget
+    core: true
+    file: "windows/winget-core.json"
+
+  - id: winget-optional
+    area: windows
+    type: winget
+    core: false
+    file: "windows/winget-optional.json"
+
+  - id: task-life-os-morning
+    area: life-os
+    type: task
+    core: true
+    file: "windows/scheduled-tasks/life-os-morning.xml.tmpl"
+    name: "Life OS Morning"
+
+  - id: mcp-exa
+    area: research
+    type: mcp
+    core: true
+    name: "exa"
+    json: '{"type":"http","url":"https://mcp.exa.ai/mcp"}'
+
+  - id: mcp-parallel
+    area: research
+    type: mcp
+    core: true
+    name: "parallel"
+    json: '{"type":"http","url":"https://search.parallel.ai/mcp"}'
+
+  - id: plugins-claude-code
+    area: claude
+    type: generated
+    core: false
+    note: "Claude Code marketplaces and plugins are installed by install.ps1 from settings.json (enabledPlugins)."
+
+  - id: obsidian-plugin-obsidian-git
+    area: vault
+    type: obsidian-plugin
+    core: true
+    name: "obsidian-git"
+    repo: "Vinzent03/obsidian-git"
+    version: "2.40.0"
+
+  - id: obsidian-plugin-tasks
+    area: vault
+    type: obsidian-plugin
+    core: true
+    name: "obsidian-tasks-plugin"
+    repo: "obsidian-tasks-group/obsidian-tasks"
+    version: "8.4.0"
+
+  - id: life-os-venv
+    area: life-os
+    type: generated
+    core: true
+    note: "created by install.ps1: python -m venv %LOCALAPPDATA%\\life-os\\venv + home/.claude/life-os/requirements.txt; model loads on first run (-WithWhisperModel preloads)"
+
+  - id: own-tools
+    area: windows
+    type: generated
+    core: true
+    note: "winget for uv (astral-sh.uv, lands in ~/.local/bin) and gh (GitHub.cli); trufflehog from the official GitHub release, SHA256 checked"
+
+# -------------------------------------------------------------------------------------------------
+# AREA os - the pieces the operating system itself provides (see setup/platforms.yaml)
+# -------------------------------------------------------------------------------------------------
+  - id: os-sync
+    area: backup
+    type: generated
+    core: true
+    note: "Windows: SyncTrayzor carries the Syncthing service. macOS: brew services start syncthing. Linux: systemctl --user enable --now syncthing.service"
+
+  - id: os-backup
+    area: backup
+    type: generated
+    core: true
+    note: "Kopia and KopiaUI from the OS package source. Connecting the repository and typing the password stays manual (decision D8)"
+
+  - id: os-onedrive
+    area: backup
+    type: generated
+    core: true
+    note: "The OneDrive client and the document archive beside the documents folder. Windows and macOS only - there is no official OneDrive client for Linux (decision D9)"

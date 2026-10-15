@@ -1,0 +1,36 @@
+# Life OS transcription environment (Python venv).
+# Install: python -m venv %LOCALAPPDATA%\life-os\venv, then
+#   venv\Scripts\python -m pip install -r %USERPROFILE%\.claude\life-os\requirements.txt
+# Frozen 2026-10-11 from the live venv (Python 3.13.15).
+#
+# The three nvidia pins carry a marker since 2026-10-14: they are the CUDA runtime wheels of
+# the frozen Windows venv, and on macOS (Apple Silicon, no CUDA) no such wheel exists - pip
+# stopped there and the whole venv stayed empty. Measured in the first full-setup CI run:
+# "No matching distribution found for nvidia-cublas-cu12==12.9.2.10" on macos-latest.
+anyio==4.15.1
+av==18.1.0
+certifi==2026.7.22
+click==8.5.0
+colorama==0.4.6
+ctranslate2==4.8.2
+faster-whisper==1.2.1
+filelock==4.0.12
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.7.0
+httpcore==1.0.9
+httpx==0.28.1
+huggingface_hub==1.33.0
+idna==3.20
+numpy==2.5.3
+nvidia-cublas-cu12==12.9.2.10 ; sys_platform != "darwin"
+nvidia-cuda-nvrtc-cu12==12.9.86 ; sys_platform != "darwin"
+nvidia-cudnn-cu12==9.27.0.42 ; sys_platform != "darwin"
+onnxruntime==1.30.0
+packaging==26.3
+protobuf==7.36.2
+PyYAML==6.0.3
+tokenizers==0.23.2
+tqdm==4.70.1
+typing_extensions==4.16.0

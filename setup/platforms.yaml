@@ -1,0 +1,402 @@
+# personal-os-setup - the platform map (decision D3 of the cross-platform task).
+#
+# One entry per manifest component and one section per operating system. The engine reads
+# this file; it never guesses. `setup/tools/verify-all.ps1` check H fails when a manifest
+# component has no entry for windows, macos or linux, and check L fails when
+# docs/platforms.md and this file disagree.
+#
+# Value vocabulary (one value per component and OS):
+#   files                     the component installs files (copy, template, doc-only, dir)
+#   dirs                      the component only creates folders
+#   packages:<path>           installed through the OS package file at <path>
+#   scheduler:<kind>          registered with that OS scheduler
+#                             (task-scheduler | launchd | systemd-user)
+#   mcp | plugin | generated  as today, identical on every OS
+#   reboot-proof:<what>       the OS does the job itself and install.ps1 only reports it
+#   homebrew-service:<name>   enabled with `brew services start <name>`
+#   systemd-user:<unit>       enabled with `systemctl --user enable --now <unit>`
+#   manual:<what>             the person does it once; install.ps1 only prints it
+#   unsupported: <reason>     not available here. A reason is mandatory - red line 5 of
+#                             the task: a component that cannot work is reported, never
+#                             silently disabled.
+
+version: 1
+
+platforms:
+  windows:
+    id: windows
+    os_name: Windows
+    state_dir: "{LOCALAPPDATA}/personal-os-setup"
+    package_tool: winget-configure
+    package_file: windows/configuration.winget
+    scheduler: task-scheduler
+    documents: known-folder
+    default_vault: "{HOME}/PersonalOS"
+    default_dev: "C:/Dev"
+  macos:
+    id: macos
+    os_name: macOS
+    state_dir: "{HOME}/.local/state/personal-os-setup"
+    package_tool: brew-bundle
+    package_file: macos/Brewfile
+    scheduler: launchd
+    documents: "{HOME}/Documents"
+    default_vault: "{HOME}/PersonalOS"
+    default_dev: "{HOME}/Dev"
+  linux:
+    id: linux
+    os_name: Linux
+    state_dir: "{HOME}/.local/state/personal-os-setup"
+    package_tool: distro-packages
+    package_file: linux/packages.yaml
+    scheduler: systemd-user
+    documents: "{HOME}/Documents"
+    default_vault: "{HOME}/PersonalOS"
+    default_dev: "{HOME}/Dev"
+
+components:
+
+  # --- area claude ---
+  claude-md:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-settings:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-statusline:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-troubleshooting:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-gitattributes:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-gitignore:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-gitleaksignore:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-kopiaignore:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area guards ---
+  claude-hooks:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-hook-tests:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area research ---
+  claude-agents:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area claude ---
+  claude-rules:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area research ---
+  claude-skill-research:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-skill-docs-import:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area life-os ---
+  claude-skill-life-os-morning:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area research ---
+  claude-docs-research-standard:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-docs-agent-tooling:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area claude ---
+  claude-lessons-skeleton:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-changelog-skeleton:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-setup-scripts:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-repair-script:
+    windows: "files"
+    macos: "unsupported: the script repairs a Windows Claude Code install (winget, registry, AppData)"
+    linux: "unsupported: the script repairs a Windows Claude Code install (winget, registry, AppData)"
+  claude-profiles-template:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area life-os ---
+  claude-life-os:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-life-os-requirements:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area claude ---
+  claude-other-harnesses:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area git ---
+  claude-setup-security:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  home-githooks:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  home-gitleaks-config:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area dev ---
+  dev-external-templates:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  dev-external-templates-mirror:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  dev-dirs:
+    windows: "dirs"
+    macos: "dirs"
+    linux: "dirs"
+  # --- area powershell ---
+  pwsh7-profile:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  pwsh51-profile:
+    windows: "files"
+    macos: "unsupported: Windows PowerShell 5.1 does not exist on this OS"
+    linux: "unsupported: Windows PowerShell 5.1 does not exist on this OS"
+  pwsh-profile-unix:
+    windows: "unsupported: pwsh on Windows reads the profile from the documents folder, not from ~/.config"
+    macos: "files"
+    linux: "files"
+  pwsh7-config:
+    windows: "files"
+    macos: "unsupported: pwsh on macOS reads profile.ps1, not a Windows powershell.config.json"
+    linux: "unsupported: pwsh on Linux reads profile.ps1, not a Windows powershell.config.json"
+  # --- area vault ---
+  vault-agents:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-claude:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-readme:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-gitignore:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-stignore:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skills-lock:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-core-plugins:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-community-plugins:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-app:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-appearance:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-daily-notes:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-templates:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-graph:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-types:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-obsidian-git-data:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-claude-settings:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-rule-sources:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skill-vault-lint:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skill-json-canvas:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skill-obsidian-bases:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skill-obsidian-cli:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-skill-obsidian-markdown:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-overview-base:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-templates:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-laptop-setup:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area backup ---
+  vault-meta-backup-doc:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  # --- area vault ---
+  vault-meta-script-setup-laptop:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-index-skeleton:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-todo-skeleton:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-meta-log-skeleton:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-archive-readme:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  vault-dirs:
+    windows: "dirs"
+    macos: "dirs"
+    linux: "dirs"
+  # --- area windows ---
+  winget-core:
+    windows: "packages:windows/configuration.winget"
+    macos: "packages:macos/Brewfile"
+    linux: "packages:linux/packages.yaml"
+  winget-optional:
+    windows: "packages:windows/configuration.winget"
+    macos: "packages:macos/Brewfile"
+    linux: "packages:linux/packages.yaml"
+  # --- area life-os ---
+  task-life-os-morning:
+    windows: "scheduler:task-scheduler"
+    macos: "scheduler:launchd"
+    linux: "scheduler:systemd-user"
+  # --- area research ---
+  mcp-exa:
+    windows: "mcp"
+    macos: "mcp"
+    linux: "mcp"
+  mcp-parallel:
+    windows: "mcp"
+    macos: "mcp"
+    linux: "mcp"
+  # --- area claude ---
+  plugins-claude-code:
+    windows: "generated"
+    macos: "generated"
+    linux: "generated"
+  # --- area vault ---
+  obsidian-plugin-obsidian-git:
+    windows: "plugin"
+    macos: "plugin"
+    linux: "plugin"
+  obsidian-plugin-tasks:
+    windows: "plugin"
+    macos: "plugin"
+    linux: "plugin"
+  # --- area life-os ---
+  life-os-venv:
+    windows: "generated"
+    macos: "generated"
+    linux: "generated"
+  # --- area windows ---
+  own-tools:
+    windows: "generated"
+    macos: "generated"
+    linux: "generated"
+  # --- area backup ---
+  os-sync:
+    windows: "manual: start SyncTrayzor once - it carries the Syncthing service and sets up its own autostart"
+    macos: "homebrew-service:syncthing"
+    linux: "systemd-user:syncthing.service"
+  os-backup:
+    windows: "packages:windows/configuration.winget"
+    macos: "packages:macos/Brewfile"
+    linux: "packages:linux/packages.yaml"
+  os-onedrive:
+    windows: "manual: sign in to the OneDrive client once"
+    macos: "manual: sign in to the OneDrive client once"
+    linux: "unsupported: no official OneDrive client for Linux"

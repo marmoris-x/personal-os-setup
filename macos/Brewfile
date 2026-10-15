@@ -1,0 +1,43 @@
+# personal-os-setup - the programs of this system, in Homebrew's own format.
+#
+#   brew bundle --file macos/Brewfile      # install.ps1 runs exactly this
+#
+# Homebrew Bundle is idempotent: a second run installs nothing. Every name below was checked
+# against the Homebrew API on 2026-10-14 (https://formulae.brew.sh/api/formula/<name>.json and
+# /api/cask/<name>.json) - a name that is invented or misspelled is a known attack, and a
+# package manager is not the place to guess.
+#
+# What is NOT here on purpose:
+#   - trufflehog is a formula below; Kopia and SyncTrayzor are casks or formulae that exist
+#   - OneDrive comes from the App Store or Microsoft's own download, not from Homebrew
+#   - Claude Code: `brew install --cask claude-code`, kept out of the bundle because the
+#     version of an agent tool should be a deliberate choice (see docs/platforms.md)
+#   - no `tap` line: `brew bundle` is built into Homebrew and casks come from the cask API, so
+#     neither homebrew/bundle nor homebrew/cask needs tapping. Measured in the second
+#     full-setup run (2026-10-14): `brew bundle` ran on a machine where homebrew/bundle was not
+#     tapped (the tap line itself was the one entry that failed there), and both casks installed.
+#     A third-party tap would belong here - a DEFAULT tap does not, because `brew tap` never
+#     lists one and the live verify would report it as missing forever.
+
+# --- command line ------------------------------------------------------------
+brew "git"              # version control
+brew "gh"               # GitHub CLI: the sign-in the pushes need
+brew "powershell"       # PowerShell 7 - the one script language of this repo (decision D2)
+brew "python@3.13"      # Life OS: the venv and faster-whisper
+brew "jq"               # JSON on the command line
+brew "wget"
+brew "uv"               # python tool runner
+brew "node"             # for tools that ship as npm packages
+
+# --- this repo's own checking tools -----------------------------------------
+brew "gitleaks"         # secret scan, also wired into the git pre-commit hook
+brew "trufflehog"       # secret scan of the full history
+brew "shellcheck"       # checks bootstrap.sh
+
+# --- sync and backup ---------------------------------------------------------
+brew "syncthing"        # the sync engine; "brew services start syncthing" runs it
+brew "kopia"            # the backup CLI
+
+# --- applications ------------------------------------------------------------
+cask "obsidian"         # the vault
+cask "kopiaui"          # the backup GUI - it connects the repository and keeps the password

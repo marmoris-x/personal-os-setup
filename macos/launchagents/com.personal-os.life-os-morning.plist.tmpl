@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd agent "Life OS Morning" - registration template for install.ps1.
+
+  It is installed to ~/Library/LaunchAgents/com.personal-os.life-os-morning.plist and loaded
+  with `launchctl bootstrap gui/$(id -u) <file>`.
+
+  RunAtLoad        = the run at login (the Windows task's LogonTrigger)
+  StartCalendarInterval = the daily run at {{MORNING_TIME}} (the Windows task's CalendarTrigger).
+                   launchd runs a calendar job it missed while the Mac was asleep as soon as
+                   the machine wakes, which is what StartWhenAvailable does on Windows.
+  Placeholders (rendered by install.ps1):
+    {{PWSH_HOST}}     pwsh
+    {{HOME}}          the user's home folder
+    {{MORNING_HOUR}}  hour of {{MORNING_TIME}}
+    {{MORNING_MINUTE}} minute of {{MORNING_TIME}}
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.personal-os.life-os-morning</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{PWSH_HOST}}</string>
+    <string>-NoProfile</string>
+    <string>-File</string>
+    <string>{{HOME}}/.claude/life-os/morning.ps1</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>{{MORNING_HOUR}}</integer>
+    <key>Minute</key>
+    <integer>{{MORNING_MINUTE}}</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>{{HOME}}/.local/state/life-os/morning.log</string>
+  <key>StandardErrorPath</key>
+  <string>{{HOME}}/.local/state/life-os/morning.err</string>
+</dict>
+</plist>

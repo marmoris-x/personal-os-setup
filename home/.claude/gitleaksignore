@@ -1,0 +1,21 @@
+# gitleaks false positives. Checked 2026-09-26.
+# The setup guide contains a deliberately fake test key (sk-0123...) used to test the hook.
+# Until v10.9 the guide was called by its old German name; those fingerprints stay
+# because they point at commits that are already in the history.
+setup/SETUP-AUFTRAG.md:deepseek-api-key:170
+8dadd28696f5542c6b851786763f8157bfc1b575:setup/SETUP-AUFTRAG.md:deepseek-api-key:170
+setup/SETUP-GUIDE.md:deepseek-api-key:170
+setup/SETUP-GUIDE.md:deepseek-api-key:175
+# 2026-09-27: the test result file records the same deliberately fake key in the
+# "re-checked on Windows" section. Same key, same purpose: proving that the hook stops it.
+setup/tests/gitleaks-test-results.txt:deepseek-api-key:23
+# 2026-09-28 (version 12.0): gitleaks 8.30.1 reports the same three places under
+# "generic-api-key" instead of "deepseek-api-key". The entries above stopped matching, and
+# `gitleaks detect` went back to reporting three leaks - all of them this one fake key.
+# Nothing about the key changed; the rule that catches it did. Both spellings stay, because
+# the old ones are the ones a reader will find in the older commits.
+setup/SETUP-GUIDE.md:generic-api-key:185
+setup/tests/gitleaks-test-results.txt:generic-api-key:23
+09e24917d7159c920ae9224f922995537c9e2493:setup/SETUP-GUIDE.md:generic-api-key:175
+fcdec803570c24b4e844d6823e4b4b50225d11d1:setup/tests/gitleaks-test-results.txt:generic-api-key:23
+8dadd28696f5542c6b851786763f8157bfc1b575:setup/SETUP-AUFTRAG.md:generic-api-key:170

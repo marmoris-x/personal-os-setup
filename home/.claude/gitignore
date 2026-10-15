@@ -1,0 +1,38 @@
+# claude-config: whitelist. Everything is ignored except what is listed below.
+*
+!.gitignore
+!.gitleaksignore
+!.kopiaignore
+!.gitattributes
+!README.md
+!CLAUDE.md
+!settings.json
+!statusline.ps1
+!keybindings.json
+!hooks/
+!hooks/*.ps1
+!agents/
+!agents/*.md
+!rules/
+!rules/*.md
+!skills/
+!skills/**
+!profiles-template/
+!profiles-template/*.json
+!docs/
+!docs/**
+!setup/
+!setup/**
+!life-os/
+!life-os/**
+# never, even if matched above
+profiles/
+**/*.key
+**/.env
+**/.credentials.json
+**/settings.local.json
+**/privacy-blocklist.txt
+**/__pycache__/
+**/*.pyc
+# skills synced from claude.ai (Anthropic's own, not part of this setup)
+skills/synced/

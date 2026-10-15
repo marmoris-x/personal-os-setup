@@ -1,0 +1,38 @@
+# gitleaks extra rules (default rules stay active). Tested 2026-09-23 with gitleaks 8.30.1.
+[extend]
+useDefault = true
+
+# Imported public documentation contains sample keys and tokens on purpose. It is third-party
+# text, stored in exactly two places (see the docs rule in CLAUDE.md), and only those two
+# paths are exempt - plus the three exact former vault imports listed at the bottom (user
+# decision 2026-10-08). A real key anywhere else is still caught.
+[[allowlists]]
+description = "imported public documentation: docs/vendor/ in a project, 500-sources/docs/ in the vault"
+paths = [
+  '''(^|[\\/])docs[\\/]vendor[\\/]''',
+  '''(^|[\\/])500-sources[\\/]docs[\\/]''',
+]
+
+# 2026-10-08 (user decision): three imported project docs that used to live in the vault under
+# 500-sources/<project>/docs/... and were moved to their project's docs\vendor\ on 2026-09-29.
+# They stay in the vault's history (91d903b), so a full-history scan needs them exempted - and
+# only them: by exact path, nothing else under 500-sources gained an exemption.
+[[allowlists]]
+description = "three former vault imports, exempted by exact path (user decision 2026-10-08)"
+paths = [
+  '''(^|[\\/])500-sources[\\/]botghost[\\/]docs[\\/]discord[\\/]Discord_Developer_Official_Docs_Bot_API_2026_März\.md$''',
+  '''(^|[\\/])500-sources[\\/]botghost[\\/]docs[\\/]discord[\\/]Discord_Developer_Unofficial_Docs_Bot_API_2026_März\.md$''',
+  '''(^|[\\/])500-sources[\\/]harpa-ai[\\/]harpa-assets[\\/]docs[\\/]Harpa_AI_Docs_Full_Main_Knowledge_Base_2026-03-30\.md$''',
+]
+
+[[rules]]
+id = "deepseek-api-key"
+description = "DeepSeek API key"
+regex = '''\bsk-[a-f0-9]{32}\b'''
+keywords = ["sk-"]
+
+[[rules]]
+id = "openrouter-api-key"
+description = "OpenRouter API key"
+regex = '''\bsk-or-v1-[a-f0-9]{64}\b'''
+keywords = ["sk-or-v1-"]

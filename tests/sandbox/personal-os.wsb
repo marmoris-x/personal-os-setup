@@ -1,0 +1,23 @@
+<Configuration>
+  <!--
+    Windows Sandbox for testing the setup on a throwaway Windows:
+    - repository mapped read-only (a writable mapping would leak changes back to the host)
+    - networking on: the installer downloads pwsh, modules and plugins
+    - the smoke script copies the repo into the sandbox, prepares example values and
+      runs install.ps1 + verify.ps1 against the sandbox itself (not -TargetRoot)
+    One instance at a time. winget does not exist inside the sandbox; the installer
+    bootstraps PowerShell 7 by direct download in that case.
+  -->
+  <Networking>Enable</Networking>
+  <MappedFolders>
+    <MappedFolder>
+      <HostFolder>C:\Dev\Projects\personal-os-setup</HostFolder>
+      <SandboxFolder>C:\personal-os-setup</SandboxFolder>
+      <ReadOnly>true</ReadOnly>
+    </MappedFolder>
+  </MappedFolders>
+  <LogonCommand>
+    <Command>powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\personal-os-setup\tests\sandbox\smoke-install.ps1</Command>
+  </LogonCommand>
+  <MemoryInMB>4096</MemoryInMB>
+</Configuration>

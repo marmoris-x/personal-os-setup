@@ -1,0 +1,30 @@
+# Settings of the repository itself.
+#
+# The acceptance run reads this file (verify-all check S) and compares it with what GitHub
+# answers for the repository it certifies. It exists so that "the repository is in the state
+# the release wants" is a value a reader can see and a check can test - before v3.0.0 that
+# statement stood in the check itself, as the literal word PRIVATE.
+#
+# The three states that matter:
+#   published: false  the release has not happened. The repository must be PRIVATE. A repo
+#                     that already went public while this says false fails the check.
+#   published: true   the release happened. The repository must be PUBLIC and the security
+#                     settings below must be on. A repo that is still private fails the check.
+#   anything else     the check refuses to guess and fails.
+#
+# Flip `published` to true in the same change that runs the publish command - not before, and
+# never without checking that the scans are clean.
+visibility: public
+published: false
+
+# What the check demands of the repository settings once it is public, and checks with
+# `gh api` for both states. The names are the API's own, so a reader can look them up.
+secret_scanning: enabled
+push_protection: enabled
+dependabot_alerts: enabled
+private_vulnerability_reporting: enabled
+
+# Actions settings: a pull request from a fork runs only after a maintainer approved it, and
+# the workflow token may read the repository and nothing else.
+fork_pr_approval: all_external_contributors
+workflow_token: read

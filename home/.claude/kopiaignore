@@ -1,0 +1,15 @@
+# Kopia ignore rules for the source {{HOME}}\.claude (gitignore syntax, forward
+# slashes, a leading "/" means the source root). Keep this file ASCII-only.
+# Why: session transcripts, file history and caches were 344 of 387 MB (measured 2026-10-01)
+# and outlive Claude Code's 30-day cleanup inside backup snapshots.
+# Still backed up: projects/*/memory/, settings, hooks, skills, agents, rules, docs, setup
+# and .claude.json.
+projects/**/*.jsonl
+projects/**/subagents/
+/file-history/
+/paste-cache/
+/debug/
+/session-env/
+/shell-snapshots/
+/tasks/
+/history.jsonl

@@ -1,0 +1,44 @@
+# Example of the personal values file. The real file lives OUTSIDE this repo at
+#   %USERPROFILE%\.personal-os\personal.yaml
+# and is never committed. `install.ps1` asks for these values (or reads them from the file
+# with -NonInteractive). All values below are invented examples.
+
+# Full name used in the archive file-name scheme (e.g. "Sender_DocType_Details_FAMILY_Given_2026-01-31.pdf")
+# The archive schema checks for a given name and a family name of 7 letters each; the guards
+# and scripts assume the archive folder is named "Dokumentenarchiv".
+user_name: "Vera Beispiel"
+user_given: "Vera"
+user_family: "Beispiel"
+
+# GitHub account that hosts your repos
+github_account: "example-user"
+
+# Backblaze B2 bucket name of the backup repository (the name only, never credentials)
+b2_bucket: "example-kopia-backup"
+
+# Where the Obsidian vault lives on this PC
+vault_path: "C:\\PersonalOS"
+
+# Root folder for own code and external repos
+dev_root: "C:\\Dev"
+
+# Documents folder is detected via [Environment]::GetFolderPath('MyDocuments')
+
+# Name of the archive folder that sits next to the Documents folder (add-only rule)
+archive_dir_name: "Dokumentenarchiv"
+
+# The folder names directly under the archive folder, and the life-area folder names of the
+# vault. They are personal: they say what the owner keeps and how his life is cut up. The
+# repository carries none of the real ones, so the archive script (add-to-archive.ps1), the
+# privacy scan and the archive-name scan all read them from this file at run time
+# (setup/lib/personal.ps1; docs/decisions/0004-personal-layer.md). One value per line, quoted
+# or bare - the readers accept this shape and refuse anything else inside the block.
+archive_categories:
+  - "01_Example"
+  - "02_Example"
+
+# Times for the scheduled jobs (local time, HH:mm)
+morning_time: "07:00"
+backup_time: "12:30"
+
+# Extra Syncthing device IDs are configured interactively when pairing; nothing goes here.

@@ -1,0 +1,283 @@
+{
+  "$schema": "https://aka.ms/winget-packages.schema.2.0.json",
+  "Sources": [
+    {
+      "SourceDetails": {
+        "Argument": "https://cdn.winget.microsoft.com/cache",
+        "Identifier": "Microsoft.Winget.Source_8wekyb3d8bbwe",
+        "Name": "winget",
+        "Type": "Microsoft.PreIndexed.Package"
+      },
+      "Packages": [
+        {
+          "PackageIdentifier": "Adobe.Acrobat.Pro"
+        },
+        {
+          "PackageIdentifier": "Adobe.CreativeCloud"
+        },
+        {
+          "PackageIdentifier": "Anaconda.Miniconda3"
+        },
+        {
+          "PackageIdentifier": "Anki.Anki"
+        },
+        {
+          "PackageIdentifier": "Bitwarden.Bitwarden"
+        },
+        {
+          "PackageIdentifier": "calibre.calibre"
+        },
+        {
+          "PackageIdentifier": "ch.LosslessCut"
+        },
+        {
+          "PackageIdentifier": "Comfy.ComfyUI-Desktop"
+        },
+        {
+          "PackageIdentifier": "CrystalRich.LockHunter"
+        },
+        {
+          "PackageIdentifier": "Discord.Discord"
+        },
+        {
+          "PackageIdentifier": "ebkr.r2modman"
+        },
+        {
+          "PackageIdentifier": "EclipseAdoptium.Temurin.8.JRE"
+        },
+        {
+          "PackageIdentifier": "ElementLabs.LMStudio"
+        },
+        {
+          "PackageIdentifier": "EpicGames.EpicGamesLauncher"
+        },
+        {
+          "PackageIdentifier": "EpicGames.EpicOnlineServices"
+        },
+        {
+          "PackageIdentifier": "Espanso.Espanso"
+        },
+        {
+          "PackageIdentifier": "GitHub.GitHubDesktop"
+        },
+        {
+          "PackageIdentifier": "Google.AntigravityIDE"
+        },
+        {
+          "PackageIdentifier": "JAMSoftware.TreeSize"
+        },
+        {
+          "PackageIdentifier": "Kitware.CMake"
+        },
+        {
+          "PackageIdentifier": "Malwarebytes.Malwarebytes"
+        },
+        {
+          "PackageIdentifier": "Microsoft.AppInstaller"
+        },
+        {
+          "PackageIdentifier": "Microsoft.CLRTypesSQLServer.2019"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DirectX"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.DesktopRuntime.10"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.DesktopRuntime.6"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.Native.Runtime"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.SDK.10"
+        },
+        {
+          "PackageIdentifier": "Microsoft.DotNet.SDK.8"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Edge"
+        },
+        {
+          "PackageIdentifier": "Microsoft.GameInput"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Office"
+        },
+        {
+          "PackageIdentifier": "Microsoft.OneDrive"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Outlook"
+        },
+        {
+          "PackageIdentifier": "Microsoft.Teams"
+        },
+        {
+          "PackageIdentifier": "Microsoft.UI.Xaml.2.7"
+        },
+        {
+          "PackageIdentifier": "Microsoft.UI.Xaml.2.8"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCLibs.14"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCLibs.Desktop.14"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2005.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2008.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2008.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2010.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2010.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2012.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2012.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2013.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2013.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2015+.x64"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VCRedist.2015+.x86"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VisualStudio.2022.Community"
+        },
+        {
+          "PackageIdentifier": "Microsoft.VisualStudioCode"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsAppRuntime.1.5"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsAppRuntime.1.6"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsAppRuntime.1.7"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsAppRuntime.1.8"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsAppRuntime.2"
+        },
+        {
+          "PackageIdentifier": "Microsoft.WindowsSDK.10.0.26100"
+        },
+        {
+          "PackageIdentifier": "mpv.net"
+        },
+        {
+          "PackageIdentifier": "Nikse.SubtitleEdit"
+        },
+        {
+          "PackageIdentifier": "Ninja-build.Ninja"
+        },
+        {
+          "PackageIdentifier": "Nvidia.Nsight.Compute"
+        },
+        {
+          "PackageIdentifier": "Nvidia.PhysX"
+        },
+        {
+          "PackageIdentifier": "OBSProject.OBSStudio"
+        },
+        {
+          "PackageIdentifier": "Ollama.Ollama"
+        },
+        {
+          "PackageIdentifier": "OpenWhispr.OpenWhispr"
+        },
+        {
+          "PackageIdentifier": "Oracle.VirtualBox"
+        },
+        {
+          "PackageIdentifier": "Parsec.Parsec"
+        },
+        {
+          "PackageIdentifier": "Parsec.ParsecVUD"
+        },
+        {
+          "PackageIdentifier": "PaulPacifico.ShutterEncoder"
+        },
+        {
+          "PackageIdentifier": "pinokiocomputer.pinokio"
+        },
+        {
+          "PackageIdentifier": "Python.Launcher"
+        },
+        {
+          "PackageIdentifier": "Python.PythonInstallManager"
+        },
+        {
+          "PackageIdentifier": "qBittorrent.qBittorrent"
+        },
+        {
+          "PackageIdentifier": "RARLab.WinRAR"
+        },
+        {
+          "PackageIdentifier": "REALiX.HWiNFO"
+        },
+        {
+          "PackageIdentifier": "RevoUninstaller.RevoUninstallerPro"
+        },
+        {
+          "PackageIdentifier": "Roblox.Roblox"
+        },
+        {
+          "PackageIdentifier": "RockstarGames.Launcher"
+        },
+        {
+          "PackageIdentifier": "Stacher.Stacher"
+        },
+        {
+          "PackageIdentifier": "Telegram.TelegramDesktop"
+        },
+        {
+          "PackageIdentifier": "Valve.Steam"
+        },
+        {
+          "PackageIdentifier": "voidtools.Everything"
+        },
+        {
+          "PackageIdentifier": "XnSoft.XnShell"
+        },
+        {
+          "PackageIdentifier": "XnSoft.XnViewMP"
+        }
+      ]
+    },
+    {
+      "SourceDetails": {
+        "Argument": "https://storeedgefd.dsx.mp.microsoft.com/v9.0",
+        "Identifier": "StoreEdgeFD",
+        "Name": "msstore",
+        "Type": "Microsoft.Rest"
+      },
+      "Packages": [
+        {
+          "PackageIdentifier": "XP89DCGQ3K6VLD"
+        }
+      ]
+    }
+  ]
+}

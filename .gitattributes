@@ -1,0 +1,13 @@
+# Line endings: what the repository stores is what a checkout gives. No conversion, ever.
+#
+# `* -text` is deliberate and load-bearing. The mirror folders (`home/`, `vault/`, `dev/`) hold
+# files exactly as they land on a target machine, and several checks compare bytes: acceptance
+# check J installs from the repository and compares sha256 against the recorded v2.1.2 baseline.
+# With the earlier rules (`* text=auto`, `*.ps1 text eol=crlf`) a checkout rewrote 113 of those
+# files to CRLF, so check J reported 113 differences on every clone and on every scratch copy
+# made with `git clone` or `git archive` (review 17, finding F5) - noise that would bury a real
+# change. With `-text`, git stores and checks out the bytes unchanged, so any copy of this
+# repository is byte-identical to the working tree it was committed from, on every system.
+#
+# Do not add `text=auto` or `eol=` rules back: they make the checkout depend on the machine.
+* -text

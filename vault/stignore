@@ -1,0 +1,29 @@
+// Syncthing ignore patterns for this vault ({{VAULT}}).
+// Reference: https://docs.syncthing.net/users/ignoring.html
+// Decisions and reasons: PROGRESS.md of life-os phase 1, part 2.
+
+// Git stays on the PC - only one sync system (part 2.6).
+/.git
+
+// Device-specific Obsidian state: window layout and per-device cache.
+/.obsidian/workspace.json
+/.obsidian/workspace-mobile.json
+/.obsidian/cache
+
+// The git plugin stays PC-only - no second sync on the phone (part 2.6).
+/.obsidian/plugins/obsidian-git
+
+// Personal archive: PC only (user decision 2026-10-08).
+/600-archive
+
+// Local working folders (send copies, deleted notes): PC only.
+/outbox
+/trash
+
+// Kopia writes nothing into this folder today (its config lives in %APPDATA%\kopia).
+// Belt and braces in case it ever does.
+/.kopia*
+/kopia.repository
+
+// Voice recordings (part 3): sent from the phone only, never back.
+/inbox/audio

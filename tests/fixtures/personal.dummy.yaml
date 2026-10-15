@@ -1,0 +1,12 @@
+# Example personal values for TESTS and CI. Never real data.
+# install.ps1 -TargetRoot / verify.ps1 -TargetRoot use this when no personal.yaml exists.
+user_name: "Vera Beispiel"
+user_given: "Vera"
+user_family: "Beispiel"
+github_account: "example-user"
+b2_bucket: "example-kopia-backup"
+vault_path: "C:\\vault-dummy"
+dev_root: "C:\\dev-dummy"
+archive_dir_name: "Dokumentenarchiv"
+morning_time: "07:00"
+backup_time: "12:30"

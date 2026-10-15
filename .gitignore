@@ -1,0 +1,7 @@
+# Scratch and local run artifacts only. The repo itself is content; nothing that belongs
+# in it may be ignored here. Only paths that a tool really writes stay listed: a dead entry
+# would hide a stray file from check B instead of keeping the tree clean (review 7).
+tests/_tmp/
+*.log
+__pycache__/
+*.pyc

@@ -1,0 +1,6 @@
+{
+  "folder": "100-daily",
+  "format": "YYYY-MM-DD",
+  "template": "000-meta/templates/daily.md",
+  "autorun": false
+}

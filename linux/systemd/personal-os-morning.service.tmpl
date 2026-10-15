@@ -1,0 +1,13 @@
+# personal-os-morning.service - the work the timer starts (install.ps1 renders this template
+# into ~/.config/systemd/user/personal-os-morning.service).
+#
+# A user unit, not a system one: the morning run reads and writes the user's own vault and
+# never needs root. Placeholders: {{PWSH_HOST}} and {{GITHUB_ACCOUNT}}.
+[Unit]
+Description=Life OS morning run (transcription, life log, cleanup)
+Documentation=https://github.com/{{GITHUB_ACCOUNT}}/personal-os-setup
+
+[Service]
+Type=oneshot
+ExecStart={{PWSH_HOST}} -NoProfile -File %h/.claude/life-os/morning.ps1
+TimeoutStartSec=45min

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Fail-closed pre-commit hook for personal-os-setup.
+#   1. gitleaks on the staged changes (secret patterns)
+#   2. privacy scan on the staged changes (local denylist + general patterns)
+# Deliberate difference from the owner's global hook: if a tool is missing this hook
+# BLOCKS instead of passing silently, because a guard that passes when its tool is
+# missing is no guard. --no-verify still overrides it by hand (self-declaration).
+
+fail() {
+    echo "pre-commit BLOCKED: $1" >&2
+    exit 1
+}
+
+command -v gitleaks >/dev/null 2>&1 || fail "gitleaks is not installed - refusing this commit (fail-closed by design)"
+command -v pwsh >/dev/null 2>&1 || fail "pwsh (PowerShell 7) is not installed - refusing this commit"
+
+gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml \
+    || fail "gitleaks found secret-shaped content in the staged changes"
+
+pwsh -NoProfile -File setup/tools/privacy-scan.ps1 -Staged \
+    || fail "privacy scan found personal data in the staged changes"
+
+exit 0

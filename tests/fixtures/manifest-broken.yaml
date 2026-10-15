@@ -1,0 +1,113 @@
+# Deliberately broken manifest for the red half of the schema test.
+# The first entry is valid; every following entry violates exactly the rule named
+# in its id, and Test-ManifestSchema must report all of them.
+#
+# The content entries point at home/README.md: a copy or template component must find its
+# content in the repo (Test-RepoContentPresent), so a target nobody wrote would make every
+# entry below fail for one more reason than the one its id names. The entry that seeds THAT
+# rule is example-content-missing at the end.
+version: 1
+
+components:
+  - id: example-ok
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-duplicate
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-duplicate
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-bad-area
+    area: kitchen
+    type: copy
+    core: true
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-bad-type
+    area: claude
+    type: magic
+    core: true
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-no-source
+    area: claude
+    type: copy
+    core: true
+    target: "HOME/README.md"
+
+  - id: example-bad-source
+    area: claude
+    type: copy
+    core: true
+    source: 'C:\elsewhere\example.txt'
+    target: "HOME/README.md"
+
+  - id: example-bad-target
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/README.md"
+    target: "C:/elsewhere/example.txt"
+
+  - id: example-no-core
+    area: claude
+    type: copy
+    source: "{HOME}/README.md"
+    target: "HOME/README.md"
+
+  - id: example-mcp-bad-json
+    area: research
+    type: mcp
+    core: true
+    name: "example"
+    json: '{not json'
+
+  - id: example-winget-missing
+    area: windows
+    type: winget
+    core: true
+    file: "winget/does-not-exist.winget"
+
+  - id: example-bad-dir
+    area: dev
+    type: dir
+    core: true
+    dirs:
+      - "XX/example"
+
+  - id: example-dir-traversal
+    area: dev
+    type: dir
+    core: true
+    dirs:
+      - "DEV/../Windows"
+
+  - id: example-dir-newline
+    area: dev
+    type: dir
+    core: true
+    dirs:
+      - "DEV\n"
+
+  # otherwise valid: the only thing wrong is that no file of this name was ever written
+  - id: example-content-missing
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/example-not-in-the-repo.txt"
+    target: "HOME/.claude/example-not-in-the-repo.txt"

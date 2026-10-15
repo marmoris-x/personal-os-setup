@@ -1,0 +1,140 @@
+# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/0.2
+#
+# personal-os-setup - the core programs of a Windows machine, in WinGet's own declarative
+# format. install.ps1 runs:
+#
+#   winget configure --file windows/configuration.winget --accept-configuration-agreements --disable-interactivity
+#
+# Format and resource names follow Microsoft's "How to author a WinGet Configuration file"
+# (learn.microsoft.com/windows/package-manager/configuration/create, read 2026-10-14). It needs
+# WinGet 1.6.2631 or newer; on an older winget install.ps1 falls back to the import lists
+# windows/winget-core.json and windows/winget-optional.json, which is why those two files stay.
+#
+# Two honest notes about what this file does and does not do (task decision D5):
+#   - The second administrator run does NOT disappear. Microsoft's own example gives every
+#     package resource `securityContext: elevated`, and a machine-wide install needs that
+#     right. install.ps1 still reports the extra step at the end of a normal run.
+#   - LongPathsEnabled stays with the os-extras stage. The schema version below carries no
+#     registry setting that I could verify, and a name I have not seen documented is exactly
+#     the kind of invention this repo does not ship.
+#
+# The optional programs of windows/winget-optional.json are deliberately NOT in here: they are
+# large and personal (Adobe, Steam, Visual Studio), and a declarative file that quietly installs
+# them would be a surprise. install.ps1 installs them only with -WithOptional.
+properties:
+  configurationVersion: 0.2.0
+  assertions:
+    - resource: Microsoft.Windows.Developer/OsVersion
+      directives:
+        description: Windows 10 2004 (build 19041) or newer
+        allowPrerelease: true
+      settings:
+        MinVersion: '10.0.19041'
+  resources:
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: powershell
+      directives:
+        description: PowerShell 7 - the script language of this repo on every system
+        securityContext: elevated
+      settings:
+        id: Microsoft.PowerShell
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: git
+      directives:
+        description: Git for Windows
+        securityContext: elevated
+      settings:
+        id: Git.Git
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: gh
+      directives:
+        description: GitHub CLI - the sign-in the pushes need
+        securityContext: elevated
+      settings:
+        id: GitHub.cli
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: gitleaks
+      directives:
+        description: Secret scan, also wired into the git pre-commit hook
+        securityContext: elevated
+      settings:
+        id: Gitleaks.Gitleaks
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: python
+      directives:
+        description: Python 3.13 - Life OS (faster-whisper) runs in a venv
+        securityContext: elevated
+      settings:
+        id: Python.Python.3.13
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: uv
+      directives:
+        description: uv, the python tool runner
+        securityContext: elevated
+      settings:
+        id: astral-sh.uv
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: nodejs
+      directives:
+        description: Node.js - for tools that ship as npm packages
+        securityContext: elevated
+      settings:
+        id: OpenJS.NodeJS
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: claude
+      directives:
+        description: Claude Code
+        securityContext: elevated
+      settings:
+        id: Anthropic.Claude
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: windows-terminal
+      directives:
+        description: Windows Terminal
+        securityContext: elevated
+      settings:
+        id: Microsoft.WindowsTerminal
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: obsidian
+      directives:
+        description: Obsidian - the vault
+        securityContext: elevated
+      settings:
+        id: Obsidian.Obsidian
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: synctrayzor
+      directives:
+        description: SyncTrayzor - it carries the Syncthing service on Windows
+        securityContext: elevated
+      settings:
+        id: GermanCoding.SyncTrayzor
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: kopiaui
+      directives:
+        description: KopiaUI - the backup GUI; the repository password is typed there
+        securityContext: elevated
+      settings:
+        id: Kopia.KopiaUI
+        source: winget

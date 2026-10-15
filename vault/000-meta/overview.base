@@ -1,0 +1,42 @@
+filters:
+  and:
+    # The templates carry the same type values as real notes, so without
+    # this the tables show a row called "project" and one called "person".
+    - not:
+        - 'file.inFolder("000-meta/templates")'
+    - or:
+        - 'type == "project"'
+        - 'type == "person"'
+        - 'type == "organisation"'
+
+properties:
+  status:
+    displayName: "Status"
+  repo:
+    displayName: "Code lives at"
+  date:
+    displayName: "Since"
+
+views:
+  - type: table
+    name: "Projects"
+    filters:
+      and:
+        - 'type == "project"'
+    order:
+      - file.name
+      - status
+      - repo
+      - date
+
+  - type: table
+    name: "People and organisations"
+    filters:
+      or:
+        - 'type == "person"'
+        - 'type == "organisation"'
+    order:
+      - file.name
+      - org
+      - status
+      - date

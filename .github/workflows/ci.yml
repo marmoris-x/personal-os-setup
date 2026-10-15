@@ -1,0 +1,195 @@
+name: ci
+
+# The matrix is the point of this workflow: the same commands run on Windows and Linux on every
+# push, so a change that only works on one of them is red before it is merged.
+#
+# macOS costs ten times a Linux minute (docs/billing on GitHub's per-minute rates), so it runs
+# on releases, once a week and when asked - not on every push. Decision D-macos of the
+# cross-platform task; docs/platforms.md names the same rule.
+#
+# Every job runs setup/tools/ci-smoke.ps1 FIRST: install into an empty target, verify it,
+# install a second time and print "IDEMPOTENT-OK". First, because a broken install then shows
+# its full output in the job log before the deeper steps run (measured 2026-10-14: the checks
+# step reported the failing install as one truncated line). Acceptance check O reads the
+# conclusion of this step out of the run's JSON (`gh run view --json jobs`) - a job that
+# skipped the step fails the check, and the marker line is what a human reads in the log.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Mondays, 04:23 UTC - off the hour, so it does not queue behind everyone else's cron
+    - cron: '23 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history: the secret scans need every commit
+
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module powershell-yaml -Scope CurrentUser -Force
+
+      - name: Version and system (runtime check, never assumed)
+        shell: pwsh
+        run: |
+          $PSVersionTable.PSVersion
+          pwsh -NoProfile -Command '. ./setup/lib/manifest.ps1; . ./setup/lib/platform.ps1; "platform=" + (Get-PlatformId)'
+
+      - name: Test install, verify, second install changes nothing
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/ci-smoke.ps1 -WorkDir "${{ runner.temp }}/personal-os-smoke"
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-smoke.ps1 failed" }
+
+      - name: Repo checks (analyzer, Pester with install e2e, guard suites, docs freshness)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/check.ps1
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/check.ps1 failed" }
+
+      - name: Privacy scan (worktree and history, general patterns)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/privacy-scan.ps1
+          if ($LASTEXITCODE -ne 0) { throw "privacy scan (worktree) found findings" }
+          pwsh -NoProfile -File setup/tools/privacy-scan.ps1 -History
+          if ($LASTEXITCODE -ne 0) { throw "privacy scan (history) found findings" }
+
+      - name: gitleaks (full history)
+        shell: pwsh
+        run: |
+          $ver = '8.30.1'
+          $base = "https://github.com/gitleaks/gitleaks/releases/download/v$ver"
+          if ($IsWindows) { $asset = "gitleaks_${ver}_windows_x64.zip" } else { $asset = "gitleaks_${ver}_linux_x64.tar.gz" }
+          Invoke-WebRequest -Uri "$base/$asset" -OutFile "gitleaks-$asset"
+          Invoke-WebRequest -Uri "$base/gitleaks_${ver}_checksums.txt" -OutFile checksums.txt
+          $expected = ((Get-Content checksums.txt | Select-String ([regex]::Escape($asset))) -split '\s+')[0]
+          $actual = (Get-FileHash "gitleaks-$asset" -Algorithm SHA256).Hash.ToLower()
+          if ($expected -ne $actual) { throw "gitleaks download checksum mismatch" }
+          if ($IsWindows) { Expand-Archive "gitleaks-$asset" -DestinationPath ./gitleaks-bin -Force }
+          else { New-Item -ItemType Directory -Force ./gitleaks-bin | Out-Null; tar -xzf "gitleaks-$asset" -C ./gitleaks-bin }
+          $bin = if ($IsWindows) { './gitleaks-bin/gitleaks.exe' } else { './gitleaks-bin/gitleaks' }
+          if (-not $IsWindows) { chmod +x $bin }
+          & $bin git --redact --no-banner --config .gitleaks.toml
+          if ($LASTEXITCODE -ne 0) { throw "gitleaks found findings" }
+          Write-Host "gitleaks: clean"
+
+      - name: shellcheck bootstrap.sh
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck --version
+          shellcheck bootstrap.sh
+
+      - name: bootstrap.sh syntax
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash -n bootstrap.sh
+
+  # macOS: expensive minutes, so it runs on a release tag, once a week and when asked by hand.
+  # It runs the same steps - a platform that is only checked when someone remembers is not
+  # checked at all.
+  macos:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module Pester -RequiredVersion 5.9.1 -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module powershell-yaml -Scope CurrentUser -Force
+
+      - name: Test install, verify, second install changes nothing
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/ci-smoke.ps1 -WorkDir "${{ runner.temp }}/personal-os-smoke"
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-smoke.ps1 failed" }
+
+      - name: Repo checks (analyzer, Pester with install e2e, guard suites, docs freshness)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/check.ps1
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/check.ps1 failed" }
+
+      - name: Privacy scan (worktree and history)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/privacy-scan.ps1
+          if ($LASTEXITCODE -ne 0) { throw "privacy scan (worktree) found findings" }
+          pwsh -NoProfile -File setup/tools/privacy-scan.ps1 -History
+          if ($LASTEXITCODE -ne 0) { throw "privacy scan (history) found findings" }
+
+      - name: shellcheck bootstrap.sh
+        run: |
+          brew install shellcheck || true
+          shellcheck --version
+          shellcheck bootstrap.sh
+
+  # The real thing, on a machine nobody owns: install.ps1 WITHOUT -TargetRoot, so the package,
+  # scheduler, sync and backup stages really run - the part a test install only renders as a
+  # preview. Then setup/verify.ps1 against the live machine, then a second install that must
+  # change nothing. Weekly, on tags and by hand: a full setup installs packages, registers
+  # services and takes tens of minutes per system, so it does not run on every push.
+  #
+  # What a machine nobody has logged into cannot do is named in the log with its reason by
+  # setup/tools/ci-full-setup.ps1 (no person to sign in, no elevated Windows session, no GUI
+  # session for launchd, no Claude Code). A check that fails for a reason NOT on that list
+  # still turns this job red - the list is a statement about the machine, not a muzzle.
+  full-setup:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # install.ps1 reads the version from the newest git tag
+
+      - name: Install PowerShell modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module powershell-yaml -Scope CurrentUser -Force
+
+      - name: Full setup on this machine (live install, verify, second install)
+        shell: pwsh
+        # GH_TOKEN: the release installs (uv, trufflehog) ask api.github.com, and a runner IP
+        # shares its anonymous quota - measured 2026-10-14: "403 (rate limit exceeded)" on
+        # windows-latest. With a token the limit is per token instead of per address. The value
+        # is never printed by the scripts (only header NAMES travel into a report).
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pwsh -NoProfile -File setup/tools/ci-full-setup.ps1 -WorkDir "${{ runner.temp }}/personal-os-full"
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-full-setup.ps1 failed" }
+

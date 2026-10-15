@@ -1,0 +1,94 @@
+# personal-os-setup - the programs of this system, per package manager.
+#
+# The engine reads this file; it never guesses a name. install.ps1 detects the distribution
+# from /etc/os-release (that is the documented interface, os-release(5)) and picks the block
+# below. A distribution that is neither apt nor dnf gets the whole list printed and that step
+# stops with a clear message (decision D5).
+#
+# Every name was checked against the distribution's own package index on 2026-10-14:
+#   Ubuntu noble / Debian bookworm  https://packages.ubuntu.com/noble/<name>
+#   Fedora                          the Fedora 44 repository RPM index
+# Three names are deliberately NOT in the lists, because they do not exist there:
+#   kopia        - it has its own repository, see `repositories` below (kopia.io/docs/installation)
+#   trufflehog   - no distribution package; see `releases` below (official GitHub release)
+#   wget on dnf  - Fedora ships wget2; "wget2-wget" is the shim that provides the command
+version: 1
+
+apt:
+  packages:
+    - git
+    - gh
+    - curl
+    - wget
+    - jq
+    - python3
+    - python3-venv
+    - python3-pip
+    - syncthing
+    - gitleaks
+    - shellcheck
+    - flatpak
+  repositories:
+    # Kopia is not in any distribution archive. These are the lines kopia.io documents.
+    - name: kopia
+      marker: /etc/apt/sources.list.d/kopia.list
+      packages: [kopia]
+      setup:
+        - "curl -s https://kopia.io/signing-key | gpg --dearmor -o /etc/apt/keyrings/kopia-keyring.gpg"
+        - "echo \"deb [signed-by=/etc/apt/keyrings/kopia-keyring.gpg] http://packages.kopia.io/apt/ stable main\" | tee /etc/apt/sources.list.d/kopia.list"
+
+dnf:
+  packages:
+    - git
+    - gh
+    - curl
+    - wget2-wget
+    - jq
+    - python3
+    - python3-pip
+    - syncthing
+    - gitleaks
+    - ShellCheck
+    - flatpak
+  repositories:
+    - name: kopia
+      marker: /etc/yum.repos.d/kopia.repo
+      packages: [kopia]
+      setup:
+        - "rpm --import https://kopia.io/signing-key"
+        - "printf '[Kopia]\\nname=Kopia\\nbaseurl=http://packages.kopia.io/rpm/stable/$basearch/\\ngpgcheck=1\\nenabled=1\\ngpgkey=https://kopia.io/signing-key\\n' > /etc/yum.repos.d/kopia.repo"
+
+# Obsidian is published for Linux as a Flatpak and nowhere else. That is the publisher's own
+# channel, so it is the one this repo uses (checked against the Flathub API on 2026-10-14).
+flatpak:
+  remote: flathub
+  remote_url: https://dl.flathub.org/repo/flathub.flatpakrepo
+  apps:
+    - md.obsidian.Obsidian
+
+# Programs that have no package at all: the official GitHub release, checksum verified.
+# The engine downloads the asset, checks it against the checksum file of the same release and
+# unpacks it into ~/.local/bin (setup/lib/releases.ps1 has the rules, tests/Releases.Tests.ps1
+# keeps them).
+#
+# `asset_linux_*` is the END of the file name, not the whole name: a release puts its version
+# into the file name (trufflehog_3.99.2_linux_amd64.tar.gz), so an exact name would go stale
+# with every release. Measured 2026-10-14: the old exact comparison found nothing in the release
+# of that day, and trufflehog stayed missing until the first full-setup CI run reported it.
+# `strip_components` says how many leading path parts the archive carries before the binaries
+# (uv packs them into uv-x86_64-unknown-linux-gnu/); a release without the field unpacks as it is.
+releases:
+  - name: trufflehog
+    repo: trufflesecurity/trufflehog
+    asset_linux_x86_64: linux_amd64.tar.gz
+    asset_linux_arm64: linux_arm64.tar.gz
+    binary: trufflehog
+  # uv has no distribution package (checked 2026-10-14: not in apt on Ubuntu 24.04/26.04, and
+  # Debian's packaging is still in progress - astral-sh/uv issue 13640), and the live verify
+  # wants it in PATH. Its release carries <asset>.sha256 next to each asset.
+  - name: uv
+    repo: astral-sh/uv
+    asset_linux_x86_64: uv-x86_64-unknown-linux-gnu.tar.gz
+    asset_linux_arm64: uv-aarch64-unknown-linux-gnu.tar.gz
+    binary: uv
+    strip_components: 1

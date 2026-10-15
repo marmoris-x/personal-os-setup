@@ -1,0 +1,60 @@
+# Old paths of the layout before 2.1.0, one regular expression per line.
+#
+# setup/tools/verify-all.ps1 (check C) searches every tracked file, the rule files of
+# claude-config and the vault rules for these. A hit means a file still points at the layout
+# from before the restructure.
+#
+# Two things are load-bearing:
+#
+# 1. The guards. Most patterns are unanchored substrings, so without a guard the NEW correct
+#    path matches its own old pattern: `tools/check.ps1` is a substring of `setup/tools/check.ps1`
+#    and `life-os-morgen` is one of `life-os-morning`. Each guard excludes exactly the prefix or
+#    suffix that the new name carries.
+# 2. Only *paths* are listed, never a bare file name. `export.ps1` is still called `export.ps1`;
+#    only its folder changed. A name alone (in a tree drawing, in a message, in
+#    Join-Path $setupDir 'export.ps1') points nowhere, so it is not searched for. What changed is
+#    the location, and a location always has a separator or a `.\` in front of it.
+# 3. Every separator is written `[\\/]`, never a bare `/`. A path written the Windows way
+#    (`sandbox\smoke-install.ps1`) slipped past the first version of this list and left a broken
+#    command in tests/sandbox/personal-os.wsb - a human writing PowerShell uses the backslash,
+#    so the pattern has to see both.
+# 4. A bare folder name is searched for only in its single-quoted PowerShell form
+#    (`'sandbox'`), because that is how Join-Path builds a location out of a name. Double quotes
+#    are deliberately not matched: a JSON or YAML key `"targets"` is data, not a path. `'winget'`
+#    is left out on purpose - the word appears 14 times as a legitimate value (the component
+#    type, the winget command line), so it cannot be told apart from a stale path. That is a
+#    stated limit of this search, not an oversight: what it proves is that no old *path* and no
+#    quoted old *folder name* survives.
+#
+# The files that have to name the old paths are skipped by the check, each with its reason.
+targets[\\/]
+'targets'
+tools[\\/]lib
+(?<!setup[\\/])tools[\\/]check\.ps1
+(?<!setup[\\/])tools[\\/]verify-all\.ps1
+(?<!setup[\\/])tools[\\/]drift-check\.ps1
+(?<!setup[\\/])tools[\\/]generate-docs\.ps1
+(?<!setup[\\/])tools[\\/]privacy-scan\.ps1
+(?<!tests[\\/])sandbox[\\/]
+'sandbox'
+winget[\\/]core\.json
+winget[\\/]optional\.json
+(?<!windows[\\/])scheduled-tasks[\\/]
+'scheduled-tasks'
+requirements-life-os
+(?<!setup[\\/])config[\\/]personal\.example\.yaml
+(?<!setup[\\/])config[\\/]secrets\.example\.md
+AGENT-INSTALL
+docs[\\/]adr[\\/]
+'adr'
+docs[\\/]phone\.md
+morgen\.ps1
+aufraeumen\.ps1
+life-os-morgen(?!ing)
+auftraege
+\.\\export\.ps1
+\./export\.ps1
+\.\\verify\.ps1
+\./verify\.ps1
+\.\\restore\.ps1
+\./restore\.ps1

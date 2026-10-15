@@ -1,0 +1,541 @@
+{
+  "version": "v2.1.2",
+  "note": "Fingerprint of a test install (install.ps1 -TargetRoot <empty> -NonInteractive). Paths are relative to the target root; .install-state is excluded by design.",
+  "roots": [
+    "HOME",
+    "DOCUMENTS",
+    "VAULT",
+    "DEV"
+  ],
+  "fileCount": 132,
+  "files": [
+    {
+      "path": "HOME/.claude/.gitattributes",
+      "sha256": "D04C8910F8A187FA456670CFD7E2243A4C11A5665E00707B2667A7D3C4A7C54F"
+    },
+    {
+      "path": "HOME/.claude/.gitignore",
+      "sha256": "DA387E03241686F70DCCBE62DBF3F63D2BA633ED413EFA09359734DC71148978"
+    },
+    {
+      "path": "HOME/.claude/.gitleaksignore",
+      "sha256": "72291D383E43E23C9FCDB0BBE41185422CBE918A9907A26519179E63678E4966"
+    },
+    {
+      "path": "HOME/.claude/.kopiaignore",
+      "sha256": "0F63674DDA47E7340AD65DC795305AFEFD6339E5092039D5BCB567F15F8149CF"
+    },
+    {
+      "path": "HOME/.claude/agents/evidence-extractor.md",
+      "sha256": "43730E60B9D0B0611F831CE48722A54F4C207B1EE2F1CCF517B3FF386AF59213"
+    },
+    {
+      "path": "HOME/.claude/agents/research-writer.md",
+      "sha256": "6F4AD149594B96071D892D32DA08E31A52DFBCA52119AF1ADBF7E0A4CB4BC185"
+    },
+    {
+      "path": "HOME/.claude/agents/web-researcher.md",
+      "sha256": "3AD248E02306393F9CD1617FE4381A5F00A879223E1CE71312E482051B530F0D"
+    },
+    {
+      "path": "HOME/.claude/CLAUDE.md",
+      "sha256": "A5547DBC40978376E355AD88CE1C76E67C6671B8024F4C65964C69213F36DCC1"
+    },
+    {
+      "path": "HOME/.claude/docs/agent-tooling.md",
+      "sha256": "924191BC4D492E5D6DE78CD0E49E6922BA899326067870563DE6D9BF43D59654"
+    },
+    {
+      "path": "HOME/.claude/docs/CHANGELOG.md",
+      "sha256": "E64BE0E512D97B0F132B0423E2500E187A06FFDFF53481368F531F0F3E367464"
+    },
+    {
+      "path": "HOME/.claude/docs/lessons.md",
+      "sha256": "D36DCDBA9A81FF7FE543206C696A327C80F799D681730851D8D9F5C261DB121B"
+    },
+    {
+      "path": "HOME/.claude/docs/research-standard.md",
+      "sha256": "32CCB81CC32C8015D7BC2BB8E87B4FAAA18F66DAC4B61646DA1D64F135485656"
+    },
+    {
+      "path": "HOME/.claude/hooks/archive-guard.ps1",
+      "sha256": "52DF0314099D8B76206B08AE65BE76D87D20041ACEF9EF914F2F0924C5B422B2"
+    },
+    {
+      "path": "HOME/.claude/hooks/block-dangerous.ps1",
+      "sha256": "4E702C0CE46C95EA50427C07E93F7429712B8E76F37C7C11E5925E45D97E3298"
+    },
+    {
+      "path": "HOME/.claude/hooks/downloads-guard.ps1",
+      "sha256": "E9D24058252C868AE03E0213F41090C5F22F767DF38413DDBBA79A6ECC439084"
+    },
+    {
+      "path": "HOME/.claude/hooks/notification-events.ps1",
+      "sha256": "A996057F8FA177123F6EABED1B6A35A001CA971A51E8836083145A84647A4B5E"
+    },
+    {
+      "path": "HOME/.claude/hooks/notification-idle.ps1",
+      "sha256": "559967BC467169F1E5995EE46510D2FA7B8406DC943C8B627B77DE94FC7C80A2"
+    },
+    {
+      "path": "HOME/.claude/hooks/onedrive-guard.ps1",
+      "sha256": "0BA5B45BC7E45DFF9690BE6C94D7C800C174520086F11E55E8382AE42E14A559"
+    },
+    {
+      "path": "HOME/.claude/hooks/session-check.ps1",
+      "sha256": "DD1929ECFABA50D17E1C5CD81A7AFC5041A17492B5B2278825F4D8448463162A"
+    },
+    {
+      "path": "HOME/.claude/hooks/stop-notify.ps1",
+      "sha256": "FDEB41C09DFC0F200EF5F83156298695DDC7D37D3C91569EB73876E6175B6175"
+    },
+    {
+      "path": "HOME/.claude/hooks/trifecta-guard.ps1",
+      "sha256": "C5315F6133AF680C9BC6994E5C702804818B92C9CFB2426421545AE16C1A865E"
+    },
+    {
+      "path": "HOME/.claude/life-os/cleanup.ps1",
+      "sha256": "843F16BA9B4E9B90CC9EFD982E5296B2E4177597E10F3EA0B01BC8C716A6439D"
+    },
+    {
+      "path": "HOME/.claude/life-os/life-os-common.ps1",
+      "sha256": "9343B200778C12EDA4C6E3F42DB4F521D6350E208CC91DF72E2A0CC38D91C90A"
+    },
+    {
+      "path": "HOME/.claude/life-os/morning.ps1",
+      "sha256": "25A1A2AF95D2B7BA4FB985A82EBC23ADF62CF53DAF83E67C8733505742DE00D2"
+    },
+    {
+      "path": "HOME/.claude/life-os/register-tasks-elevated.ps1",
+      "sha256": "6C395F731F7CBB80A7A6546FD9EB3E6E516F5CA0264E3B590CF1DB02C4AA0225"
+    },
+    {
+      "path": "HOME/.claude/life-os/register-tasks.ps1",
+      "sha256": "A697E1F5865508768F62B1F65D470DFCCAA3D7B48D5035797A60B64C135A739C"
+    },
+    {
+      "path": "HOME/.claude/life-os/requirements.txt",
+      "sha256": "9007E10E1558FC5151F4B79618B2B4EA3AE5FBBA2BD9C6155A21C483BF87C4B4"
+    },
+    {
+      "path": "HOME/.claude/life-os/transcribe_worker.py",
+      "sha256": "2D0A0AD8CAA4C206F2982C1243CA58A146305F527591E4865A32D156AC8DE8C6"
+    },
+    {
+      "path": "HOME/.claude/life-os/transcribe.ps1",
+      "sha256": "F34C1EC21CE723E0A06B81B080E76840C27F88AE29C8CED620B237065FDE3B80"
+    },
+    {
+      "path": "HOME/.claude/profiles-template/deepseek.json",
+      "sha256": "335BD7844DD11C104FA96845F845C73CE1B0F7CE3FA6ADFAF88E2A1F6D1D9C7D"
+    },
+    {
+      "path": "HOME/.claude/profiles-template/openrouter.json",
+      "sha256": "F8896BB20962593B665964545614C969A49A56ABE7236BD84E3E3BDC7932AA94"
+    },
+    {
+      "path": "HOME/.claude/rules/browser-extensions-userscripts.md",
+      "sha256": "4189EEF72F2EEFADDE3018534561956D59AE5BB3560AE0B8DE38C437747D7981"
+    },
+    {
+      "path": "HOME/.claude/rules/dotnet-csharp.md",
+      "sha256": "E5913964BFAAA220B0FC52A9A25C7C4B2878431152008CDC8DA33A09F6E7CA84"
+    },
+    {
+      "path": "HOME/.claude/rules/javascript-typescript.md",
+      "sha256": "3A344E5641D44641AF128774851316E4CAD6C583416C4F380EFCFB4E96E883C6"
+    },
+    {
+      "path": "HOME/.claude/rules/markdown-obsidian.md",
+      "sha256": "E353D3F051AB04B8FF536C0FF60FE22BE835EA1D57EE069B934B3EA7D8414B1E"
+    },
+    {
+      "path": "HOME/.claude/rules/powershell-batch.md",
+      "sha256": "61F6163331B312D6A38D3912B16E0F12F162CB101574BA7BD36C66DDEB223440"
+    },
+    {
+      "path": "HOME/.claude/rules/python.md",
+      "sha256": "B2282C1399444FF942716F8FB3F3709332A734A9332874E5767A0CD22E700C75"
+    },
+    {
+      "path": "HOME/.claude/settings.json",
+      "sha256": "7A2DB7E9C871EA5D24F8FFF83659EE538102FECB1364B98DE9611EE2393E3722"
+    },
+    {
+      "path": "HOME/.claude/setup/external/CLAUDE.md",
+      "sha256": "D5F35230243D29CBF8FF43C63804542697CEF6B48E1B51E1606FF4B7AB90346A"
+    },
+    {
+      "path": "HOME/.claude/setup/external/README.md",
+      "sha256": "0F2D13CBAC632A2CB6B76220543646F3E382EADC428B1D3564A3F1A50F76E366"
+    },
+    {
+      "path": "HOME/.claude/setup/other-harnesses/agents-skills/docs-import/SKILL.md",
+      "sha256": "212F99EF5E8B9703FEAC4FBDD1B8CE97ECE1A8069C18F654BC6859E2879CB47A"
+    },
+    {
+      "path": "HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md",
+      "sha256": "149B56196E70A25B54B8962AEDE7404278D87DDF3DE390E497AE6B791FBBEB06"
+    },
+    {
+      "path": "HOME/.claude/setup/other-harnesses/codex/config-mcp.toml",
+      "sha256": "B9AE5333DC7A38EA266BCEC68FBA0FA2CC14AC5B4D544E102ABCEC38146CA852"
+    },
+    {
+      "path": "HOME/.claude/setup/other-harnesses/opencode/opencode.json",
+      "sha256": "1F62CC9A17052DE5BEC27EEBB3EF78810978F023101DBB5343009AC6C7EB2D77"
+    },
+    {
+      "path": "HOME/.claude/setup/powershell/add-to-archive.ps1",
+      "sha256": "37E749138C99FEA3B690D7E63F3D63F81562E5814017585360E1F71F746D2E52"
+    },
+    {
+      "path": "HOME/.claude/setup/powershell/claude-profile-functions.ps1",
+      "sha256": "01EF8DA3E95DAAA745AFF9CEC9D04C2468A9407F354853AA66B9C2BB89D4EA6C"
+    },
+    {
+      "path": "HOME/.claude/setup/powershell/set-research-keys.ps1",
+      "sha256": "4744893428B072EFE4D3BDD0C6AAF4B8DB461CF9250EB2392F8D96AF878909F1"
+    },
+    {
+      "path": "HOME/.claude/setup/repair-claude-code.ps1",
+      "sha256": "D4660A32B5AB431298099CB7EF15475354BAD2BB665882CFF597F9C97AA8D922"
+    },
+    {
+      "path": "HOME/.claude/setup/security/githooks/pre-commit",
+      "sha256": "30BC03ADB738569FC06B10C3FDD99B09C334E80C5E10DB2FD40A5D162A69A217"
+    },
+    {
+      "path": "HOME/.claude/setup/security/gitleaks/gitleaks.toml",
+      "sha256": "42D5C5343A718734C7E445EA6438F20D3DCA87E431ED3CF646FEE580AEBBCAEF"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/check-hooks-path.ps1",
+      "sha256": "F517DE8A4914AA8953FCC5C7BDF5E6CDF31BE37570A6813741CEDFEF6CE68E9B"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/run_mutations.py",
+      "sha256": "D95701132B3BBBADC5931FC97CEE0ED7DC12FDC83BDB7AA8EECFB0D1F9381215"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_build_references.py",
+      "sha256": "7707C8EF0E2AF9D8007BD161DBA2952D6D419BA5FD0A0ACBD2EFF08D30ED4508"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_check_article.py",
+      "sha256": "2E0AAD5ABA27F2F04F91644330979E1DBFCF7E83CCCFABB596BA9DC8D59AADA1"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_check_note.py",
+      "sha256": "160CFD0DB11141B1BFF8CB5CE19BC01ADD0E204134B7DFDDA15202644E08EE04"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_check_services.py",
+      "sha256": "D25316A341F9B640796187E5F786AF383BE4F3C4F390F17E386BC9E644975057"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_save_pages.py",
+      "sha256": "98249514E0058647705C1AC75E1CDC64F89BA0DC31F0CB6D3B2CC9C9D31FBE2D"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_store_results.py",
+      "sha256": "11C748EBEE3B98E5058B29DA539E7B0DDBF69473F2ADE4CD4FB2850B11D5B8B3"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/test_verify_evidence.py",
+      "sha256": "9FAA418D834BCE8BDC81EFD9C3E62EF9061C6286A58C2A030BCD2C450221E63B"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/research/testlib.py",
+      "sha256": "B2E9582843D8FAE525369CC7A74D47E1BE8E48F878F2C1C80FF1CFB9DE9BE999"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-add-to-archive.ps1",
+      "sha256": "5E9B4ECE94D1F1FF0CCA22B82BCB8E6167DD66B64D1571DFECC2D26A507FC477"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-archive-guard.ps1",
+      "sha256": "B9567EE11599F05CAFA1F248CCCA689CCC6F0CBAAAA897042B560C8690F5031C"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-block-dangerous-51.ps1",
+      "sha256": "87A0CCD5F58BDC9C154326730005664FB1467DD769EE93072CB2E3B81E99986C"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-block-dangerous.ps1",
+      "sha256": "764C09B5CC7D78C4BD07BDD455AF7710D4DA05A8655E7E49475593239DA92FD4"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-downloads-guard.ps1",
+      "sha256": "E4B792C19FEA349C49C9F5A9D22B18FAD8D1DA1311DF159303E414E1F561D2A0"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-onedrive-guard.ps1",
+      "sha256": "5131C58481D5B5D7169D2BF35821069BBAFDA0662BC3A41BAC6602904EC75CD5"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-session-check.ps1",
+      "sha256": "142E2B6311C983F47F12AC7696E07411750267C2D44B6B8F289BFA834A9A20D1"
+    },
+    {
+      "path": "HOME/.claude/setup/tests/test-trifecta-guard.ps1",
+      "sha256": "2838384DC69673D427675583C5886AE340559FE155BF3AABC0E9DED36AAFB9F8"
+    },
+    {
+      "path": "HOME/.claude/skills/docs-import/SKILL.md",
+      "sha256": "212F99EF5E8B9703FEAC4FBDD1B8CE97ECE1A8069C18F654BC6859E2879CB47A"
+    },
+    {
+      "path": "HOME/.claude/skills/life-os-morning/SKILL.md",
+      "sha256": "82F61345FFC9F6BAE07243AB4A8C5991DA6FAEED8E58327597C238528E410FCF"
+    },
+    {
+      "path": "HOME/.claude/skills/research/references/style-rules.md",
+      "sha256": "9269D3911A76EF2727A975FF9F6F3CF2D4329E2BBE3704BDCD7FC63108BC6B97"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/ai_patterns.py",
+      "sha256": "AFD05AB8D59932E961E5CF787E080086114FA78DC5B3C4B62DEED58438EFCAE2"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/build_references.py",
+      "sha256": "39841D1986230AA9069E9CFF9E40398FC9195B66906C087A66E2A84AD211DA22"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/check_article.py",
+      "sha256": "0328970BC7C8D0EB37A639CC49628C5AECABE4D3D65F8C8BF39B7573D79F3424"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/check_note.py",
+      "sha256": "F480E0263E33F671244D65F3382458BCC03FCF397DD8241759DE6DF9502AA92A"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/check_services.py",
+      "sha256": "A589EFBC92D5046EC430E27533A74D61DBACF3CBCAAEED8437F05CDA0C16C9C4"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/common.py",
+      "sha256": "0C7EB534C188F95791A6722EA63440928129484FC5323F160C8C895A3EC2F195"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/save_pages.py",
+      "sha256": "A1820E07B66F488195195BE01B0155AEA7A7D3B5E6DD26F54CB5120DA9EA875F"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/store_results.py",
+      "sha256": "DBB508601DFBCAEE4F09C76CD68B6201D39AA5551801D4B55B00EB6618D3E516"
+    },
+    {
+      "path": "HOME/.claude/skills/research/scripts/verify_evidence.py",
+      "sha256": "D9B87290762824B860F969F56B8C1AAA7D46DF2552501A3FCD64F95405B92EDA"
+    },
+    {
+      "path": "HOME/.claude/skills/research/SKILL.md",
+      "sha256": "3E1992C934BA60A3B6EE0FC03946619085D52EF6DF2F47B0943882FDAA36989F"
+    },
+    {
+      "path": "HOME/.claude/statusline.ps1",
+      "sha256": "3A635B08C6FA8FF2766419F2870740A88B2FB43B42F945C980EF1E611CEF2784"
+    },
+    {
+      "path": "HOME/.claude/TROUBLESHOOTING.md",
+      "sha256": "0C7CCF26BAEDF4F3E9BDDDDD6A22095A5AC4061ACD6FE04C398B90348713F0AD"
+    },
+    {
+      "path": "HOME/.config/gitleaks/gitleaks.toml",
+      "sha256": "25ECCE317C02560AADE8860FA4678757A9B18E68FA27E518BD4E4F17EB34C08B"
+    },
+    {
+      "path": "HOME/.githooks/pre-commit",
+      "sha256": "30BC03ADB738569FC06B10C3FDD99B09C334E80C5E10DB2FD40A5D162A69A217"
+    },
+    {
+      "path": "DOCUMENTS/PowerShell/Microsoft.PowerShell_profile.ps1",
+      "sha256": "01EF8DA3E95DAAA745AFF9CEC9D04C2468A9407F354853AA66B9C2BB89D4EA6C"
+    },
+    {
+      "path": "DOCUMENTS/PowerShell/powershell.config.json",
+      "sha256": "07B07A34CBA62B4A50E941FA9F568E2719C5573853EC2DF77A4314F64C5D9BB2"
+    },
+    {
+      "path": "DOCUMENTS/WindowsPowerShell/Microsoft.PowerShell_profile.ps1",
+      "sha256": "01EF8DA3E95DAAA745AFF9CEC9D04C2468A9407F354853AA66B9C2BB89D4EA6C"
+    },
+    {
+      "path": "VAULT/.claude/rules/sources.md",
+      "sha256": "A7001EAE2D3D84621E2C72DE15C69FF6F3187AA91C2C5C7D48B24557BE2AC62D"
+    },
+    {
+      "path": "VAULT/.claude/settings.json",
+      "sha256": "16010565301BDBA7D997FFB7D65F92C53E69850BCFEE701D4F81EA703D23E154"
+    },
+    {
+      "path": "VAULT/.claude/skills/json-canvas/references/EXAMPLES.md",
+      "sha256": "C6FCE2E043F98D5BF3C52662A0261AA3E12D5EABBB37585E3C4C52A968B109A1"
+    },
+    {
+      "path": "VAULT/.claude/skills/json-canvas/SKILL.md",
+      "sha256": "788535277BC5F460BEC97D467615A2CE97E2957DAD1B1FC961E645F64C827128"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-bases/references/FUNCTIONS_REFERENCE.md",
+      "sha256": "0D0CD128BC5070EF1ABA2BAEF41BD55B31B3F56961975934D7A5172396CA0006"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-bases/SKILL.md",
+      "sha256": "83BC04A2C306A61C216C0CFECBB4D032CC763896623D229CD2A6DAB811083032"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-cli/SKILL.md",
+      "sha256": "B4D398C64E086D84CFD51BED896B9BDC243A5FD8A9EA2815A261CD9CB4DA3155"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-markdown/references/CALLOUTS.md",
+      "sha256": "3B8F63C90F692AC40E6989FDA2AB2FED3BB482FF515176B40D18DAC8402E516B"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-markdown/references/EMBEDS.md",
+      "sha256": "D9F9F485DED6A32B4D76E59EADDC442BD09FAF851D755F052759FC9AB1A25B2C"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-markdown/references/PROPERTIES.md",
+      "sha256": "0592806CCF78CCF00E27F4C663D766BBC569ECD7218D2A54CB910137377E42B5"
+    },
+    {
+      "path": "VAULT/.claude/skills/obsidian-markdown/SKILL.md",
+      "sha256": "6E1BE3C3A4C4AE5941F576AD2F5F63565127D42EFBE63F360A8AD5D95C840AB7"
+    },
+    {
+      "path": "VAULT/.claude/skills/vault-lint/conflicts.py",
+      "sha256": "06030DD5A03C4A3D2BAF90B4852A5942212564BFC9B3E095CD9F8CB389981701"
+    },
+    {
+      "path": "VAULT/.claude/skills/vault-lint/graph_health.py",
+      "sha256": "28F25AC4E8D3384ABD2D70383F792F9D9E97A75295BECCB6BDE4C00828D4DBF2"
+    },
+    {
+      "path": "VAULT/.claude/skills/vault-lint/project_sync.py",
+      "sha256": "B71CF1CA81B5631E682DC0568B6E59BB956A77C00FF53BF171A41DB9E8E786E6"
+    },
+    {
+      "path": "VAULT/.claude/skills/vault-lint/SKILL.md",
+      "sha256": "9349D81E7610F2D690F68BC747374A95EF679540E8DA56AE7E47623DEDCC5B32"
+    },
+    {
+      "path": "VAULT/.gitignore",
+      "sha256": "4DC6B6F49B9AAD104485A0E18295E13D8643BBC9B8172289B4C9617507527CFD"
+    },
+    {
+      "path": "VAULT/.obsidian/app.json",
+      "sha256": "26DC6F8AD8D7D0B17AABC14008FD354607E4880299C60174CB6B067FA5D88386"
+    },
+    {
+      "path": "VAULT/.obsidian/appearance.json",
+      "sha256": "44136FA355B3678A1146AD16F7E8649E94FB4FC21FE77E8310C060F61CAAFF8A"
+    },
+    {
+      "path": "VAULT/.obsidian/community-plugins.json",
+      "sha256": "728861E476243E66CBF1B27C727E541E10724F995BD20B87D7E8FC6C63E9277F"
+    },
+    {
+      "path": "VAULT/.obsidian/core-plugins.json",
+      "sha256": "763CF20A921FD9955735B278006820B90B207B2FC04D9E79CA648279C7C14276"
+    },
+    {
+      "path": "VAULT/.obsidian/daily-notes.json",
+      "sha256": "23860BE4BAE8F4043AC6EF7D481C77FFCC6E99B36CF13BB67F296FB98E98FB3A"
+    },
+    {
+      "path": "VAULT/.obsidian/graph.json",
+      "sha256": "54CF84AA6C8D6EE172A8408E7B58543F790F40DC16B592A8315E169078C1CD0F"
+    },
+    {
+      "path": "VAULT/.obsidian/plugins/obsidian-git/data.json",
+      "sha256": "CBADD5FD46D0F41EEBC1497AF15CF8C753E4D5277DD78407A7177E837FEE3A60"
+    },
+    {
+      "path": "VAULT/.obsidian/templates.json",
+      "sha256": "C67C7C7F75532CDE2236C3860ED8C39AAE46585CCA6D709280093EF0F2342F63"
+    },
+    {
+      "path": "VAULT/.obsidian/types.json",
+      "sha256": "C361C067AEC5BAE9CDCD2B2EB3865688C45AB4A83945F15FB6E8010FFFCAB08A"
+    },
+    {
+      "path": "VAULT/.stignore",
+      "sha256": "120A974E8A6E1DA2244227C14579C4EA95E57DEB57E545ECD1B5AB14976403A2"
+    },
+    {
+      "path": "VAULT/000-meta/backup.md",
+      "sha256": "982E25A43C18836739EE6358B002DE3BFCDF3A1C2C76171C492CDA9311A76987"
+    },
+    {
+      "path": "VAULT/000-meta/index.md",
+      "sha256": "6E952DCAD6080420ABA693BB27F0DED546CF1A04280AEB7C07464766ED3AEA09"
+    },
+    {
+      "path": "VAULT/000-meta/laptop-setup.md",
+      "sha256": "AD87730D44C2CC7F28215A63E70357603468F04BDC84E57CB276FABDE4CEE3D5"
+    },
+    {
+      "path": "VAULT/000-meta/log.md",
+      "sha256": "571B5F21EA4BDE8A5A5D697F71F92A8879B981B516787E1F5F800605F17849A6"
+    },
+    {
+      "path": "VAULT/000-meta/overview.base",
+      "sha256": "23BAF26C2AA2C4F614B25B6FA7A8E18ED1EFFFEE180FFE5B4D6CD3AD7C711133"
+    },
+    {
+      "path": "VAULT/000-meta/scripts/setup-laptop.ps1",
+      "sha256": "16E09C4F8BF65DBF8F0D9AE80BBCD02651CE66F774A7A70E2629D3FCEB09ED25"
+    },
+    {
+      "path": "VAULT/000-meta/templates/daily.md",
+      "sha256": "EB6BB725071E619EE3A6E755A13B238288786C38E451BE23C8E02E3978BA5CBD"
+    },
+    {
+      "path": "VAULT/000-meta/templates/person.md",
+      "sha256": "89D5F22DB495189B16DDFF55A37534DA3E1B8A13D71CB77FFA5DA3A090285720"
+    },
+    {
+      "path": "VAULT/000-meta/templates/project.md",
+      "sha256": "927B8EC189B14E6616013F6B9761B7180A2654462D508727344B5F15810E2983"
+    },
+    {
+      "path": "VAULT/000-meta/templates/source.md",
+      "sha256": "867D6EFD50A55C5FE5682F096F9D6C3F7A988922542986ED92F83DFE0E919ACE"
+    },
+    {
+      "path": "VAULT/000-meta/todo.md",
+      "sha256": "EA65BA396DE2A89E173D221E11FE5FD3EF6F087F7D3B2C29DE69C1783A522F54"
+    },
+    {
+      "path": "VAULT/600-archive/README.md",
+      "sha256": "AF2459B9EC1165B26051B16F4496BBCB466FBABB3AA20C1ABE68E6366C6D3881"
+    },
+    {
+      "path": "VAULT/AGENTS.md",
+      "sha256": "1F8FEE99E6FF0A164F8EA99F67EA9FC35C38202F21DA857D81E232B65123A405"
+    },
+    {
+      "path": "VAULT/CLAUDE.md",
+      "sha256": "C5C713B93A3EF7711300F6B2894DE72619657179BC25F9687F642A8AEDEABAF6"
+    },
+    {
+      "path": "VAULT/README.md",
+      "sha256": "322EC8A4BE427643F819F5FE3F72D77551F8542A441C2046F3DE3ACCB18FAE13"
+    },
+    {
+      "path": "VAULT/skills-lock.json",
+      "sha256": "F80F9B21ECA7B671B2D49702D8265F98626778566AEC8D93E5ADE08C0DB91654"
+    },
+    {
+      "path": "DEV/External/CLAUDE.md",
+      "sha256": "D5F35230243D29CBF8FF43C63804542697CEF6B48E1B51E1606FF4B7AB90346A"
+    },
+    {
+      "path": "DEV/External/README.md",
+      "sha256": "0F2D13CBAC632A2CB6B76220543646F3E382EADC428B1D3564A3F1A50F76E366"
+    }
+  ]
+}

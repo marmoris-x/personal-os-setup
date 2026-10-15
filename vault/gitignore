@@ -1,0 +1,71 @@
+# Binaries — never in git (git stores every version in full, forever)
+*.pdf
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.tif
+*.tiff
+*.mp3
+*.mp4
+*.m4a
+*.mov
+*.wav
+*.zip
+*.7z
+
+# Exceptions
+!000-meta/**/*.png
+!.obsidian/**/*.png
+
+# Credentials (should never exist here, belt and braces)
+*.age
+*.kdbx
+.env
+.env.*
+
+# Python bytecode, written by the py_compile check the agent runs on the scripts
+__pycache__/
+*.pyc
+
+# Working folders
+outbox/
+trash/
+inbox/
+erledigt/
+
+# Personal documents - local only, never on GitHub (Kopia backs the vault up)
+600-archive/
+000-meta/archive-additions.md
+
+# Local copies of pages that a research run cited (about 0.5 MB each; Kopia backs them up)
+500-sources/research/*/pages/
+900-inactive/research-tests/*/pages/
+
+# Obsidian state (causes merge conflicts)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# Plugin program files (large minified bundles; gitleaks false positives).
+# They stay on disk, sync to the phone via Syncthing and are in the Kopia
+# backup. data.json and manifest.json stay tracked, so settings and plugin
+# versions remain in the history. Decision: user, 2026-10-08.
+.obsidian/plugins/*/main.js
+.obsidian/plugins/*/styles.css
+
+# Syncthing state (machine-local control files, never synced themselves)
+.stfolder/
+.stversions/
+
+# Claude Code local settings (personal, per machine)
+.claude/settings.local.json
+
+# Windows
+Thumbs.db
+desktop.ini

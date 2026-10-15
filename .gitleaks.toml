@@ -1,0 +1,35 @@
+# gitleaks configuration for this repository.
+# The default ruleset stays active; two provider rules are added because this system
+# really uses these two providers (same rules as the owner's global gitleaks config).
+# Allowlist entries are added only with a written reason, one per line, never as a blanket.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "deepseek-api-key"
+description = "DeepSeek API key (sk- followed by 32 hex characters)"
+regex = '''(?i)sk-[a-f0-9]{32}'''
+tags = ["key", "deepseek"]
+
+[[rules]]
+id = "openrouter-api-key"
+description = "OpenRouter API key (sk-or-v1- followed by 64 hex characters)"
+regex = '''(?i)sk-or-v1-[a-f0-9]{64}'''
+tags = ["key", "openrouter"]
+
+# One allowlist entry, added 2026-10-14, with its reason. It excludes a PATH, not a pattern,
+# and it is the only one:
+#
+#   tests/fixtures/install-baseline-v2.1.2.json
+#     The recorded fingerprint of a v2.1.2 test install: 132 entries, each a file path and the
+#     SHA256 of that file's normalised text. Every digest belongs to a file that is in this
+#     repository, so none of them can be a secret, and the default generic-api-key rule reads a
+#     64-character hex value next to the path segment "keys" as an API key. Measured with
+#     gitleaks 8.30.1 on 2026-10-14: Entropy 3.86, in
+#     "HOME/.claude/setup/powershell/set-research-keys.ps1".
+#     The red proof that the rest of the ruleset is untouched: the same gitleaks and the same
+#     config find a seeded test key in a scratch repository under C:\Dev\Temp (see the task
+#     log), and acceptance check 3 runs gitleaks over the full history of this repo.
+[allowlist]
+paths = ['''tests/fixtures/install-baseline-v2\.1\.2\.json''']

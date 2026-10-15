@@ -1,0 +1,9 @@
+#!/bin/sh
+# Global pre-commit hook (all repositories): blocks commits that contain secrets.
+# Uses gitleaks with extra rules for DeepSeek and OpenRouter keys.
+# After checking a false positive, bypass once with:  git commit --no-verify
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "[gitleaks] not installed - secret check skipped" >&2
+  exit 0
+fi
+exec gitleaks git --pre-commit --staged --redact --no-banner --config "$HOME/.config/gitleaks/gitleaks.toml" .

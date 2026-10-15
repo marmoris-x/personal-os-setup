@@ -1,0 +1,14 @@
+{
+  "userIgnoreFilters": [
+    "outbox/",
+    "trash/",
+    "900-inactive/",
+    "500-sources/docs/",
+    "/^500-sources\\/research\\/[^/]+\\/pages\\//"
+  ],
+  "showUnsupportedFiles": false,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "inbox",
+  "attachmentFolderPath": "inbox",
+  "openBehavior": "daily"
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "exa": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp",
+      "enabled": true
+    },
+    "parallel": {
+      "type": "remote",
+      "url": "https://search.parallel.ai/mcp",
+      "enabled": true
+    },
+    "exa-key": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp",
+      "enabled": true,
+      "headers": {
+        "x-api-key": "{env:EXA_API_KEY}"
+      }
+    },
+    "you-free": {
+      "type": "remote",
+      "url": "https://api.you.com/mcp?profile=free",
+      "enabled": true
+    },
+    "you": {
+      "type": "remote",
+      "url": "https://api.you.com/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:YDC_API_KEY}"
+      }
+    },
+    "tavily": {
+      "type": "remote",
+      "url": "https://mcp.tavily.com/mcp/",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:TAVILY_API_KEY}"
+      }
+    },
+    "firecrawl": {
+      "type": "remote",
+      "url": "https://mcp.firecrawl.dev/v2/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:FIRECRAWL_API_KEY}"
+      }
+    }
+  },
+  "tools": {
+    "exa-key*": false,
+    "you*": false,
+    "tavily*": false,
+    "firecrawl*": false,
+    "parallel*": false
+  },
+  "agent": {
+    "researcher": {
+      "description": "Web research with several free search and page-reading services. Use for anything beyond a quick lookup.",
+      "mode": "subagent",
+      "prompt": "{file:~/.agents/skills/web-research/SKILL.md}",
+      "tools": {
+        "exa*": true,
+        "you*": true,
+        "tavily*": true,
+        "firecrawl*": true,
+        "write": false,
+        "edit": false,
+        "parallel*": true
+      }
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "external_directory": {
+      "*": "allow"
+    },
+    "bash": {
+      "*": "allow",
+      "rm -r*": "ask",
+      "rm -fr*": "ask",
+      "Remove-Item*-Recurse*": "ask",
+      "rd /s*": "ask",
+      "rmdir*": "ask",
+      "git reset --hard*": "ask",
+      "git clean*": "ask"
+    }
+  }
+}

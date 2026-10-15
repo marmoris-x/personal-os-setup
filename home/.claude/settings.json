@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe",
+    "CLAUDE_CODE_USE_POWERSHELL_TOOL": "1",
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
+    "BASH_DEFAULT_TIMEOUT_MS": "180000",
+    "BASH_MAX_TIMEOUT_MS": "1800000",
+    "CLAUDE_CODE_IDE_SKIP_AUTO_INSTALL": "1",
+    "CLAUDE_CODE_DISABLE_MOUSE_CLICKS": "1",
+    "DISABLE_COST_WARNINGS": "1",
+    "DISABLE_FEEDBACK_COMMAND": "1",
+    "DISABLE_ERROR_REPORTING": "1",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "GIT_OPTIONAL_LOCKS": "0"
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "allow": [
+      "Edit",
+      "PowerShell(git add *)",
+      "Bash(git add *)",
+      "PowerShell(git commit *)",
+      "Bash(git commit *)",
+      "PowerShell(npm run *)",
+      "Bash(npm run *)",
+      "WebFetch",
+      "WebSearch",
+      "PowerShell(gh search *)",
+      "Bash(gh search *)",
+      "PowerShell(gh repo view *)",
+      "Bash(gh repo view *)",
+      "PowerShell(gh repo clone *)",
+      "Bash(gh repo clone *)",
+      "PowerShell(git clone *)",
+      "Bash(git clone *)",
+      "mcp__exa__*",
+      "mcp__exa-key__*",
+      "mcp__you-free__*",
+      "mcp__you__*",
+      "mcp__tavily__*",
+      "mcp__firecrawl__*",
+      "mcp__parallel__*"
+    ],
+    "deny": [
+      "Read(//c/**/.env)",
+      "Read(//c/**/*.pem)",
+      "Read(/{{DEV_BASH}}/Projects/**/Server Keys/**)",
+      "Read(//c/Users/*/.claude/profiles/**)",
+      "Edit(//c/Users/*/.claude/profiles/**)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "sonnet",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/block-dangerous.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/downloads-guard.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit|Grep|Glob|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/archive-guard.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit|Grep|Glob|Bash|PowerShell|Monitor|Artifact|LSP|WebFetch|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/onedrive-guard.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Edit|Write|NotebookEdit|Grep|Glob|Bash|PowerShell|WebFetch|WebSearch|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/trifecta-guard.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/session-check.ps1"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/stop-notify.ps1"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-WindowStyle",
+              "Hidden",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/notification-idle.ps1"
+            ],
+            "async": true
+          }
+        ]
+      },
+      {
+        "matcher": "permission_prompt|agent_needs_input|agent_completed",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-WindowStyle",
+              "Hidden",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/notification-events.ps1"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "worktree": {
+    "bgIsolation": "none"
+  },
+  "defaultShell": "powershell",
+  "statusLine": {
+    "type": "command",
+    "command": "{{PWSH_PATH}} -NoProfile -ExecutionPolicy Bypass -File {{HOME_FWD}}/.claude/statusline.ps1"
+  },
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "codeguard-security@project-codeguard": false,
+    "context7@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "project-codeguard": {
+      "source": {
+        "source": "github",
+        "repo": "cosai-oasis/project-codeguard"
+      }
+    }
+  },
+  "language": "german",
+  "feedbackSurveyRate": 0,
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "high"
+    },
+    "claude-sonnet-5-5": {
+      "effortLevel": "medium"
+    }
+  },
+  "autoCompactWindow": 400000,
+  "fastModePerSessionOptIn": true,
+  "promptSuggestionEnabled": false,
+  "pluginConfigs": {
+    "agents-md@builtin": {
+      "options": {
+        "instructionFiles": "claude-md-and-agents-md"
+      }
+    }
+  },
+  "tui": "fullscreen",
+  "autoMemoryEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
+  "claudeMdExcludes": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**"
+  ]
+}

@@ -1,0 +1,2 @@
+# Git hooks run in Git's sh; a Windows line ending in the first line breaks them.
+setup/security/githooks/pre-commit text eol=lf
