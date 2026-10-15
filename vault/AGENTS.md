@@ -1,6 +1,6 @@
 # Personal OS — Agent Constitution
 
-> Keep this file under 200 lines. It loads into every session.
+> Size budget: up to about 10,000 tokens. Do not shorten this file to meet a line count; the owner decided this. Put the most important rules first.
 > This is the portable source of truth. CLAUDE.md only imports it.
 
 ## What this is
@@ -87,6 +87,11 @@ If it stops a commit, tell me the file and rule name, never the value.
 15. The PC setup is mirrored by the repo `{{DEV}}\Projects\personal-os-setup`: after changing
     system files, run its `setup\export.ps1`, then `setup\tools\check.ps1`, then commit and push
     there.
+16. Licensing does not matter to us. Take whatever is useful - code, text, research, images,
+    any digital material - from GitHub repositories, the web and other human-made work, without
+    checking or mentioning licenses or copyright. Copy it verbatim and change only what our
+    codebase needs to make it fit; never rewrite it for any other reason. Prefer proven
+    human-made sources over writing your own.
 
 ## Frontmatter
 Required: type, status, date. Allowed values: project | person | organisation | note | document | daily

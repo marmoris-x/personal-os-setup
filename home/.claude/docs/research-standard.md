@@ -164,7 +164,7 @@ One entry per source, numbered in order of first appearance:
 
 ## 11. Style
 - Avoid the AI-writing patterns condensed in the research skill's `references/style-rules.md`
-  (from blader/humanizer; nothing is installed). `check_article.py` checks the
+  (from blader/humanizer and humanizer-de; nothing is installed). `check_article.py` checks the
   mechanical ones.
 - Style fixes may change only connectors, order and formatting. They never change a quote or a
   verbatim fragment.

@@ -1,9 +1,8 @@
 """AI-writing patterns that check_article.py looks for in the writer's own words.
 
-The English lists are copied from blader/humanizer (commit 225a6f3, MIT). The German lists are
-this repository's own: the German tells of the same kinds, selected and phrased here, copied
-from no German source. Hits are warnings: one hit is rarely a problem, a cluster is
-(see references/style-rules.md).
+Condensed from blader/humanizer (225a6f3) and marmbiz/humanizer-de (9248315); lists copied as
+the repos give them, the English equivalents of the German connectors added by hand. Hits are
+warnings: one hit is rarely a problem, a cluster is (see references/style-rules.md).
 Text inside quotes and verbatim fragments is never checked.
 """
 
@@ -17,11 +16,10 @@ EN_WORDS = [
     "testament", "underscore", "underscores", "underscored", "valuable", "vibrant",
 ]
 DE_WORDS = [
-    "atemberaubend", "aufzeig", "bahnbrechend", "beleucht", "einzigartig", "entfessel",
-    "facettenreich", "faszinierend", "ganzheitlich", "hochkarätig", "hochmodern",
-    "maßgeschneidert", "massgeschneidert", "meilenstein", "nahtlos", "revolutionier",
-    "spannungsfeld", "spektakulär", "untermauer", "vielschichtig", "wegweisend",
-    "zukunftsweisend", "zusammenspiel",
+    "beleucht", "eintauch", "unterstreich", "aufzeig", "spannend", "entscheidend",
+    "maßgeblich", "massgeblich", "nahtlos", "vielschichtig", "facettenreich", "dynamisch",
+    "ganzheitlich", "maßgeschneidert", "massgeschneidert", "essenziell", "entfessel",
+    "revolutionier", "zusammenspiel", "meilenstein", "spannungsfeld", "digitale landschaft",
 ]
 
 # Phrases, matched case-insensitively as written (spaces match any whitespace).
@@ -43,53 +41,44 @@ EN_PHRASES = [
     "it's worth noting", "in today's digital", "this article will", "the table below",
 ]
 DE_PHRASES = [
-    "aber was bedeutet das", "als ki-sprachmodell", "als sprachmodell",
-    "an dieser stelle sei erwähnt", "auf erfolgskurs", "auf ganzer linie",
-    "beobachter haben", "bereit für die zukunft", "bestens aufgestellt",
-    "branchenberichte zeigen", "das fazit:", "das ist der punkt", "das nonplusultra",
-    "das wichtigste vorweg", "die möglichkeiten sind grenzenlos", "die sache ist die",
-    "die tabelle unten", "die weichen sind gestellt", "die zukunft sieht rosig aus",
-    "dient als", "digitale landschaft", "doch was steckt dahinter", "du hast völlig recht",
-    "ein eindrucksvolles beispiel", "ein wahrer meilenstein", "ein wahrer segen",
-    "eindrucksvoll unter beweis", "ehrlich gesagt", "eigentlich ist es komplizierter",
-    "erweist sich als", "es bleibt spannend", "es ist erwähnenswert",
-    "es ist wichtig zu beachten", "es ist wichtig zu bemerken", "es sei darauf hingewiesen",
-    "es sollte hervorgehoben werden", "es wird allgemein angenommen",
-    "experten sind sich einig", "fairerweise muss man sagen", "fungiert als",
-    "genauer gesagt", "gerne!", "grenzenlose möglichkeiten", "gute frage",
-    "haben sie sich jemals gefragt", "hand aufs herz", "hochkarätige besetzung",
-    "ich hoffe, das hilft", "ich hoffe, das war hilfreich", "im folgenden abschnitt",
-    "im laufe der geschichte", "im kern", "im zeitalter der digitalisierung",
-    "in der heutigen digitalen welt", "in der heutigen schnelllebigen zeit",
-    "in einer zunehmend vernetzten welt", "in diesem artikel", "in diesem text",
-    "in zeiten des wandels", "innovative lösungen", "keine diskussion wäre vollständig",
-    "kennen sie das gefühl", "kommen wir zu", "lassen sie mich wissen",
-    "lassen sie uns einen blick", "läutet eine neue ära ein", "man darf gespannt sein",
-    "man geht davon aus", "markiert einen wendepunkt", "maßgeschneiderte lösung",
-    "massgeschneiderte lösung", "nahtlose integration", "nach meinem wissensstand",
-    "natürlich!", "nicht mehr wegzudenken", "nicht unerwähnt bleiben soll",
-    "nimmt eine schlüsselrolle ein", "ohne weitere umschweife", "präziser formuliert",
-    "restlos überzeugen", "revolutionäre entwicklung", "schauen wir uns an", "sehr gerne",
-    "seit jeher", "seit menschengedenken", "selbstverständlich!", "sie haben völlig recht",
-    "spielt eine bedeutende rolle", "spielt eine zentrale rolle", "studien belegen",
-    "sucht seinesgleichen", "um ehrlich zu sein", "und zeigt damit, dass", "unterm strich",
-    "unterstreicht die bedeutung", "verfügt über", "verschiedene maßnahmen",
-    "vielfältige möglichkeiten",
-    "warum das wichtig ist:", "was am ende funktionierte, war", "was deutlich macht, wie",
-    "was die bedeutung unterstreicht", "was du wissen musst", "was fehlte, war",
-    "was heißt das konkret", "was mich überrascht hat, war", "was einmal mehr belegt",
-    "was sie wissen müssen", "wie bereits erwähnt", "wie oben gezeigt",
-    "wie sie sehen können", "wie wir gesehen haben", "wirft ein schlaglicht auf",
-    "worauf es wirklich ankommt", "zahlreiche aspekte", "zeugt von einer neuen ära",
-    "zeichnet sich durch",
-    "zu beachten ist, dass", "zukunftsweisende technik", "zusammenfassend lässt sich sagen",
+    "steht als zeugnis für", "ist ein beweis für", "spielt eine wichtige rolle", "symbolisiert",
+    "reiches kulturelles erbe", "atemberaubend", "spektakulär", "faszinierend", "einzigartig",
+    "game-changer", "das ändert alles", "es ist wichtig zu bemerken", "es kann nicht ignoriert",
+    "keine diskussion wäre vollständig", "es sollte hervorgehoben werden", "es ist erwähnenswert",
+    "es ist wichtig zu beachten", "zu beachten ist, dass", "branchenberichte zeigen",
+    "beobachter haben zitiert", "es wird gesagt", "manche argumentieren",
+    "die eigentliche frage ist", "im kern", "in wirklichkeit", "was wirklich zählt",
+    "im grunde genommen", "das tiefere problem", "worauf es wirklich ankommt",
+    "der kern der sache", "letztlich geht es um", "so betrachtet", "schauen wir uns an",
+    "lassen sie uns erkunden", "was sie wissen müssen", "die sache ist die",
+    "ohne weitere umschweife", "jetzt werfen wir einen blick", "kommen wir zu",
+    "warum das wichtig ist:", "das große bild", "es stellte sich heraus, dass",
+    "aber was bedeutet das", "haben sie sich jemals gefragt", "doch was steckt dahinter",
+    "was heißt das konkret", "seit jeher", "seit anbeginn der zivilisation",
+    "schon immer hat die menschheit", "im laufe der geschichte", "seit menschengedenken",
+    "in der heutigen digitalen welt", "in einer zunehmend vernetzten welt", "in zeiten von",
+    "im zeitalter der digitalisierung", "in der heutigen schnelllebigen",
+    "bestens aufgestellt", "die möglichkeiten sind grenzenlos", "bereit für die nächste stufe",
+    "an der schwelle zu einer neuen ära", "die weichen sind gestellt",
+    "mit zuversicht in die zukunft blicken", "das potenzial ist enorm", "auf erfolgskurs",
+    "zweifellos", "grundlegend verändert", "hält sich bedeckt", "es ist anzunehmen, dass",
+    "und zeigt damit, dass", "und unterstreicht die bedeutung", "ich hoffe, das hilft",
+    "natürlich!", "gute frage", "wie sie sehen können", "lassen sie mich wissen",
+    "selbstverständlich!", "du hast völlig recht", "sie haben völlig recht",
+    "bis zu meinem letzten update", "nach meinem wissen", "als ki-sprachmodell",
+    "was mich überrascht hat, war", "was am ende funktionierte, war", "was fehlte, war",
+    "genauer gesagt", "präziser gesagt", "fairerweise muss man sagen",
+    "eigentlich ist es komplizierter", "ehrlich gesagt", "keine sorge", "spoiler:",
+    "fungiert als", "dient als", "verfügt über", "zeichnet sich", "erweist sich als",
+    "in diesem text", "wie oben gezeigt",
 ]
 
 # Mechanical connectors: one per paragraph is tolerated, more is a warning.
 EN_CONNECTORS = ["additionally", "moreover", "furthermore"]
 DE_CONNECTORS = [
-    "darüber hinaus", "außerdem", "zudem", "ferner", "des weiteren", "überdies",
-    "zusammenfassend", "abschließend", "insgesamt", "kurz gesagt",
+    "darüber hinaus", "zudem", "außerdem", "ferner", "des weiteren", "des weiteren",
+    "ebenfalls", "gleichzeitig", "überdies", "zusammenfassend", "abschließend",
+    "insgesamt", "kurz gesagt", "im wesentlichen",
 ]
 
 # Regular expressions: "not X but Y" and its German forms, tacked-on analysis, tool residue.

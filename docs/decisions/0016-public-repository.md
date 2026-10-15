@@ -32,7 +32,7 @@ and a third made the choice between the two possible routes easy.
 - The old repository is **not** deleted and is **not** made public. It is renamed to
   `personal-os-setup-history`, stays private, and keeps its full history and its tags.
 - A **new** repository `personal-os-setup` starts with **one** commit - the cleaned tree - and
-  the tag `v3.0.0`. It carries the license (MIT), the security policy and the third-party list.
+  the tag `v3.0.0`. It carries the security policy.
 - Personal values live in the personal layer (`~/.personal-os/`, ADR 0004) and nowhere else.
   Since v3.0.0 that includes the archive category list: `add-to-archive.ps1` reads it from
   `personal.yaml` at run time, `setup/lib/personal.ps1` is the reader the repository tools

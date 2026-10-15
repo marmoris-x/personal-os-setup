@@ -6,7 +6,7 @@ what **this repo** adopted (with location) and what deliberately not.
 
 ## 1. microsoft/WindowsDeveloperConfig
 
-Manifest-driven Windows setup by Microsoft itself (3,105 stars, MIT).
+Manifest-driven Windows setup by Microsoft itself (3,105 stars).
 
 - **Adopted:** "manifest as the single truth" (ADR 0002) and the CI structure
   (install → test → summary) in simplified form (`.github/workflows/ci.yml`).
@@ -29,7 +29,7 @@ Declarative YAML for machine state (schema v2: `.config/configuration.winget`; v
 
 ## 3. chezmoi
 
-Dotfile manager (21,889 stars, MIT). Source folder mirrors target locations.
+Dotfile manager (21,889 stars). Source folder mirrors target locations.
 
 - **Adopted:** the basic idea "repo mirrors target structure" (ADR 0001) and the
   secret principle "only the **reference** into the repo, never the value" (ADR 0005 + `setup/tools/privacy-scan.ps1`
@@ -45,12 +45,12 @@ Dotfile manager (21,889 stars, MIT). Source folder mirrors target locations.
 - **Adopted:** the idea "rendered instead of tracked live files" (with us:
   the mirror folders `home/`, `vault/` and `dev/` + placeholders + `install.ps1`). The idea of a "no longer wanted" list
   (convergence) is noted as an extension in BERICHT, v1 does not have it.
-- **Not adopted:** the overhead structure (eval harness, dashboards); no license, no fork.
+- **Not adopted:** the overhead structure (eval harness, dashboards); no fork.
 - Source: https://github.com/johncwaters/claude-setup
 
 ## 5. ballred/obsidian-claude-pkm
 
-Vault template with skills (1,877 stars, MIT).
+Vault template with skills (1,877 stars).
 
 - **Adopted:** folder names as variables instead of hard-wired (with us `personal.yaml`),
   and "safe updates": backups with timestamp before every overwrite + `setup/restore.ps1`.
@@ -62,7 +62,7 @@ Vault template with skills (1,877 stars, MIT).
 
 ## 6. louisfb01/obsidian-agent-vault-template
 
-Pure Markdown template (50 stars, MIT).
+Pure Markdown template (50 stars).
 
 - **Adopted:** the feedback loop is already a property of the live system
   ("second correction ⇒ rule", `docs/lessons.md` skeleton in `home/.claude/docs/`).
@@ -84,7 +84,7 @@ a quality proof (not independently confirmed in the research).
 
 ## 8. kepano/obsidian-skills
 
-Six small Obsidian skills (49,381 stars, MIT, Obsidian maintainer).
+Six small Obsidian skills (49,381 stars, Obsidian maintainer).
 
 - **Adopted:** The skills (`obsidian-markdown`, `-bases`, `json-canvas`, `-cli`) already lie
   in the live vault and travel along via the export

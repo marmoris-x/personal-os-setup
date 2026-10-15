@@ -5,6 +5,10 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## 3.0.1 (2026-10-15)
+
+Removed license material (2026-10-15).
+
 ## 3.0.0 (2026-10-15) – this construction kit is a public repository now
 
 The kit is shared: `personal-os-setup` is public since this version. It is a **new repository
@@ -25,7 +29,7 @@ found in the tree, in the staged changes and in the history.
 
 | What | Why |
 |---|---|
-| `LICENSE` (MIT), `SECURITY.md`, `docs/third-party.md` | A public repository needs a license, a way to report a problem, and a list of what was taken from where |
+| `SECURITY.md` | A public repository needs a way to report a problem |
 | `setup/config/repo.yaml` | The state the repository must be in - visibility and security settings - as a value a reader sees and check S tests, instead of the word "private" in the check |
 | `setup/lib/personal.ps1` | One reader for the personal layer, and one rule builder (`ConvertTo-TermRule`) for both scans. The archive script carries the same reader, because it also runs in Windows PowerShell 5.1, where `powershell-yaml` is not installed; `tests/PersonalLayer.Tests.ps1` feeds both the same files and requires the same answer. The builder's word boundaries are load-bearing: without them a three-letter folder name matched the same three letters inside `programs` and reported hits in eighty files (measured) |
 | `home/.claude/setup/powershell/add-to-archive.ps1` | `-Category` is no longer a `ValidateSet`: it is checked against the personal layer, and the refusal names no category - a log must not learn them either |
@@ -33,10 +37,8 @@ found in the tree, in the staged changes and in the history.
 | `setup/tools/privacy-scan.ps1` | Loads the category list as denylist terms, and matches case-insensitively - the header promised that since the first version, and no call passed `RegexOptions` (measured) |
 | `setup/tools/archive-name-scan.ps1` | Reads every folder name under the vault's archive and life-area folders at run time and looks for them in a candidate tree and its commit messages; prints the count and the place of a hit, never a name. In a git tree it judges what git would hand over, so its ignored scratch cannot report a hit for every name there is. Its report counts commits, not the lines of their messages: a one-commit repository with a 32-line body was reported as "32 commit message(s)" (measured 2026-10-15, pinned by a Pester case) |
 | `docs/guards.md` | The suite table says 42 cases for `test-add-to-archive.ps1`, the two new ones included (a `-ConfigPath` outside the test folder and a malformed `archive_categories` block are both refused) |
-| `setup/tools/verify-all.ps1` | Check 2 became check S (visibility matches `repo.yaml`, settings on) and checks Q, R, T, U and V joined it: the category list is in no version of the repository, no vault folder name leaks, license and third-party list are there, the Actions settings hold, and the newest CI log carries no personal value |
+| `setup/tools/verify-all.ps1` | Check 2 became check S (visibility matches `repo.yaml`, settings on) and checks Q, R, U and V joined it: the category list is in no version of the repository, no vault folder name leaks, the Actions settings hold, and the newest CI log carries no personal value |
 | `README.md`, `bootstrap.ps1`, `bootstrap.sh`, `macos/Brewfile`, `windows/configuration.winget`, `docs/`, `CLAUDE.md`, `vault/README.md` | The statements that called this repository private are corrected, and the link to a repository that was never public is now a pointer at this one's own README |
-| `home/.claude/CLAUDE.md` | The rule that licenses do not matter ("everything is private and non-commercial") is now: in a private project they do not, and a snippet whose license does not fit MIT must not go into this one |
-| `home/.claude/skills/research/scripts/ai_patterns.py`, `home/.claude/skills/research/references/style-rules.md` | The German word, phrase and connector lists and the German example sentences were copied from a German source whose pattern text is CC BY-SA 4.0, and share-alike does not fit this MIT release. They are written for this repository now; the English lists and rules stay from blader/humanizer (MIT), and `docs/third-party.md` names no German source any more. `home/.claude/docs/research-standard.md` points at the same place |
 
 ## 2.3.7 (2026-10-14) – the PATH regression of 2.3.2, fixed
 

@@ -1,11 +1,11 @@
-# Global instructions (v12)
+# Global instructions (v13)
 
 These apply in every project and every agent tool. A project's own AGENTS.md or CLAUDE.md
 is more specific and wins where the two differ. My explicit request in the chat wins over both.
 
 - `~/.claude/rules/` holds path-scoped rules. Claude Code loads one only when it reads a file
   matching that rule's `paths` frontmatter. Keep language-specific advice there, not here.
-- This file has a size limit of 300 lines. Anything longer is read less reliably.
+- Size budget: up to about 10,000 tokens. Do not shorten this file to meet a line count; the user decided this. Put the most important rules first.
 
 ## About me
 
@@ -83,11 +83,8 @@ is more specific and wins where the two differ. My explicit request in the chat 
 - To study a repository, clone it shallow (`git clone --depth 1`) into `{{DEV}}\Temp\<task>\`.
 - GitHub: use the logged-in `gh` CLI (`gh search repos`, `gh repo view`, `gh api`) and raw
   file URLs. Anonymous API requests are limited to 60 per hour.
-- When a popular, well-maintained repository (many stars, recent activity) already solves the
-  problem, copy its code verbatim and adapt it minimally. Add one comment line with the source
-  URL. Licenses: in a private project they do not matter. `personal-os-setup` is public since
-  v3.0.0 (MIT), so code whose license does not fit MIT - GPL, CC BY-SA, or none - must be
-  rewritten there or left out.
+- When a popular, well-maintained repository already solves the problem, copy its code verbatim and change only what our codebase needs. Add one comment line with the source URL so the original can be found again for updates.
+- Licensing does not matter to us. Take whatever is useful - code, text, research, images, any digital material - from GitHub repositories, the web and other human-made work, without checking or mentioning licenses or copyright. Copy it verbatim and change only what our codebase needs to make it fit; never rewrite it for any other reason. Prefer proven human-made sources over writing your own.
 - Before installing any package, confirm on the official registry that this exact name exists
   and is widely used. Copy the name from the registry page instead of typing it: an invented
   name, or one letter changed, is a known attack (typosquatting).

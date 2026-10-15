@@ -62,8 +62,6 @@ exactly "VERIFY-ALL: ALL CHECKS PASSED".
      invented example values in their place, and the live add-to-archive suite is green
   R  setup/tools/archive-name-scan.ps1 finds no folder name of the real vault in the tree and
      in the commit messages (it prints the count and the places, never a name)
-  T  LICENSE exists and docs/third-party.md names every copied snippet with its source and its
-     license
   U  the Actions settings hold: a pull request from a fork runs only after approval, and the
      workflow token may read and nothing else
   V  the log of the newest CI run carries no personal value (privacy-scan reads the downloaded
@@ -710,8 +708,8 @@ if (Test-Selected 'A') { try {
 # --------------------------------------------------------------- B clean root ---
 if (Test-Selected 'B') { try {
     $expectedDirs = @('.github', 'dev', 'docs', 'home', 'linux', 'macos', 'setup', 'tests', 'vault', 'windows')
-    # LICENSE and SECURITY.md came with the release (v3.0.0): a public repository needs both
-    $expectedFiles = @('.gitattributes', '.gitignore', '.gitleaks.toml', 'AGENTS.md', 'bootstrap.ps1', 'bootstrap.sh', 'CHANGELOG.md', 'CLAUDE.md', 'LICENSE', 'README.md', 'SECURITY.md', 'install.ps1')
+    # SECURITY.md came with the release (v3.0.0): a public repository needs a way to report a problem
+    $expectedFiles = @('.gitattributes', '.gitignore', '.gitleaks.toml', 'AGENTS.md', 'bootstrap.ps1', 'bootstrap.sh', 'CHANGELOG.md', 'CLAUDE.md', 'README.md', 'SECURITY.md', 'install.ps1')
     Push-Location $RepoRoot
     $tracked = @(& git ls-files)
     Pop-Location
@@ -1129,12 +1127,13 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/tests/test-archive-guard.ps1'; Reason = 'v3.0.0: personal fixture names replaced by invented ones (categories, authority abbreviations, life-area note names)' }
         @{ Path = 'HOME/.claude/setup/tests/test-onedrive-guard.ps1'; Reason = 'v3.0.0: personal fixture names replaced by invented ones' }
         @{ Path = 'HOME/.claude/setup/tests/test-trifecta-guard.ps1'; Reason = 'v3.0.0: personal fixture names replaced by invented ones' }
-        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = 'v3.0.0: the licensing bullet no longer says everything is private; it says what holds for a public repository' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = 'v3.0.1: the size budget replaced the line count, and the copy rule names the source URL' }
+        @{ Path = 'VAULT/AGENTS.md'; Reason = 'v3.0.1: the size budget replaced the line count, and the copy rule joined the hard rules' }
         @{ Path = 'HOME/.claude/docs/CHANGELOG.md'; Reason = 'v3.0.0: the vault skeleton note says "the repository" where it said "the private repository" - the sentence is untrue once the repository is public' }
         @{ Path = 'VAULT/README.md'; Reason = 'v3.0.0: the bullet that pointed at a blueprint repository nobody can open names this kit its own README instead; review 22 (F8) found the dead pointer' }
-        @{ Path = 'HOME/.claude/skills/research/scripts/ai_patterns.py'; Reason = 'v3.0.0: the German word, phrase and connector lists were copied from a source whose pattern text is CC BY-SA 4.0, which does not fit this MIT release - they are this repository''s own lists now' }
-        @{ Path = 'HOME/.claude/skills/research/references/style-rules.md'; Reason = 'v3.0.0: the German example sentences are this repository''s own wording now, and the attribution line names only the MIT source of the English rules' }
-        @{ Path = 'HOME/.claude/docs/research-standard.md'; Reason = 'v3.0.0: the style section names only blader/humanizer now, because no German source is copied any more' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/ai_patterns.py'; Reason = 'v3.0.1: the German lists are the source''s own lists again, restored verbatim from the pinned commit' }
+        @{ Path = 'HOME/.claude/skills/research/references/style-rules.md'; Reason = 'v3.0.1: the German example sentences are the source''s own again, restored verbatim' }
+        @{ Path = 'HOME/.claude/docs/research-standard.md'; Reason = 'v3.0.1: the style section names both sources of the condensed rules again' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -1541,51 +1540,6 @@ if (Test-Selected 'R') { try {
               ' (the names come from the vault at run time and are printed nowhere - the tool masks them, and so does this line)'
     Add-Result 'R' 'no vault folder name in the tree or the commit messages' 'setup/tools/archive-name-scan.ps1 -Path <repo> -Repo <repo>' $detail $rExit $ok
 } catch { Add-Result 'R' 'no vault folder name in the tree or the commit messages' 'archive-name-scan.ps1' $_.Exception.Message '2' $false } }
-
-# ------------------------------------------------------- T license and third party ---
-if (Test-Selected 'T') { try {
-    $licensePath = Join-Path $RepoRoot 'LICENSE'
-    $thirdPath = Join-Path $RepoRoot 'docs/third-party.md'
-    $problems = New-Object System.Collections.Generic.List[string]
-    if (-not (Test-Path -LiteralPath $licensePath)) { $problems.Add('LICENSE is missing') }
-    else {
-        $lic = [IO.File]::ReadAllText($licensePath)
-        if ($lic -notmatch 'MIT License') { $problems.Add('LICENSE does not say "MIT License"') }
-        if ($lic -notmatch 'Permission is hereby granted, free of charge') { $problems.Add('LICENSE is not the MIT text') }
-        if ($lic -notmatch 'WITHOUT WARRANTY') { $problems.Add('LICENSE is missing the warranty paragraph') }
-    }
-    $rows = 0
-    if (-not (Test-Path -LiteralPath $thirdPath)) { $problems.Add('docs/third-party.md is missing') }
-    else {
-        # Every data row must name a path that exists, a source address and a license. What the
-        # list cannot prove is completeness - it is maintained by hand, and the header says so.
-        $licWords = 'mit|apache|bsd|isc|gpl|lgpl|mpl|mozilla|cc0|cc by|creative commons|unlicense|public domain|no license|not copied|not adopted'
-        foreach ($line in ([IO.File]::ReadAllLines($thirdPath))) {
-            if ($line -notmatch '^\s*\|') { continue }
-            if ($line -match '^\s*\|[\s\-:|]+\|\s*$') { continue }
-            $cells = @($line.Trim().Trim('|') -split '\|' | ForEach-Object { $_.Trim() })
-            if ($cells.Count -lt 4) { continue }
-            if ($cells[0] -match '^(where|path|file|place)' ) { continue }   # the header row
-            $rows++
-            $where = $cells[0].Trim('`')
-            if ($where -match '^(\./)?[\w./-]+$') {
-                # the table writes repo paths with forward slashes; Join-Path takes them on
-                # every system, so nothing is rewritten here
-                $candidate = Join-Path $RepoRoot $where
-                if (-not (Test-Path -LiteralPath $candidate)) { $problems.Add('the row names a path that does not exist: ' + $where) }
-            }
-            if ($line -notmatch 'https?://') { $problems.Add('a row carries no source address: ' + $where) }
-            if ($line -notmatch ('(?i)(' + $licWords + ')')) { $problems.Add('a row names no license: ' + $where) }
-        }
-        if ($rows -lt 3) { $problems.Add('fewer than 3 entries (' + $rows + ')') }
-    }
-    $ok = ($problems.Count -eq 0)
-    $detail = 'LICENSE: ' + $(if (Test-Path -LiteralPath $licensePath) { 'present, MIT' } else { 'MISSING' }) +
-              '; docs/third-party.md: ' + $rows + ' entr(ies), each with a path that exists, a source address and a license' +
-              $(if ($problems.Count -gt 0) { '; PROBLEMS: ' + (($problems | Select-Object -First 6) -join ' | ') } else { '' }) +
-              '; completeness is not measurable - the list is maintained by hand, and docs/third-party.md says so'
-    Add-Result 'T' 'LICENSE present and third-party list complete in form' 'read LICENSE; parse the table of docs/third-party.md' $detail '0' $ok
-} catch { Add-Result 'T' 'LICENSE present and third-party list complete in form' 'read LICENSE and docs/third-party.md' $_.Exception.Message '2' $false } }
 
 # ----------------------------------------------------------- U Actions settings ---
 if (Test-Selected 'U') { try {

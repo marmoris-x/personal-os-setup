@@ -203,7 +203,6 @@ docs/install-with-an-agent.md
 docs/phone-setup.md
 docs/platforms.md
 docs/structure.md
-docs/third-party.md
 docs/troubleshooting.md
 docs/updating.md
 home/.claude/agents/evidence-extractor.md
@@ -297,7 +296,6 @@ home/Documents/PowerShell/powershell.config.json
 home/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1
 home/README.md
 install.ps1
-LICENSE
 linux/packages.yaml
 linux/systemd/personal-os-morning.service.tmpl
 linux/systemd/personal-os-morning.timer.tmpl

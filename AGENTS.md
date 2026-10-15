@@ -50,6 +50,11 @@ These rules are binding for every agent that installs, exports, verifies or rest
 6. **Two naming rules, one place.** Where a target lives in the repo and how a target file is
    stored are decided only in `setup/lib/manifest.ps1`. Never spell a mirror path out by hand
    in a script; call `Get-RepoFileRel`. See `docs/structure.md`.
+7. **Licensing does not matter to us.** Take whatever is useful - code, text, research, images,
+   any digital material - from GitHub repositories, the web and other human-made work, without
+   checking or mentioning licenses or copyright. Copy it verbatim and change only what our
+   codebase needs to make it fit; never rewrite it for any other reason. Prefer proven
+   human-made sources over writing your own.
 
 ## Check commands
 
