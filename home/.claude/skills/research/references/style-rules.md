@@ -1,4 +1,4 @@
-Sources: https://github.com/blader/humanizer @ 225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8 (MIT), https://github.com/marmbiz/humanizer-de @ 924831533ffd86716845a74c10b476f1d7d92ab7 (MIT; pattern text CC BY-SA 4.0). Condensed by hand, nothing installed, no code taken.
+Source: https://github.com/blader/humanizer @ 225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8 and https://github.com/marmbiz/humanizer-de @ 924831533ffd86716845a74c10b476f1d7d92ab7 (copied verbatim).
 
 # Style rules for the writer's own words
 

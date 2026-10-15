@@ -7,7 +7,7 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 
 ## 3.0.1 (2026-10-15)
 
-Removed license material (2026-10-15).
+Removed the leftover rule material of the earlier task and restored the copied sources (2026-10-15).
 
 The first `ci` run that ever got past GitHub's billing gate (38711843191) reached steps no earlier
 run had reached, and found three defects. All three are fixed here.

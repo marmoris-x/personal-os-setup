@@ -432,11 +432,6 @@ class CheckNote(unittest.TestCase):
         self.assertIn("v4.08", errors[0])
         self.assertIn("v4.12", errors[0])
 
-    def test_a_licence_version_is_not_a_tool_version(self):
-        text = ('# T\n\npyVideoTrans steht unter der "GNU General Public License v3.0" '
-                '[1](https://example.org/a).\n')
-        self.assertEqual(check_note.version_pairs(text), {})
-
 
 LINK_3 = "[3](https://example.org/seite3)"
 

@@ -587,9 +587,6 @@ BINNEN_RE = re.compile(
     r"|\b[A-ZÄÖÜ][a-zäöü]+[A-ZÄÖÜ][A-Za-zÄÖÜäöü0-9]*\b")
 VERSION_RE = re.compile(r"\bv(\d+(?:\.\d+)+)\b", re.I)
 CROSS_NAME_SKIP = {"github", "gitlab", "youtube"}
-# A version right after a licence name is the licence's version, not the tool's
-# ("GNU General Public License v3.0" says nothing about pyVideoTrans' own version).
-LICENSE_NEAR_RE = re.compile(r"(?i)(licen[cs]e|lizenz|gpl)")
 
 
 def version_pairs(text):
@@ -600,10 +597,6 @@ def version_pairs(text):
     for sentence in check_article.split_sentences(plain):
         versions = set()
         for m in VERSION_RE.finditer(sentence):
-            # Licence words stand before the version ("... License v3.0"); a word right
-            # after it ("v4.08, GPL-3.0") says nothing about that version.
-            if LICENSE_NEAR_RE.search(sentence[max(0, m.start() - 40):m.start()]):
-                continue
             versions.add(m.group(1))
         if not versions:
             continue

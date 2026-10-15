@@ -134,7 +134,6 @@ MUTATIONS = [
     ('check_note.py', 'if here and there and here.isdisjoint(there):', 'if False:'),
     ('check_note.py', 'if abs(m.start() - (at + len(word))) <= 80:', 'if abs(m.start() - (at + len(word))) <= 100000:'),
     ('check_note.py', 'if strong or (weak and any(w.endswith(EN_SUFFIX) for w in folded)):', 'if strong or weak:'),
-    ('check_note.py', 'if LICENSE_NEAR_RE.search(sentence[max(0, m.start() - 40):m.start()]):', 'if False:'),
     ('check_note.py', '    if not word.isascii():\n        return False', '    if False:\n        return False'),
     ('check_note.py', r"[^\W\d_](?:[^\W\d_]|['_-])*", r"[A-Za-z](?:[A-Za-z'_-])*"),
 ]

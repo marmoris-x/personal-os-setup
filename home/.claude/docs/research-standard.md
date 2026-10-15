@@ -174,6 +174,6 @@ One entry per source, numbered in order of first appearance:
 - Say "not found in the sources" instead of guessing.
 - State which languages and how many sources were used.
 - A claim whose evidence fails verification is removed.
-- A note is checked against the notes already in the vault about the same tool: a version,
-  licence or number that differs is looked up again and, if both readings stand, the difference
+- A note is checked against the notes already in the vault about the same tool: a version
+  or number that differs is looked up again and, if both readings stand, the difference
   is named (newer reading or a noted change).
