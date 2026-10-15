@@ -154,7 +154,7 @@ $script:workRootObjection = Get-WorkRootObjection -Path $WorkRoot
 $isAcceptanceCall = ($Only.Count -eq 0) -and ($HomeRoot -eq $script:realProfile) -and
                     (-not $script:workRootObjection) -and ($RepoRoot -eq $script:acceptanceRepoRoot) -and
                     ($env:USERPROFILE -eq $script:realProfile) -and ($PSCommandPath -eq $script:selfPath)
-if ($isAcceptanceCall) { Write-Host 'Checks: all 33, live profile, repo root and the work root below (this is the acceptance run)' }
+if ($isAcceptanceCall) { Write-Host ('Checks: all ' + $script:checkCount + ', live profile, repo root and the work root below (this is the acceptance run)') }
 else {
     $why = New-Object System.Collections.Generic.List[string]
     if ($Only.Count -gt 0) { $why.Add('only ' + ($Only -join ', ')) }
@@ -823,17 +823,34 @@ if (Test-Selected 'D') { try {
     # (The wording avoids the old-path pattern on purpose: this file stays visible to check C,
     # which found the first version of this very comment - review 11, finding 1.)
     $baseline = '41c583d'
-    # --- the release history: one commit, and the old history still in the archive ----------
-    # Since v3.0.0 this repository IS the fresh release history (docs/decisions/0016): one
-    # commit, the tree of the release, and the whole old history in the private repository
+    # --- the release history: the old history lives in the archive --------------------------
+    # Since v3.0.0 this repository IS the fresh release history (docs/decisions/0016): the tree
+    # of the release, and the whole old history in the private repository
     # `personal-os-setup-history`. `git log --follow` has nothing to follow there, so the five
     # probes above cannot be asked at all - and skipping the check would let a repository whose
     # history was thrown away pass as "history kept". What is asked instead is the property the
-    # release promises: the commit carries a tag, the `history` remote names the archive, and
-    # that archive still answers.
+    # release promises: a release tag that HEAD builds on, the `history` remote names the
+    # archive, and that archive still answers.
+    # Two shapes of it are asked. The release itself, one commit with the tag on it (v3.0.0).
+    # And every commit after it (v3.0.1 added five): there `headCount` is more than one and no
+    # tag points at HEAD, so the `-eq 1` test alone turned this check red for the repository's
+    # own normal state - the acceptance run of 2026-10-15 measured exactly that. What decides
+    # whether the probes can be asked at all is not the commit count but whether the old
+    # baseline is part of this repository's lineage: it is in the archive, not here. A repository
+    # that really carries the old history still takes the probe branch below, unchanged.
     Push-Location $RepoRoot
     $headCount = 0
     try { $headCount = [int](@(& git rev-list --count HEAD 2>$null)[0]) } catch { $headCount = 0 }
+    $baselineHere = $false
+    if ($headCount -gt 1) {
+        try {
+            $null = (& git cat-file -e ($baseline + '^{commit}') 2>$null)
+            if ($LASTEXITCODE -eq 0) {
+                $null = (& git merge-base --is-ancestor $baseline HEAD 2>$null)
+                $baselineHere = ($LASTEXITCODE -eq 0)
+            }
+        } catch { $baselineHere = $false }
+    }
     if ($headCount -eq 1) {
         $tagAtHead = @(& git tag --points-at HEAD 2>$null)
         $histUrl = ''
@@ -852,6 +869,23 @@ if (Test-Selected 'D') { try {
         Add-Result 'D' 'history of moved files kept' ('git rev-list --count HEAD; git tag --points-at HEAD; git remote get-url history; git ls-remote --exit-code history HEAD; the old test (git log --follow over 5 moved files against the ancestors of ' + $baseline + ') applies to a history with more than one commit and is kept for that case') $detail '0' $ok
     }
     elseif ($headCount -eq 0) { Pop-Location; throw 'git rev-list --count HEAD answered nothing - is this a repository?' }
+    elseif (-not $baselineHere) {
+        $tagReachable = @(& git tag --merged HEAD 2>$null)
+        $histUrl = ''
+        try { $histUrl = [string](& git remote get-url history 2>$null) } catch { $histUrl = '' }
+        $reachable = $false
+        if ($histUrl) {
+            $null = (& git ls-remote --exit-code history HEAD 2>&1)
+            $reachable = ($LASTEXITCODE -eq 0)
+        }
+        Pop-Location
+        $ok = ($tagReachable.Count -ge 1) -and ($histUrl -match 'personal-os-setup-history') -and $reachable -and $script:toolsOk
+        $detail = ($headCount.ToString() + ' commit(s) (the release history, grown past the release); release tags HEAD builds on: ' + $(if ($tagReachable.Count -gt 0) { $tagReachable -join ', ' } else { 'NONE' })) +
+                  '; history remote: ' + $(if ($histUrl) { $histUrl } else { 'MISSING' }) +
+                  '; the archive answers ls-remote: ' + $reachable +
+                  '; the baseline ' + $baseline + ' is not in this lineage, so the five --follow probes have nothing to follow here - a history with the old baseline in it still takes the probe branch'
+        Add-Result 'D' 'history of moved files kept' ('git rev-list --count HEAD; git tag --merged HEAD; git remote get-url history; git ls-remote --exit-code history HEAD; the old test (git log --follow over 5 moved files against the ancestors of ' + $baseline + ') is asked whenever ' + $baseline + ' is an ancestor of HEAD') $detail '0' $ok
+    }
     else {
         $probe = @(
             'home/.claude/hooks/block-dangerous.ps1',

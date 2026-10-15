@@ -18,6 +18,17 @@ run had reached, and found three defects. All three are fixed here.
 | `setup/tools/verify-all.ps1` | `$script:checkCount` still said 33 after check T left. The acceptance line prints only when the result count equals it, so the run would have printed the partial line for ever and could never have said ALL CHECKS PASSED. It is 32 now - 21 lettered checks plus 11 numbered ones, counted both ways |
 | `setup/tools/ci-full-setup.ps1` | `full-setup (macos-latest)` was red with `life-os-venv - venv present but incomplete: faster-whisper is not installed`. `ctranslate2==4.8.2` publishes no macOS arm64 wheel, so the venv cannot be built on `macos-latest` and nothing about that improves on a machine with nobody logged in. The install stage already reports the same failure as a WARN under "what a machine nobody has logged into cannot do"; the verify did not know the limit. It is named in `$script:expectedFails` now, with the detail text it must match, so a venv that breaks for another reason still turns the job red |
 
+The first **full acceptance run** on this state (`verify-all.ps1` with all 32 checks) then found
+five more, and all five are fixed here:
+
+| What | Why |
+|---|---|
+| the repository's security settings | Check S demands four settings once `published: true`; the publish step had set only the visibility. Secret scanning, push protection and private vulnerability reporting were off. Set through the API, no commit involved. Check U found the same for fork pull requests: `first_time_contributors` instead of `all_external_contributors` |
+| `docs/structure.md` | `tests/AgentFileBudget.Tests.ps1` was in the tree but not in the file. Regenerated with `check-structure.ps1 -Write` |
+| the acceptance banner | `Checks: all 33` stood in a second copy of the number, and stayed there when check T left. It now reads `$script:checkCount` instead of repeating it, so it cannot drift again |
+| check D | It asked for the release history only while `git rev-list --count HEAD` was exactly 1, so every commit after v3.0.0 turned it red - the repository's own normal state. The discriminator is whether the old baseline `41c583d` is in this lineage at all, which is what decides whether `git log --follow` can be asked. Both release-history branches keep the same demands: a release tag HEAD builds on, the `history` remote naming the archive, and the archive answering `ls-remote`. Red-proved on a clone: no `history` remote, a `history` remote pointing nowhere and a deleted release tag each turn it red; the real state turns it green |
+| the install target's bytecode caches | `home/.claude/setup/tests/research/__pycache__/` sat in the working tree (git-ignored, never committed) and the install copies the working tree, so eight `*.pyc` files landed in the target and check J reported them as undocumented additions. Removed; the manifest's `exclude` already keeps them out, and the export writes nothing afterwards. Target: 132 files against the 132 of the v2.1.2 baseline, 0 added, 0 gone |
+
 ## 3.0.0 (2026-10-15) – this construction kit is a public repository now
 
 The kit is shared: `personal-os-setup` is public since this version. It is a **new repository

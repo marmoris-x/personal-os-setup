@@ -333,6 +333,7 @@ setup/tools/old-paths.txt
 setup/tools/privacy-scan.ps1
 setup/tools/verify-all.ps1
 setup/verify.ps1
+tests/AgentFileBudget.Tests.ps1
 tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
 tests/fixtures/personal.dummy.yaml
