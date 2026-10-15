@@ -156,6 +156,7 @@ if (-not $SkipHooks) {
         [pscustomobject]@{ Name = 'test-onedrive-guard.ps1';     Os = @('windows'); Why = 'the guard recognizes the wide globs of a Windows profile; on macOS/Linux its detection is stricter and blocks cases its suite expects to pass (measured 2026-10-14 in CI: 40 of 191 cases)' }
         [pscustomobject]@{ Name = 'test-trifecta-guard.ps1';     Os = @('windows', 'macos', 'linux'); Why = '' }
         [pscustomobject]@{ Name = 'test-session-check.ps1';      Os = @('windows', 'macos', 'linux'); Why = '' }
+        [pscustomobject]@{ Name = 'test-no-license-files.ps1';   Os = @('windows', 'macos', 'linux'); Why = '' }
     )
     foreach ($suite in $suites) {
         if ($suite.Os -notcontains $checkOs) {

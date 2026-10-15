@@ -219,6 +219,7 @@ home/.claude/gitleaksignore
 home/.claude/hooks/archive-guard.ps1
 home/.claude/hooks/block-dangerous.ps1
 home/.claude/hooks/downloads-guard.ps1
+home/.claude/hooks/no-license-files.ps1
 home/.claude/hooks/notification-events.ps1
 home/.claude/hooks/notification-idle.ps1
 home/.claude/hooks/onedrive-guard.ps1
@@ -270,6 +271,7 @@ home/.claude/setup/tests/test-archive-guard.ps1
 home/.claude/setup/tests/test-block-dangerous-51.ps1
 home/.claude/setup/tests/test-block-dangerous.ps1
 home/.claude/setup/tests/test-downloads-guard.ps1
+home/.claude/setup/tests/test-no-license-files.ps1
 home/.claude/setup/tests/test-onedrive-guard.ps1
 home/.claude/setup/tests/test-session-check.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
@@ -286,6 +288,7 @@ home/.claude/skills/research/scripts/save_pages.py
 home/.claude/skills/research/scripts/store_results.py
 home/.claude/skills/research/scripts/verify_evidence.py
 home/.claude/skills/research/SKILL.md
+home/.claude/skills/reuse-first/SKILL.md
 home/.claude/statusline.ps1
 home/.claude/TROUBLESHOOTING.md
 home/.config/gitleaks/gitleaks.toml

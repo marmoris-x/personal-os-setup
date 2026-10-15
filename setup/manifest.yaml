@@ -187,6 +187,18 @@ components:
       - { root: HOME, to: "{{HOME}}" }
       - { root: VAULT, to: "{{VAULT}}" }
 
+  - id: claude-skill-reuse-first
+    area: claude
+    type: copy
+    core: true
+    source: "{HOME}/.claude/skills/reuse-first"
+    target: "HOME/.claude/skills/reuse-first"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
   - id: claude-docs-research-standard
     area: research
     type: copy

@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `3e4a21d7818312ca` (SHA256, first 16 characters)
+- Manifest checksum: `1335470d4caa9149` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (65 of 80)
+## Core (66 of 81)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -26,6 +26,7 @@ file no longer matches the manifest (`-Check`).
 | `claude-skill-research` | research | core | file/folder to `HOME/.claude/skills/research` |
 | `claude-skill-docs-import` | research | core | file/folder to `HOME/.claude/skills/docs-import` |
 | `claude-skill-life-os-morning` | life-os | core | file/folder to `HOME/.claude/skills/life-os-morning` |
+| `claude-skill-reuse-first` | claude | core | file/folder to `HOME/.claude/skills/reuse-first` |
 | `claude-docs-research-standard` | research | core | file/folder to `HOME/.claude/docs/research-standard.md` |
 | `claude-lessons-skeleton` | claude | core | skeleton to `HOME/.claude/docs/lessons.md` (only when nothing is there) |
 | `claude-changelog-skeleton` | claude | core | skeleton to `HOME/.claude/docs/CHANGELOG.md` (only when nothing is there) |

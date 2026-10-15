@@ -117,6 +117,11 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
+  # --- area claude ---
+  claude-skill-reuse-first:
+    windows: "files"
+    macos: "files"
+    linux: "files"
   # --- area life-os ---
   claude-skill-life-os-morning:
     windows: "files"
