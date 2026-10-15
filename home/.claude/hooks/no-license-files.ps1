@@ -57,10 +57,14 @@ $path = [string]$call.tool_input.file_path
 if ([string]::IsNullOrWhiteSpace($path)) { exit 0 }
 
 # --- the three folders -------------------------------------------------------
+# Plain strings, not Join-Path: this hook is part of the portable set and runs on macOS and Linux
+# too, where Join-Path with a drive-lettered first part throws "Cannot find drive" - and a hook
+# that throws on every call is a hook that blocks every call. The separator does not matter here
+# because both sides are compared with "/" a few lines down.
 $roots = @(
-    (Join-Path '{{DEV}}' 'Projects'),
+    '{{DEV}}\Projects',
     '{{VAULT}}',
-    (Join-Path {{HOME_ENV}} '.claude')
+    ({{HOME_ENV}} + '\.claude')
 )
 
 # Both sides are compared with "/" as the separator and without case, so the spellings a session

@@ -40,9 +40,9 @@ function Invoke-Guard([string]$Tool, [hashtable]$ToolInput) {
 
 # The three roots, written the way the hook writes them: the render turns each of them into the
 # value of the system it runs on, so both files always agree.
-$devProjects = Join-Path '{{DEV}}' 'Projects'
+$devProjects = '{{DEV}}\Projects'
 $vault       = '{{VAULT}}'
-$claude      = Join-Path {{HOME_ENV}} '.claude'
+$claude      = {{HOME_ENV}} + '\.claude'
 
 # A drive-rooted path in the other two styles, built without a Windows literal: on Windows the
 # hook never sees them as INSIDE a root (its roots are drive paths), and on macOS and Linux the
@@ -64,31 +64,31 @@ function Test-Case([string]$Expected, [string]$Tool, [hashtable]$ToolInput, [str
 }
 
 Write-Output '== denied: an attribution file inside one of the three folders =='
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE') } 'LICENSE in a project'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE.md') } 'LICENSE.md'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE-MIT') } 'LICENSE-MIT'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\COPYING') } 'COPYING'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\NOTICE.txt') } 'NOTICE.txt'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\THIRD-PARTY-NOTICES.md') } 'THIRD-PARTY-NOTICES.md'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\third-party.md') } 'third-party.md, lower case'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\ATTRIBUTION.md') } 'ATTRIBUTION.md'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\license') } 'LICENSE in lower case'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'a\b\c\d\LICENCE') } 'deep below the project root, LICENCE'
-Test-Case 'block' 'Edit'  @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE') } 'Edit, not only Write'
-Test-Case 'block' 'MultiEdit' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE') } 'MultiEdit'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $vault 'LICENCE') } 'at the vault root'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $vault '500-sources\docs\COPYING') } 'inside the vault, COPYING'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $claude 'LICENSE') } 'at the .claude root'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $claude 'skills\reuse-first\LICENSE') } 'inside a skill folder'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo/LICENSE') } 'forward slashes'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE') + '\' } 'a trailing separator'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\NOTICE') } 'NOTICE without an extension'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSE') } 'LICENSE in a project'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSE.md') } 'LICENSE.md'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSE-MIT') } 'LICENSE-MIT'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\COPYING') } 'COPYING'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\NOTICE.txt') } 'NOTICE.txt'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\THIRD-PARTY-NOTICES.md') } 'THIRD-PARTY-NOTICES.md'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\third-party.md') } 'third-party.md, lower case'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\ATTRIBUTION.md') } 'ATTRIBUTION.md'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\license') } 'LICENSE in lower case'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\a\b\c\d\LICENCE') } 'deep below the project root, LICENCE'
+Test-Case 'block' 'Edit'  @{ file_path = ($devProjects + '\myrepo\LICENSE') } 'Edit, not only Write'
+Test-Case 'block' 'MultiEdit' @{ file_path = ($devProjects + '\myrepo\LICENSE') } 'MultiEdit'
+Test-Case 'block' 'Write' @{ file_path = ($vault + '\LICENCE') } 'at the vault root'
+Test-Case 'block' 'Write' @{ file_path = ($vault + '\500-sources\docs\COPYING') } 'inside the vault, COPYING'
+Test-Case 'block' 'Write' @{ file_path = ($claude + '\LICENSE') } 'at the .claude root'
+Test-Case 'block' 'Write' @{ file_path = ($claude + '\skills\reuse-first\LICENSE') } 'inside a skill folder'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo/LICENSE') } 'forward slashes'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSE') + '\' } 'a trailing separator'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\NOTICE') } 'NOTICE without an extension'
 
 Write-Output ''
 Write-Output '== allowed: the same names outside the three folders =='
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path '{{DEV}}\External' 'some-clone\LICENSE') } 'a cloned repository keeps its files'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path '{{DEV}}\External' 'some-clone\THIRD-PARTY.md') } 'the same for the .md spelling'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path '{{DEV}}\Temp\agent-upgrade' 'LICENSE') } 'a scratch folder'
+Test-Case 'allow' 'Write' @{ file_path = ('{{DEV}}\External' + '\some-clone\LICENSE') } 'a cloned repository keeps its files'
+Test-Case 'allow' 'Write' @{ file_path = ('{{DEV}}\External' + '\some-clone\THIRD-PARTY.md') } 'the same for the .md spelling'
+Test-Case 'allow' 'Write' @{ file_path = ('{{DEV}}\Temp\agent-upgrade\LICENSE') } 'a scratch folder'
 Test-Case 'allow' 'Write' @{ file_path = "$posixUser\Downloads\LICENSE" } 'macOS style, outside the roots'
 Test-Case 'allow' 'Write' @{ file_path = "$posixHome\Downloads\COPYING" } 'Linux style, outside the roots'
 Test-Case 'allow' 'Write' @{ file_path = '/tmp/scratch/NOTICE.txt' } 'Linux style, forward slashes'
@@ -99,26 +99,26 @@ Test-Case 'allow' 'Write' @{ file_path = "$posixUser\dev\Projects\LICENSE" } 'ma
 
 Write-Output ''
 Write-Output '== allowed: names inside the folders that are not attribution files =='
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\README.md') } 'a README'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\src\main.py') } 'a source file'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSING.md') } 'LICENSING is not LICENSE - the seventh letter decides'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\myrepo\README.md') } 'a README'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\myrepo\src\main.py') } 'a source file'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSING.md') } 'LICENSING is not LICENSE - the seventh letter decides'
 # The next two are the price of the prefix rule, and they are pinned here so the price stays
 # visible: a name that merely BEGINS with one of the words is refused too. The rule names
 # LICENSE* and NOTICE*, not "a file that carries terms", and a session that wants a note called
 # licence-notes.md has to call it something else. Widening the rule to a word match would let
 # LICENSE.md.old through, which is the file that matters.
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\NOTICEBOARD.md') } 'NOTICEBOARD starts with NOTICE - the prefix rule, pinned'
-Test-Case 'block' 'Write' @{ file_path = (Join-Path $devProjects 'myrepo\licence-notes.md') } 'a name that begins with LICENCE - the prefix rule, pinned'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $claude 'settings.json') } 'an ordinary file in .claude'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $vault '000-meta\todo.md') } 'an ordinary note in the vault'
-Test-Case 'allow' 'Write' @{ file_path = (Join-Path $devProjects '') } 'the project root itself'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\NOTICEBOARD.md') } 'NOTICEBOARD starts with NOTICE - the prefix rule, pinned'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\licence-notes.md') } 'a name that begins with LICENCE - the prefix rule, pinned'
+Test-Case 'allow' 'Write' @{ file_path = ($claude + '\settings.json') } 'an ordinary file in .claude'
+Test-Case 'allow' 'Write' @{ file_path = ($vault + '\000-meta\todo.md') } 'an ordinary note in the vault'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\') } 'the project root itself'
 
 Write-Output ''
 Write-Output '== allowed: tool calls this hook must never judge =='
 Test-Case 'allow' 'Bash' @{ command = 'git clone --depth 1 https://github.com/x/y {{DEV}}\External\y' } 'git clone brings its own files along'
 Test-Case 'allow' 'PowerShell' @{ command = 'git clone https://github.com/x/y {{DEV_FWD}}/External/y' } 'the same, other spelling'
-Test-Case 'allow' 'Read' @{ file_path = (Join-Path $devProjects 'myrepo\LICENSE') } 'reading one is not writing one'
-Test-Case 'allow' 'NotebookEdit' @{ notebook_path = (Join-Path $devProjects 'myrepo\LICENSE') } 'a notebook path is not judged'
+Test-Case 'allow' 'Read' @{ file_path = ($devProjects + '\myrepo\LICENSE') } 'reading one is not writing one'
+Test-Case 'allow' 'NotebookEdit' @{ notebook_path = ($devProjects + '\myrepo\LICENSE') } 'a notebook path is not judged'
 Test-Case 'allow' 'Write' @{ file_path = '' } 'no path at all'
 Test-Case 'allow' 'Write' @{} 'no file_path field'
 
