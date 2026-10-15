@@ -9,6 +9,15 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 
 Removed license material (2026-10-15).
 
+The first `ci` run that ever got past GitHub's billing gate (38711843191) reached steps no earlier
+run had reached, and found three defects. All three are fixed here.
+
+| What | Why |
+|---|---|
+| `tests/PersonalLayer.Tests.ps1` | The reader test pinned the literal `'false'` for `published` in `repo.yaml`, so recording the release turned it red on ubuntu and on macOS (`Expected: 'false' But was: 'true'`) while it had been green a minute earlier. The test is about the READER, so it now takes the value out of the file and demands only that it is one of the two states check S accepts. Red-proved on a clone: as released 27 passed / 0 failed, `published: maybe` 26/1, key removed 26/1 |
+| `setup/tools/verify-all.ps1` | `$script:checkCount` still said 33 after check T left. The acceptance line prints only when the result count equals it, so the run would have printed the partial line for ever and could never have said ALL CHECKS PASSED. It is 32 now - 21 lettered checks plus 11 numbered ones, counted both ways |
+| `setup/tools/ci-full-setup.ps1` | `full-setup (macos-latest)` was red with `life-os-venv - venv present but incomplete: faster-whisper is not installed`. `ctranslate2==4.8.2` publishes no macOS arm64 wheel, so the venv cannot be built on `macos-latest` and nothing about that improves on a machine with nobody logged in. The install stage already reports the same failure as a WARN under "what a machine nobody has logged into cannot do"; the verify did not know the limit. It is named in `$script:expectedFails` now, with the detail text it must match, so a venv that breaks for another reason still turns the job red |
+
 ## 3.0.0 (2026-10-15) – this construction kit is a public repository now
 
 The kit is shared: `personal-os-setup` is public since this version. It is a **new repository
