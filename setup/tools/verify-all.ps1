@@ -261,8 +261,8 @@ function Add-Result([string]$nr, [string]$name, [string]$cmd, [string]$out, [str
 
 function Test-Selected([string]$nr) { return (($Only.Count -eq 0) -or ($Only -contains $nr)) }
 
-Write-Host ('== verify-all  ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + '  Repo: ' + $RepoRoot + ' ==')
-Write-Host ''
+Write-Both ('== verify-all  ' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + '  Repo: ' + $RepoRoot + ' ==')
+Write-Both ''
 
 # ---------------------------------------------------------------- 1 PROGRESS ---
 if (Test-Selected '1') { try {
@@ -443,14 +443,20 @@ if (Test-Selected '6') { try {
 if (Test-Selected '7') { try {
     Push-Location $RepoRoot
     $head = (& git rev-parse HEAD).Trim()
-    # --workflow ci, not the newest run of any workflow: GitHub's own "Dependency Graph" runs
-    # report success for the same commit and would let this check pass without ci ever finishing
-    $runJson = (& gh run list --workflow ci --limit 1 --json headSha,status,conclusion 2>&1 | Out-String)
-    Pop-Location
     $code = Get-LastCodeCommit
-    $run = ($runJson | ConvertFrom-Json)[0]
-    $ok = ($run.headSha -eq $code) -and ($run.status -eq 'completed') -and ($run.conclusion -eq 'success')
-    Add-Result 7 'CI: newest code commit, success' 'gh run list --workflow ci --limit 1 --json headSha,status,conclusion' ($run.headSha.Substring(0, 7) + ' ' + $run.status + ' ' + $run.conclusion + ' (newest code commit ' + $code.Substring(0, 7) + ', HEAD ' + $head.Substring(0, 7) + ')') '0' $ok
+    # The run FOR the newest code commit, not the newest run of the workflow: a commit that only
+    # changes documentation still starts a run of its own (the workflow has no paths filter), and
+    # that run would sit on top and make this check red for a state the owner's rule blesses. What
+    # has to hold is that the code at HEAD has a green run - a docs-only commit on top needs none.
+    # --workflow ci, not any workflow: GitHub's own "Dependency Graph" runs report success for the
+    # same commit and would let this check pass without ci ever finishing.
+    $runJson = (& gh run list --workflow ci --commit $code --limit 1 --json headSha,status,conclusion 2>&1 | Out-String)
+    Pop-Location
+    $run = @($runJson | ConvertFrom-Json)[0]
+    $ok = ($null -ne $run) -and ($run.status -eq 'completed') -and ($run.conclusion -eq 'success')
+    $detail = if ($null -eq $run) { 'no ci run exists for the newest code commit ' + $code.Substring(0, 7) + ' (HEAD ' + $head.Substring(0, 7) + ')' }
+              else { $run.headSha.Substring(0, 7) + ' ' + $run.status + ' ' + $run.conclusion + ' (newest code commit ' + $code.Substring(0, 7) + ', HEAD ' + $head.Substring(0, 7) + ')' }
+    Add-Result 7 'CI: newest code commit, success' 'gh run list --workflow ci --commit <newest code commit> --limit 1 --json headSha,status,conclusion' $detail '0' $ok
 } catch { Add-Result 7 'CI: newest code commit, success' 'gh run list' $_.Exception.Message '2' $false } }
 
 # ----------------------------------------------------------------- 8 export ---
@@ -1464,14 +1470,15 @@ if (Test-Selected 'M') { try {
 if (Test-Selected 'N') { try {
     Push-Location $RepoRoot
     $head = (& git rev-parse HEAD | Out-String).Trim()
-    $runJson = (& gh run list --workflow ci --limit 1 --json headSha,status,conclusion,databaseId 2>&1 | Out-String)
-    Pop-Location
     $code = Get-LastCodeCommit
+    # the run FOR the newest code commit (check 7 states why), so a documentation-only commit on
+    # top with a run of its own does not make this red
+    $runJson = (& gh run list --workflow ci --commit $code --limit 1 --json headSha,status,conclusion,databaseId 2>&1 | Out-String)
+    Pop-Location
     $run = @($runJson | ConvertFrom-Json)[0]
     $bad = New-Object System.Collections.Generic.List[string]
-    if (-not $run) { throw 'gh returned no run for the ci workflow' }
-    if ($run.headSha -ne $code) { $bad.Add('the newest run is not for the newest code commit (' + ([string]$run.headSha).Substring(0, 7) + ' vs ' + $code.Substring(0, 7) + ')') }
-    if ($run.status -ne 'completed') { $bad.Add('the newest run is still ' + $run.status) }
+    if (-not $run) { throw 'gh returned no run of the ci workflow for the newest code commit ' + $code.Substring(0, 7) }
+    if ($run.status -ne 'completed') { $bad.Add('the run for the newest code commit is still ' + $run.status) }
     elseif ($run.conclusion -ne 'success') { $bad.Add('the newest run concluded ' + $run.conclusion) }
     Push-Location $RepoRoot
     $jobsJson = (& gh run view $run.databaseId --json jobs 2>&1 | Out-String)

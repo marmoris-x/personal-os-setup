@@ -88,8 +88,8 @@ if (-not $SkipAnalyzer) {
     # Linux loads that file. Parse errors belong in the list a check calls an error.
     foreach ($f in $files) { $issues += @(Invoke-ScriptAnalyzer -Path $f.FullName -Severity ParseError, Error) }
     foreach ($i in $issues) { Write-Both ('  ' + $i.ScriptName + ':' + $i.Line + '  ' + $i.RuleName + '  ' + $i.Message) }
-    if ($issues.Count -eq 0) { Write-Host '  ANALYZER-OK (0 errors)' -ForegroundColor Green }
-    else { Write-Host ('  ANALYZER: ' + $issues.Count + ' errors') -ForegroundColor Red; $errorCount += $issues.Count }
+    if ($issues.Count -eq 0) { Write-Host '  ANALYZER-OK (0 errors)' -ForegroundColor Green; Write-Log '  ANALYZER-OK (0 errors)' }
+    else { Write-Host ('  ANALYZER: ' + $issues.Count + ' errors') -ForegroundColor Red; Write-Log ('  ANALYZER: ' + $issues.Count + ' errors'); $errorCount += $issues.Count }
 }
 
 # --- 2. Pester ---------------------------------------------------------------
@@ -223,11 +223,13 @@ if (-not $SkipHooks) {
         if ($ok) {
             $line = ($out -split "`n" | Where-Object { $_ -match '(errors|failed)' } | Select-Object -Last 1).Trim()
             Write-Host ('  OK    ' + $suite.Name + '  ' + $line) -ForegroundColor Green
+            Write-Log ('  OK    ' + $suite.Name + '  ' + $line)
         }
         else {
             Write-Host ('  ERROR ' + $suite.Name) -ForegroundColor Red
             Write-Host ($out -split "`n" | Where-Object { $_ -match 'FAIL' } | Select-Object -First 8 | ForEach-Object { '    ' + $_ }) -ForegroundColor Red
             Write-Host ($out -split "`n" | Select-Object -Last 4 | ForEach-Object { '    ' + $_ }) -ForegroundColor Red
+            Write-Log ('  ERROR ' + $suite.Name)
             $errorCount++
         }
     }

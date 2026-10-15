@@ -26,9 +26,13 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $Hook)) { Write-Error "hook not found: $Hook"; exit 2 }
 $hookPath = (Resolve-Path $Hook).Path
 
-function Invoke-Guard([string]$Tool, [hashtable]$ToolInput) {
-    $payload = (@{ tool_name = $Tool; session_id = 'nlftest'; tool_input = $ToolInput } |
-        ConvertTo-Json -Compress -Depth 6)
+function Invoke-Guard([string]$Tool, [hashtable]$ToolInput, [string]$Cwd = '') {
+    # "cwd" is a field of the tool call itself, beside tool_input - the same place
+    # downloads-guard.ps1 reads it from. It is left out when no folder is given, so the case
+    # "relative with no session folder given" really measures the missing field.
+    $call = @{ tool_name = $Tool; session_id = 'nlftest'; tool_input = $ToolInput }
+    if ($Cwd -ne '') { $call['cwd'] = $Cwd }
+    $payload = ($call | ConvertTo-Json -Compress -Depth 6)
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
@@ -53,9 +57,9 @@ $posixHome = '/home/beispiel'
 $errors = 0
 $total = 0
 
-function Test-Case([string]$Expected, [string]$Tool, [hashtable]$ToolInput, [string]$What) {
+function Test-Case([string]$Expected, [string]$Tool, [hashtable]$ToolInput, [string]$What, [string]$Cwd = '') {
     $script:total++
-    $code = Invoke-Guard $Tool $ToolInput
+    $code = Invoke-Guard $Tool $ToolInput $Cwd
     $got = if ($code -eq 2) { 'block' } elseif ($code -eq 0) { 'allow' } else { "exit $code" }
     $ok = ($got -eq $Expected)
     if (-not $ok) { $script:errors++ }
@@ -83,6 +87,13 @@ Test-Case 'block' 'Write' @{ file_path = ($claude + '\skills\reuse-first\LICENSE
 Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo/LICENSE') } 'forward slashes'
 Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\LICENSE') + '\' } 'a trailing separator'
 Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\NOTICE') } 'NOTICE without an extension'
+# A relative path is the ordinary shape for a file in the folder the session sits in. The tool
+# call carries that folder, and the hook resolves the name against it (review 1, finding 3).
+Test-Case 'block' 'Write' @{ file_path = 'LICENSE' } 'relative, resolved against the session folder' ($devProjects + '\myrepo')
+Test-Case 'block' 'Write' @{ file_path = 'docs/THIRD-PARTY.md' } 'relative with a subfolder' ($devProjects + '\myrepo')
+Test-Case 'block' 'Write' @{ file_path = 'LICENSE' } 'relative inside .claude' ($claude + '\skills\reuse-first')
+# ".." is collapsed before the comparison (review 1, finding 4): this one comes back inside.
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\myrepo\..\other\LICENSE') } 'a branch that returns into the root'
 
 Write-Output ''
 Write-Output '== allowed: the same names outside the three folders =='
@@ -96,6 +107,12 @@ Test-Case 'allow' 'Write' @{ file_path = "$devProjects-backup\LICENSE" } 'a fold
 Test-Case 'allow' 'Write' @{ file_path = "$vault-old\LICENCE" } 'the vault name plus a suffix'
 Test-Case 'allow' 'Write' @{ file_path = "$claude-backup\LICENSE" } 'the .claude name plus a suffix'
 Test-Case 'allow' 'Write' @{ file_path = "$posixUser\dev\Projects\LICENSE" } 'macOS style project root - not this system''s root'
+# The two shapes the ".." step exists for: a branch that leaves the root, and a path with no root
+# at all. Both name a file outside the three folders, so both must pass.
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\..\External\cl\LICENSE') } 'a branch out of the root lands outside it'
+Test-Case 'allow' 'Write' @{ file_path = ($vault + '\..\Temp\COPYING') } 'the same for the vault'
+Test-Case 'allow' 'Write' @{ file_path = 'LICENSE' } 'relative, session folder outside the roots' '/tmp/scratch'
+Test-Case 'allow' 'Write' @{ file_path = 'LICENSE' } 'relative with no session folder given'
 
 Write-Output ''
 Write-Output '== allowed: names inside the folders that are not attribution files =='

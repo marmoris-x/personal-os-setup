@@ -77,7 +77,36 @@ function ConvertTo-Slashes([string]$value) {
     return $s
 }
 
+# ".." segments are collapsed textually - never through [IO.Path]::GetFullPath: this hook runs on
+# macOS and Linux too, where GetFullPath reads "{{DEV_FWD}}/..." as a relative name and would glue the
+# working directory in front of it. Without this step "{{DEV}}\Projects\..\External\x\LICENSE"
+# stays a string that starts with a root and is refused, although the file it names lives outside
+# all three (found in review 1, finding 4).
+function Resolve-Dots([string]$value) {
+    $prefix = ''
+    if ($value.StartsWith('/')) { $prefix = '/' }
+    $stack = New-Object System.Collections.Generic.List[string]
+    foreach ($part in ($value -split '/')) {
+        if ($part -eq '' -or $part -eq '.') { continue }
+        if ($part -eq '..') {
+            if ($stack.Count -gt 0) { $stack.RemoveAt($stack.Count - 1) }
+            continue
+        }
+        $stack.Add($part)
+    }
+    return ($prefix + ($stack -join '/'))
+}
+
+# A relative path is the normal shape for a file in the project the session sits in ("src/x.md"),
+# and the payload says where that session stands. Resolving it against that folder is what keeps
+# the guard whole: without it a bare "LICENSE" names a file inside a root and is let through
+# (found in review 1, finding 3; the same use of the payload's cwd as downloads-guard.ps1:165).
+$cwd = [string]$call.cwd
 $target = ConvertTo-Slashes $path
+if ($target -notmatch '^([A-Za-z]:|/)' -and -not [string]::IsNullOrWhiteSpace($cwd)) {
+    $target = (ConvertTo-Slashes $cwd) + '/' + $target
+}
+$target = Resolve-Dots $target
 $inside = $false
 foreach ($root in $roots) {
     $r = ConvertTo-Slashes ([string]$root)
