@@ -140,6 +140,22 @@ Test-Case 'allow' 'Write' @{ file_path = '' } 'no path at all'
 Test-Case 'allow' 'Write' @{} 'no file_path field'
 
 Write-Output ''
+Write-Output '== umlauts: the same path with and without must be judged the same =='
+# The umlauts are built from code points and never written into this file: a BOM-less .ps1 is
+# read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source could
+# itself arrive wrong and the case would then test a different path than it says (measured
+# 2026-10-16). The hook reads its input as raw UTF-8 bytes, so the two spellings must land on the
+# same decision - the folder carrying the umlaut is not what the rule looks at, the file name is.
+$ue = [char]0x00FC   # u with diaeresis
+$ae = [char]0x00E4   # a with diaeresis
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\B' + $ue + 'cher\LICENSE') } 'an umlaut in the folder, LICENSE below it'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\Buecher\LICENSE') } 'the same path without the umlaut'
+Test-Case 'block' 'Write' @{ file_path = ($vault + '\500-sources\B' + $ue + 'cher\NOTICE.md') } 'an umlaut in the vault, NOTICE.md'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\B' + $ue + 'cher\README.md') } 'an umlaut in the folder, no attribution name'
+Test-Case 'allow' 'Write' @{ file_path = ($devProjects + '\Buecher\README.md') } 'the same path without the umlaut'
+Test-Case 'block' 'Write' @{ file_path = ($devProjects + '\B' + $ue + 'cher\NOTICE-' + $ae + '.md') } 'an umlaut in the folder AND after the attribution name'
+
+Write-Output ''
 Write-Output ("Errors: {0} of {1}" -f $errors, $total)
 if ($errors -gt 0) { exit 1 }
 exit 0

@@ -56,7 +56,23 @@
       "Bash(git push --force-with-lease*)",
       "PowerShell(git push --force*)",
       "PowerShell(git push -f*)",
-      "PowerShell(git push --force-with-lease*)"
+      "PowerShell(git push --force-with-lease*)",
+      "Bash(git commit *--no-verify*)",
+      "Bash(git commit -n*)",
+      "Bash(git commit * -n*)",
+      "Bash(git push *--no-verify*)",
+      "PowerShell(git commit *--no-verify*)",
+      "PowerShell(git commit -n*)",
+      "PowerShell(git commit * -n*)",
+      "PowerShell(git push *--no-verify*)",
+      "Bash(git -C * commit *--no-verify*)",
+      "Bash(git -C * commit -n*)",
+      "Bash(git -C * commit * -n*)",
+      "Bash(git -C * push *--no-verify*)",
+      "PowerShell(git -C * commit *--no-verify*)",
+      "PowerShell(git -C * commit -n*)",
+      "PowerShell(git -C * commit * -n*)",
+      "PowerShell(git -C * push *--no-verify*)"
     ],
     "defaultMode": "auto"
   },
@@ -277,6 +293,7 @@
     }
   },
   "autoCompactWindow": 400000,
+  "bashOutputMaxChars": 15000,
   "fastModePerSessionOptIn": true,
   "promptSuggestionEnabled": false,
   "pluginConfigs": {

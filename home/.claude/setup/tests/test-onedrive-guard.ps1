@@ -63,6 +63,12 @@ $ODB = '{{ARCHIVE_BASH}}'
 $OB  = '{{VAULT}}\outbox'
 $ADD = 'powershell -NoProfile -File {{HOME}}\.claude\setup\powershell\add-to-archive.ps1'
 
+# The umlauts used below are built from code points and never written into this file: a BOM-less
+# .ps1 is read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source
+# could itself arrive wrong and the case would then test a path other than the one it names
+# (measured 2026-10-16). $ue = u with diaeresis.
+$ue = [char]0x00FC
+
 $cases = @(
     # ---- green: what the user allowed ---------------------------------------
     @{ E = 'allow'; T = 'Glob'; I = @{ pattern = '**/*.pdf'; path = "$OD\01_Example" } },
@@ -283,7 +289,20 @@ $more = @(
     @{ E = 'allow'; T = 'PowerShell'; I = @{ command = 'Remove-Item {{DEV}}\Temp\task\scratch.txt' } },
     @{ E = 'allow'; T = 'Bash'; I = @{ command = 'git -C {{HOME_FWD}}/.claude status -sb' } },
     @{ E = 'allow'; T = 'Grep'; I = @{ pattern = 'x'; path = '{{HOME}}\.claude\hooks' } },
-    @{ E = 'allow'; T = 'WebFetch'; I = @{ url = 'https://example.com/docs' } }
+    @{ E = 'allow'; T = 'WebFetch'; I = @{ url = 'https://example.com/docs' } },
+
+    # ---- umlauts: the same path with and without must be judged the same ------
+    # The guard reads the tool call as raw UTF-8 bytes, so an umlaut in the path must land on
+    # exactly the same verdict as its ASCII twin; each pair stands next to its twin here, so a
+    # difference shows up as a FAIL and not as a silently different path. The statement the guard
+    # quotes back is measured byte for byte after this loop.
+    @{ E = 'block'; T = 'Read';       I = @{ file_path = ("$OD\B" + $ue + "cher\a.txt") } },
+    @{ E = 'block'; T = 'Read';       I = @{ file_path = "$OD\Buecher\a.txt" } },
+    @{ E = 'block'; T = 'Bash';       I = @{ command = ('rm ' + $ODB + '/B' + $ue + 'cher/x.pdf') } },
+    @{ E = 'block'; T = 'PowerShell'; I = @{ command = ('Remove-Item "' + $OD + '\B' + $ue + 'cher\x.pdf"') } },
+    @{ E = 'block'; T = 'Grep';       I = @{ pattern = 'IBAN'; path = ("$OD\B" + $ue + "cher") } },
+    @{ E = 'allow'; T = 'Bash';       I = @{ command = ('ls ' + $ODB + '/B' + $ue + 'cher | head -20') } },
+    @{ E = 'allow'; T = 'PowerShell'; I = @{ command = ('Get-ChildItem "' + $OD + '\B' + $ue + 'cher" -Recurse -File | Select-Object -First 3') } }
 )
 foreach ($case in $more) {
     $exit = Invoke-Guard $case.T $case.I
@@ -299,6 +318,39 @@ $bomPayload = (@{ tool_name = 'PowerShell'; session_id = 'odtest'; tool_input = 
 Judge 'JSON with a byte order mark is still judged (red)' 'block' (Invoke-GuardRaw $bomPayload $true)
 $bomOk = (@{ tool_name = 'PowerShell'; session_id = 'odtest'; tool_input = @{ command = 'Get-Date' } } | ConvertTo-Json -Compress -Depth 6)
 Judge 'JSON with a byte order mark is still judged (green)' 'allow' (Invoke-GuardRaw $bomOk $true)
+
+# --- umlaut: the statement the message quotes must arrive as UTF-8 ----------
+# Stderr is decoded as UTF-8 here ON PURPOSE: the guard writes UTF-8 bytes, and until 2026-10-16
+# the same message went out through [Console]::Error.WriteLine, which writes in the console's OEM
+# code page - an umlaut in the quoted statement reached the agent as mojibake while the verdict
+# stayed right. With this decoder those old bytes become replacement characters and the check
+# fails; that is what makes the case a detector and not just a pin.
+function Invoke-HookErr([string]$Payload) {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = '{{PWSH_HOST}}'
+    $psi.Arguments = '-NoProfile -File "' + $hookPath + '"'
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.UseShellExecute = $false
+    $psi.StandardErrorEncoding = New-Object System.Text.UTF8Encoding($false)
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Payload)
+    $proc.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
+    $proc.StandardInput.Close()
+    $err = $proc.StandardError.ReadToEnd()
+    $null = $proc.StandardOutput.ReadToEnd()
+    $proc.WaitForExit()
+    return @{ Exit = $proc.ExitCode; Err = $err }
+}
+$total++
+$umlautStatement = 'Remove-Item "' + $OD + '\B' + $ue + 'cher\x.pdf"'
+$umlautPayload2 = (@{ tool_name = 'PowerShell'; session_id = 'odtest'; tool_input = @{ command = $umlautStatement } } | ConvertTo-Json -Compress -Depth 6)
+$um = Invoke-HookErr $umlautPayload2
+$umOk = ($um.Exit -eq 2) -and ($um.Err -like ('*B' + $ue + 'cher*'))
+if (-not $umOk) { $errors++ }
+Write-Output ("{0} expected block | result {1,-5} | message quotes the umlaut path as UTF-8: {2}" -f
+    $(if ($umOk) { 'OK   ' } else { 'FAIL ' }), $(if ($um.Exit -eq 2) { 'block' } else { 'allow' }), $(if ($um.Err -like ('*B' + $ue + 'cher*')) { 'yes' } else { 'no' }))
 
 Write-Output ''
 Write-Output ("{0} checks, {1} failed" -f $total, $errors)

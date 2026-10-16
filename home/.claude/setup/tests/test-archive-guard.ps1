@@ -230,8 +230,60 @@ if (-not $ok) { $errors++ }
 $tag = if ($ok) { 'OK   ' } else { 'FAIL ' }
 Write-Output ("{0} expected block | result {1,-5} | state file locked for the whole run: blocked (fail closed)" -f $tag, $(if ($proc.ExitCode -eq 2) { 'block' } else { 'allow' }))
 
+Write-Output ''
+Write-Output '== umlauts =='
+# The umlauts are built from code points and never written into this file: a BOM-less .ps1 is
+# read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source could
+# itself arrive wrong and the case would test a different path than it says (measured 2026-10-16).
+$ue = [char]0x00FC   # u with diaeresis
+$ae = [char]0x00E4   # a with diaeresis
+$umlautDoc = '{{VAULT}}\600-archive\B' + $ue + 'cher\Rechnung.md'
+
+# 1. The state file remembers the paths this session already read. It is written the way the hook
+#    writes it - UTF-8 without a BOM - and the hook reads it under Windows PowerShell 5.1, where
+#    Get-Content would decode it in the ANSI code page and lose the umlaut. The list carries one
+#    entry MORE than the limit of ten on purpose: only a read that keeps the umlaut finds the path
+#    in it and allows it, a broken read counts an eleventh document and blocks. The keys are
+#    lowercased at RUNTIME, the way the hook lowercases them: written as a literal 'c:\...' the
+#    export would swap the spelling for a placeholder and the render would give back the canonical
+#    'C:\...', so the mirrored copy would no longer round-trip (measured 2026-10-16).
+$stateFile = Join-Path $stateDir 'archive-guard-agtest-umlaut.json'
+$entries = @(1..10 | ForEach-Object { ('{{VAULT}}\600-archive\_x' + $_ + '\note.md').ToLower() })
+$entries += $umlautDoc.ToLower()
+[IO.File]::WriteAllText($stateFile, (@{ read = $entries } | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+Judge 'a path with an umlaut, already counted in this session' 'allow' (Invoke-Guard 'Read' @{ file_path = $umlautDoc } 'agtest-umlaut')
+
+# 2. The message that explains a block quotes the file name. It has to arrive as UTF-8 BYTES: the
+#    agent reads it, and the console's OEM code page turns the umlaut into mojibake there. The
+#    stderr is therefore read as bytes, not as text - a text read would decode with whatever the
+#    running host uses and could hide exactly this defect.
+$psi = New-Object System.Diagnostics.ProcessStartInfo
+$psi.FileName = '{{PWSH_HOST}}'
+$psi.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $hookPath + '"'
+$psi.UseShellExecute = $false
+$psi.RedirectStandardInput = $true
+$psi.RedirectStandardError = $true
+$psi.RedirectStandardOutput = $true
+$proc = [System.Diagnostics.Process]::Start($psi)
+$msgCall = @{ tool_name = 'Read'; session_id = 'agtest-msg'; tool_input = @{ file_path = ('{{VAULT}}\600-archive\B' + $ue + 'cher\Rechnung-' + $ae + '.pdf') } }
+$msgBytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes(($msgCall | ConvertTo-Json -Compress -Depth 6))
+$proc.StandardInput.BaseStream.Write($msgBytes, 0, $msgBytes.Length)
+$proc.StandardInput.BaseStream.Flush()
+$proc.StandardInput.Close()
+$stream = New-Object System.IO.MemoryStream
+$proc.StandardError.BaseStream.CopyTo($stream)
+$null = $proc.StandardOutput.ReadToEnd()
+$proc.WaitForExit()
+$raw = $stream.ToArray()
+$utf8Ok = $false
+for ($i = 0; $i -lt ($raw.Length - 1); $i++) { if ($raw[$i] -eq 0xC3 -and $raw[$i + 1] -eq 0xA4) { $utf8Ok = $true } }
+$ok = ($proc.ExitCode -eq 2) -and $utf8Ok
+if (-not $ok) { $script:errors++ }
+$tag = if ($ok) { 'OK   ' } else { 'FAIL ' }
+Write-Output ("{0} expected block | result {1,-5} | the block message carries the umlaut as UTF-8 bytes (C3 A4)" -f $tag, $(if ($proc.ExitCode -eq 2) { 'block' } else { 'allow' }))
+
 Clear-TestState
 Write-Output ''
-Write-Output ("Errors: {0} of {1}" -f $errors, ($cases.Count + 16 + $rawCases.Count))
+Write-Output ("Errors: {0} of {1}" -f $errors, ($cases.Count + 18 + $rawCases.Count))
 if ($errors -gt 0) { exit 1 }
 exit 0

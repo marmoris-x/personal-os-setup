@@ -1,4 +1,4 @@
-# ---- Claude Code: provider profiles (version 12, 2026-10-15) ----
+# ---- Claude Code: provider profiles (version 13, 2026-10-16) ----
 # Insert into BOTH PowerShell profiles (Windows PowerShell 5.1 and PowerShell 7):
 #   {{PWSH_HOST}} -NoProfile -Command '$PROFILE'   -> path for 5.1
 #   {{PWSH_EXE}}       -NoProfile -Command '$PROFILE'   -> path for 7
@@ -14,6 +14,14 @@
 # `claude-ds` and `claude-or` alike - and not in settings.json, which the owner keeps uncommitted
 # for review.
 $env:CLAUDE_CODE_GOAL_CHECKIN_MINUTES = '0'
+
+# Claude Code returns to the project folder after every Bash and PowerShell command (docs: "Return
+# to the original working directory after each Bash or PowerShell command in the main session").
+# That is what stops a cd in one command from moving the next one - and it is why a test command
+# must name its own folder (measured 2026-10-16: a Set-Location from an earlier call was gone in
+# the next one, and a test commit landed in the real repository). settings.json carries this value
+# too; it stands here as well so the --settings profiles (claude-ds, claude-or) have it.
+$env:CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR = '1'
 
 function claude-ds { claude --settings "{{HOME_ENV}}\.claude\profiles\deepseek.json" @args }
 function claude-or { claude --settings "{{HOME_ENV}}\.claude\profiles\openrouter.json" @args }

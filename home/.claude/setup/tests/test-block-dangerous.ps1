@@ -21,6 +21,13 @@ $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $Hook)) { Write-Error "hook not found: $Hook"; exit 2 }
 $hookPath = (Resolve-Path $Hook).Path
 
+# The umlauts used below are built from code points and never written into this file: a BOM-less
+# .ps1 is read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source
+# could itself arrive wrong and the case would then test a different path than it says (measured
+# 2026-10-16). $ue = u with diaeresis, $ae = a with diaeresis.
+$ue = [char]0x00FC
+$ae = [char]0x00E4
+
 # expected, command
 $cases = @(
     @('block', 'Remove-Item "{{DEV}}\Projects\any-project" -Recurse -Force'),
@@ -156,7 +163,22 @@ $cases = @(
     # target and still asks.
     @('block', 'rd /s /q %TEMP%\build'),
     @('block', 'rm -rf %TEMP%\x'),
-    @('block', 'Remove-Item %TEMP%\a -Recurse -Force')
+    @('block', 'Remove-Item %TEMP%\a -Recurse -Force'),
+
+    # --- umlauts ---------------------------------------------------------------
+    # The guard reads the tool call as raw UTF-8 bytes, so a path with an umlaut must land on
+    # exactly the same verdict as the same path spelled in ASCII. Each pair sits next to its twin
+    # here, so a difference shows up as one FAIL instead of a silently different path.
+    @('block', ('Remove-Item "{{DEV}}\Projects\B' + $ue + 'cher" -Recurse -Force')),
+    @('block', 'Remove-Item "{{DEV}}\Projects\Buecher" -Recurse -Force'),
+    @('block', ('Remove-Item {{DEV}}\Projects\B' + $ue + 'cher\package-lock.json')),
+    @('block', ('Remove-Item "{{VAULT}}\B' + $ue + 'cher M' + $ae + 'rz" -Recurse -Force')),
+    @('block', ('Remove-Item "{{DEV}}\Temp\Pr' + $ue + 'fung\.claude" -Recurse -Force')),
+    @('block', ('Remove-Item "{{DEV}}\Temp\Pr' + $ue + 'fung\..\..\Projects\B' + $ue + 'cher" -Recurse -Force')),
+    @('allow', ('Remove-Item "{{DEV}}\Temp\Pr' + $ue + 'fung\notes.txt"')),
+    @('allow', 'Remove-Item "{{DEV}}\Temp\Pruefung\notes.txt"'),
+    @('allow', ('Remove-Item {{DEV}}\Temp\Pr' + $ue + 'fung -Recurse -Force')),
+    @('allow', ('git commit -m "fix: B' + $ue + 'cher sortiert"'))
 )
 
 $errors = 0
@@ -204,6 +226,11 @@ function Invoke-HookBytes([byte[]]$bytes) {
     $psi.RedirectStandardError = $true
     $psi.RedirectStandardOutput = $true
     $psi.UseShellExecute = $false
+    # The block message is read as UTF-8 on purpose: the guard writes it as UTF-8 bytes, and
+    # before 2026-10-16 the same text went out through [Console]::Error.WriteLine in the console's
+    # OEM code page, so an umlaut in a quoted path arrived as mojibake. The cases below match the
+    # umlaut itself, so the old bytes would decode to replacement characters and fail here.
+    $psi.StandardErrorEncoding = New-Object System.Text.UTF8Encoding($false)
     $proc = [System.Diagnostics.Process]::Start($psi)
     $proc.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
     $proc.StandardInput.Close()
@@ -223,7 +250,10 @@ $rawCases = @(
     @{ Name = 'BOM + garbage is refused';                          Bytes = ($bom + $utf8.GetBytes('{{{')); Want = 'block'; Text = 'cannot read' },
     @{ Name = 'truncated JSON is refused';                         Bytes = $utf8.GetBytes('{"tool_name":"Bash","tool_input":{"command":"rm -rf sr'); Want = 'block'; Text = 'cannot read' },
     @{ Name = 'empty input is refused';                            Bytes = [byte[]]@();          Want = 'block'; Text = 'cannot read' },
-    @{ Name = 'valid JSON without a command is allowed';           Bytes = $utf8.GetBytes('{"tool_name":"Read","tool_input":{"file_path":"x"}}'); Want = 'allow'; Text = '' }
+    @{ Name = 'valid JSON without a command is allowed';           Bytes = $utf8.GetBytes('{"tool_name":"Read","tool_input":{"file_path":"x"}}'); Want = 'allow'; Text = '' },
+    # The quoted path comes back in the message: this is the umlaut half of the delete case above,
+    # read as raw bytes from the same UTF-8 stream the guard writes.
+    @{ Name = 'BOM + a delete with an umlaut is read and answered in UTF-8'; Bytes = ($bom + $utf8.GetBytes((New-Payload ('Remove-Item "{{DEV}}\Projects\B' + $ue + 'cher" -Recurse -Force')))); Want = 'block'; Text = ('B' + $ue + 'cher') }
 )
 $rawTotal = 0
 foreach ($rc in $rawCases) {

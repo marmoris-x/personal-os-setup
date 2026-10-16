@@ -5,6 +5,25 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## 3.2.0 (2026-10-16, not tagged yet)
+
+The owner's umlaut task: every PreToolUse guard gets real JSON with umlaut paths over stdin and
+must decide exactly as it does for the same path without umlauts; umlaut cases in all six guard
+suites, red then green; then four more git rules, `bashOutputMaxChars`, the working-directory
+variable in the profile template and the sparse clone in `reuse-first`. The full table with the
+measurements stands in the claude-config CHANGELOG of the same date.
+
+| What | Why |
+|---|---|
+| `home/.claude/hooks/*.ps1` (all six): `Send-Block` writes the message as UTF-8 bytes instead of `[Console]::Error.WriteLine`; `archive-guard.ps1` reads its session state with `[IO.File]::ReadAllText` instead of `Get-Content` | The verdicts were already right for umlaut paths (10 of 10 pairs measured equal); two things around them were not. The message arrived in the console's OEM code page, so a quoted `Bücher` reached the agent as mojibake - red-proved per guard against a copy with only `Send-Block` reverted. The state read was the one real decision defect: a BOM-less UTF-8 state file read in the ANSI code page lost the umlaut, the same document counted twice, and the eleven-document limit blocked one the session had already read |
+| `home/.claude/setup/tests/test-block-dangerous.ps1` (131 cases), `test-downloads-guard.ps1` (73), `test-onedrive-guard.ps1` (199), `test-trifecta-guard.ps1` (51), `test-archive-guard.ps1` (52), `test-no-license-files.ps1` (57): an umlaut block each, every case beside its ASCII twin; the guards that quote a path also get a byte-exact stderr case | The umlauts are built from code points, never written into the file (Windows PowerShell 5.1 reads a BOM-less `.ps1` in the ANSI code page). Measured before/after, from `git show HEAD:`: 120/64/191/43/50/51 cases were there before. The trifecta guard's messages are fixed text, so its cases pin the decision only - measured: a copy reading stdin in the console code page passes them and fails the suite's older BOM case, which is its real detector |
+| `home/.claude/settings.json`: the four ordered `--no-verify` / `-n` patterns per shell, plus the same four with `git -C * ` in front (16 rules in all) | The eight ordered patterns leave a gap that the test measured: `git -C <path> commit --no-verify` begins with `git -C`, so no pattern anchored at `git commit` sees it, and the commit runs with the hooks skipped. With the twins all 16 spellings are refused in both shells; a normal commit and push still go through; `git commit -m "fix -n flag"` is blocked by `git commit * -n*` and that is the documented outcome the order allows |
+| `home/.claude/settings.json`: `"bashOutputMaxChars": 15000` | The owner's order, confirmed against the docs first (top-level key, clamped 4000-128000, default 30000, needs 2.1.261+; installed 2.1.301) |
+| `home/.claude/setup/powershell/claude-profile-functions.ps1` (version 13): `CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=1` beside the goal-check-in variable | The docs: "Return to the original working directory after each Bash or PowerShell command in the main session." `settings.json` carries it too, the profile sets it so the `--settings` profiles have it as well |
+| `home/.claude/skills/reuse-first/SKILL.md`: the sparse-clone recipe for large repositories (`--filter=blob:none --sparse`, then `sparse-checkout set <folder>`) | The owner's order; measured on PowerShell/PSReadLine: 64 of 135 files on disk with one folder selected |
+| `setup/tools/check.ps1`: the verdict regex for the guard suites keeps the number and its word on ONE line (`[^\S\r\n]` instead of `\s`) | The umlaut case name ends in "UTF-8"; with `\s+` the digit plus the blank line before the summary read as "8 ... errors", and the harness reported a suite with 0 errors as ERROR. Measured: with the old pattern the delete-guard suite is judged ERROR while it exits 0 and prints "Errors: 0 of 131" |
+| `home/.claude/CLAUDE.md`: one rule in "Git" - a test that commits or pushes runs only in a throw-away repository under `{{DEV}}\Temp`, names that repository in the same command and reads `git remote -v` first | The mistake this task made: the deny-rule test's positive half ran in this repository instead of `{{DEV}}\Temp`, because `Set-Location` from an earlier tool call was gone in the next one (the working-directory variable above). An empty commit sits on GitHub main since then; the owner decided to leave it, so no history was rewritten |
+
 ## 3.1.0 (2026-10-15, not tagged yet)
 
 The agent-upgrade task (the owner's task file, Parts 0 to 4). The repository side: one new guard,

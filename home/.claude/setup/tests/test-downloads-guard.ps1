@@ -47,6 +47,13 @@ function Judge([string]$Name, [string]$Expect, [int]$Exit) {
 
 $d = '{{HOME}}\Downloads'
 
+# The umlauts used below are built from code points and never written into this file: a BOM-less
+# .ps1 is read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source
+# could itself arrive wrong and the case would then test a path other than the one it names
+# (measured 2026-10-16). $ue = u with diaeresis, $ae = a with diaeresis.
+$ue = [char]0x00FC
+$ae = [char]0x00E4
+
 $cases = @(
     # --- must be blocked -------------------------------------------------
     @{ E = 'block'; T = 'PowerShell'; C = "Move-Item -LiteralPath '$d\Images\a.png' -Destination {{DEV}}\Temp\" },
@@ -116,7 +123,20 @@ $cases = @(
     @{ E = 'block'; T = 'Bash';       C = "bash <<'EOF'`nrm ~/Downloads/Images/a.png`nEOF`n" },
     @{ E = 'block'; T = 'Bash';       C = "cat <<'EOF' | bash`nrm ~/Downloads/Images/a.png`nEOF`n" },
     @{ E = 'block'; T = 'Bash';       C = "python - <<'EOF'`nimport shutil; shutil.move(r'{{HOME}}\Downloads\Images\a.png', 'x')`nEOF`n" },
-    @{ E = 'block'; T = 'Bash';       C = "cat <<'EOF' > x.md`ntext`nEOF`nrm ~/Downloads/Images/a.png`n" }   # a real command AFTER the heredoc
+    @{ E = 'block'; T = 'Bash';       C = "cat <<'EOF' > x.md`ntext`nEOF`nrm ~/Downloads/Images/a.png`n" },   # a real command AFTER the heredoc
+
+    # --- umlauts: the same path with and without must be judged the same --------
+    # The guard reads the tool call as raw UTF-8 bytes, so an umlaut in the path must land on
+    # exactly the same verdict as its ASCII twin. Each pair stands next to its twin, so a
+    # difference shows up as a FAIL and not as a silently different path.
+    @{ E = 'block'; T = 'PowerShell'; C = ('Move-Item "' + $d + '\Documents\B' + $ue + 'cher\a.pdf" {{DEV}}\Temp\') },
+    @{ E = 'block'; T = 'PowerShell'; C = ('Move-Item "' + $d + '\Documents\Buecher\a.pdf" {{DEV}}\Temp\') },
+    @{ E = 'block'; T = 'Bash';       C = ('rm ~/Downloads/Music/Soundboard/Sch' + $ue + 'tzen/a.mp3') },
+    @{ E = 'block'; T = 'PowerShell'; C = ('Remove-Item -Recurse -Force "' + $d + '\Videos\Pr' + $ue + 'fung"') },
+    @{ E = 'allow'; T = 'PowerShell'; C = ('Get-ChildItem -LiteralPath "' + $d + '\Documents\B' + $ue + 'cher" -Recurse') },
+    @{ E = 'allow'; T = 'PowerShell'; C = ('Get-ChildItem -LiteralPath "' + $d + '\Documents\Buecher" -Recurse') },
+    @{ E = 'allow'; T = 'PowerShell'; C = ('Remove-Item "' + $d + '\_Aufraeum-Protokoll M' + $ae + 'rz.csv"') },
+    @{ E = 'allow'; T = 'Bash';       C = 'git commit -m "chore: Buecher und Notizen umsortiert"' }
 )
 
 foreach ($c in $cases) {
@@ -140,6 +160,39 @@ foreach ($bad in @('', 'not json at all')) {
     if (-not $ok) { $errors++ }
     Write-Output ("{0} expected block | result {1,-5} | unreadable input: '{2}'" -f $(if ($ok) { 'OK   ' } else { 'FAIL ' }), $(if ($code -eq 2) { 'block' } else { 'allow' }), $bad)
 }
+
+# --- umlauts: the quoted path in the message must arrive as UTF-8 ------------
+# The guard quotes the statement in its block message. Until 2026-10-16 that message went out
+# through [Console]::Error.WriteLine, which writes in the console's OEM code page: the umlaut
+# reached the agent as mojibake (measured bytes 81 84 instead of the UTF-8 spellings of ue and
+# ae) while the verdict itself stayed right. Stderr is decoded as UTF-8 here ON PURPOSE, so those
+# old bytes would come back as replacement characters and this check would fail.
+function Invoke-GuardErr([string]$Payload) {
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = '{{PWSH_HOST}}'
+    $psi.Arguments = '-NoProfile -File "' + $hookPath + '"'
+    $psi.RedirectStandardInput = $true
+    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.UseShellExecute = $false
+    $psi.StandardErrorEncoding = New-Object System.Text.UTF8Encoding($false)
+    $proc = [System.Diagnostics.Process]::Start($psi)
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Payload)
+    $proc.StandardInput.BaseStream.Write($bytes, 0, $bytes.Length)
+    $proc.StandardInput.Close()
+    $err = $proc.StandardError.ReadToEnd()
+    $null = $proc.StandardOutput.ReadToEnd()
+    $proc.WaitForExit()
+    return @{ Exit = $proc.ExitCode; Err = $err }
+}
+$total++
+$umlautCommand = 'Move-Item "' + $d + '\Documents\B' + $ue + 'cher\a.pdf" {{DEV}}\Temp\'
+$umlautPayload = (@{ tool_name = 'PowerShell'; session_id = 'dlgtest'; cwd = '{{VAULT}}'; tool_input = @{ command = $umlautCommand } } | ConvertTo-Json -Compress -Depth 6)
+$um = Invoke-GuardErr $umlautPayload
+$ok = ($um.Exit -eq 2) -and ($um.Err -like ('*B' + $ue + 'cher*'))
+if (-not $ok) { $errors++ }
+Write-Output ("{0} expected block | result {1,-5} | message quotes the umlaut path as UTF-8: {2}" -f
+    $(if ($ok) { 'OK   ' } else { 'FAIL ' }), $(if ($um.Exit -eq 2) { 'block' } else { 'allow' }), $(if ($um.Err -like ('*B' + $ue + 'cher*')) { 'yes' } else { 'no' }))
 
 Write-Output ''
 Write-Output ("{0} of {1} cases as expected, {2} errors" -f ($total - $errors), $total, $errors)

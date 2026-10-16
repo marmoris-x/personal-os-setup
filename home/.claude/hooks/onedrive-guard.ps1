@@ -78,7 +78,16 @@
 $ErrorActionPreference = 'SilentlyContinue'
 
 function Send-Block([string]$reason) {
-    [Console]::Error.WriteLine($reason)
+    # UTF-8 BYTES, not [Console]::Error.WriteLine: that one writes in the console's OEM code
+    # page, so an umlaut in a quoted path reached the agent as mojibake (measured 2026-10-16).
+    # The decision was never affected by this - the message that explains it was. The try keeps
+    # the fail-closed promise if the stream cannot be opened: exit 2 still happens.
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($reason + [Environment]::NewLine)
+        $err = [Console]::OpenStandardError()
+        $err.Write($bytes, 0, $bytes.Length)
+        $err.Flush()
+    } catch { }
     exit 2
 }
 

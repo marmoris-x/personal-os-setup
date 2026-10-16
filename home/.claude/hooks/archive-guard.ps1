@@ -54,7 +54,16 @@ $script:StateMaxAgeDays = 7   # read counters of older sessions are deleted
 $ErrorActionPreference = 'SilentlyContinue'
 
 function Send-Block([string]$reason) {
-    [Console]::Error.WriteLine($reason)
+    # UTF-8 BYTES, not [Console]::Error.WriteLine: that one writes in the console's OEM code
+    # page, so an umlaut in a quoted path reached the agent as mojibake (measured 2026-10-16).
+    # The decision was never affected by this - the message that explains it was. The try keeps
+    # the fail-closed promise if the stream cannot be opened: exit 2 still happens.
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($reason + [Environment]::NewLine)
+        $err = [Console]::OpenStandardError()
+        $err.Write($bytes, 0, $bytes.Length)
+        $err.Flush()
+    } catch { }
     exit 2
 }
 
@@ -145,7 +154,11 @@ function Save-ArchiveState {
             break
         } catch [System.IO.IOException] {
             try {
-                $reread = Get-Content -LiteralPath $statePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                # ReadAllText, not Get-Content: the state is written as UTF-8 without a BOM, and
+                # Windows PowerShell 5.1 reads such a file in the ANSI code page, so a path with
+                # an umlaut came back broken and was treated as a document this session had not
+                # seen (measured 2026-10-16).
+                $reread = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json -ErrorAction Stop
                 foreach ($e in @($reread.read)) { if ($e -and ($script:read -notcontains $e)) { $script:read += $e } }
             } catch { }
             Start-Sleep -Milliseconds 120
@@ -165,7 +178,11 @@ Get-ChildItem -LiteralPath $stateDir -Filter 'archive-guard-*.json' -File -Error
 $script:read = @()
 if (Test-Path -LiteralPath $statePath) {
     try {
-        $saved = Get-Content -LiteralPath $statePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+        # ReadAllText, not Get-Content: the state is written as UTF-8 without a BOM, and Windows
+        # PowerShell 5.1 reads such a file in the ANSI code page, so a path with an umlaut came
+        # back broken. The lowercased path IS the key this file exists for (measured 2026-10-16:
+        # a document read twice counted as two documents after the first store).
+        $saved = [IO.File]::ReadAllText($statePath) | ConvertFrom-Json -ErrorAction Stop
         $script:read = @($saved.read | Where-Object { $_ })
     } catch { $script:read = @() }
 }

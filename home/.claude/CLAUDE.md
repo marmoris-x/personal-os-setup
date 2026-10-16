@@ -265,6 +265,11 @@ is more specific and wins where the two differ. My explicit request in the chat 
 ## Git
 
 - One commit per finished step. Run `git status` first and stage the files you changed.
+- A test that commits or pushes runs only in a throwaway repo under `{{DEV}}\Temp`, and the same
+  command names that repo itself (absolute path, `git -C <path>`) and reads `git remote -v` before
+  the first test commit. Why: `CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR` returns the shell to the
+  project folder after every command, so a folder chosen in an earlier call is already gone
+  (measured 2026-10-16: a test commit and push landed in a real repository).
 - Conventional Commits: `<type>(<scope>): <description>` with feat, fix, refactor, test,
   docs, chore, perf, style.
 - Never force-push or rewrite history that is already pushed, unless I ask.

@@ -57,6 +57,19 @@ line: "X, because it is plain PowerShell, still maintained, and shows a toast wi
 git clone --depth 1 <url> {{DEV}}\Temp\<task>\<name>
 ```
 
+In a large repository, ask for one folder at a time instead of the whole tree:
+
+```powershell
+git clone --depth 1 --filter=blob:none --sparse <url> {{DEV}}\Temp\<task>\<name>
+git -C {{DEV}}\Temp\<task>\<name> sparse-checkout set <folder>
+```
+
+`--filter=blob:none` fetches the history without the file contents, `--sparse` starts with the
+root files alone, and `sparse-checkout set` brings in the folder you need; `sparse-checkout add`
+brings in a second one later. Measured 2026-10-16 on PowerShell/PSReadLine: `set PSReadLine` left
+64 of the 135 tracked files on disk. Less fetched and less on disk means a faster clone and less
+in the way; the copy step below is the same either way.
+
 Then copy the single files you need into the project. Never take a foreign `.git/`, `.github/`
 workflows, CI configs, lock files or build output. Change only what makes it fit: import paths,
 names that clash, file locations, configuration values, environment variables. No refactoring,

@@ -57,6 +57,11 @@ function Judge([string]$Name, [string]$Expect, [int]$Exit) {
 }
 
 $read600 = @{ file_path = '{{VAULT}}\600-archive\01_Example\Bankvertrag.md' }
+
+# The umlaut used below is built from a code point and never written into this file: a BOM-less
+# .ps1 is read in the ANSI code page by Windows PowerShell 5.1, so a literal umlaut in the source
+# could itself arrive wrong (measured 2026-10-16). $ue = u with diaeresis.
+$ue = [char]0x00FC
 $grep600 = @{ pattern = 'IBAN'; path = '{{VAULT}}\600-archive'; head_limit = 50 }
 $web = @{ url = 'https://example.com'; prompt = 'x' }
 $mcp = @{ query = 'x' }
@@ -116,7 +121,24 @@ $cases = @(
     @{ E = 'allow'; T = 'Read';     S = 'tgtest-300'; I = @{ file_path = '{{VAULT}}\300-areas\Amt_Beispiel.md' } },
     @{ E = 'allow'; T = 'WebFetch'; S = 'tgtest-300'; I = $web },
     @{ E = 'allow'; T = 'Read';     S = 'tgtest-400'; I = @{ file_path = '{{VAULT}}\400-knowledge\x.md' } },
-    @{ E = 'allow'; T = 'WebFetch'; S = 'tgtest-400'; I = $web }
+    @{ E = 'allow'; T = 'WebFetch'; S = 'tgtest-400'; I = $web },
+
+    # --- umlauts: the folder the rule looks at is ASCII, the decision must not change ---
+    # The guard reads the tool call as raw UTF-8 bytes, so a note whose PATH carries an umlaut is
+    # archive access exactly like its ASCII twin - before the umlaut note and after it, and in a
+    # web-first session too. Each pair stands next to its twin, so a difference is one FAIL. The
+    # umlauts are built from code points: a BOM-less .ps1 is read in the ANSI code page by Windows
+    # PowerShell 5.1, so a literal umlaut here could arrive wrong and test another path (measured
+    # 2026-10-16). The messages of this guard are fixed text and carry no path, so there is no
+    # message byte case to measure here.
+    @{ E = 'allow'; T = 'Read';      S = 'tgtest-uml';  I = @{ file_path = ('{{VAULT}}\600-archive\B' + $ue + 'cher\Bankvertrag.md') } },
+    @{ E = 'allow'; T = 'Read';      S = 'tgtest-uml';  I = @{ file_path = '{{VAULT}}\600-archive\Buecher\Bankvertrag.md' } },
+    @{ E = 'block'; T = 'WebSearch'; S = 'tgtest-uml';  I = @{ query = 'x' } },
+    @{ E = 'allow'; T = 'WebSearch'; S = 'tgtest-uml2'; I = @{ query = 'x' } },
+    @{ E = 'block'; T = 'Read';      S = 'tgtest-uml2'; I = @{ file_path = ('{{VAULT}}\600-archive\B' + $ue + 'cher\Bankvertrag.md') } },
+    @{ E = 'block'; T = 'Read';      S = 'tgtest-uml2'; I = @{ file_path = '{{VAULT}}\600-archive\Buecher\Bankvertrag.md' } },
+    @{ E = 'allow'; T = 'Read';      S = 'tgtest-uml3'; I = @{ file_path = ('{{VAULT}}\400-knowledge\Notizen B' + $ue + 'cher.md') } },
+    @{ E = 'allow'; T = 'WebFetch';  S = 'tgtest-uml3'; I = $web }
 )
 
 foreach ($case in $cases) {

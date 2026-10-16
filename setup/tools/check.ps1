@@ -214,8 +214,11 @@ if (-not $SkipHooks) {
         $path = Join-Path $renderDir ('HOME/.claude/setup/tests/' + $suite.Name)
         if (-not (Test-Path -LiteralPath $path)) { Write-Host ('  ' + $suite.Name + ': MISSING') -ForegroundColor Red; $errorCount++; continue }
         $out = & pwsh -NoProfile -File $path 2>&1 | Out-String
-        # measured formats: "Errors: 0 of 120" / "0 errors" / "0 failed" - exit code decides too
-        $ok = ($LASTEXITCODE -eq 0) -and ($out -match '(?m)(Errors:\s*0\b|\b0 (failed|errors)\b)') -and ($out -notmatch '(?m)(Errors:\s*[1-9]\d*\b|[1-9]\d*\s+(failed|errors)\b)')
+        # measured formats: "Errors: 0 of 120" / "0 errors" / "0 failed" - exit code decides too.
+        # The number and its word stay on ONE line: with \s+ a case name ending in a digit ("...UTF-8")
+        # plus the blank line before the summary read as "8 ... errors", so a suite that passed was
+        # reported as an error (measured 2026-10-16 against the umlaut case in test-block-dangerous).
+        $ok = ($LASTEXITCODE -eq 0) -and ($out -match '(?m)(Errors:[^\S\r\n]*0\b|\b0 (failed|errors)\b)') -and ($out -notmatch '(?m)(Errors:[^\S\r\n]*[1-9]\d*\b|[1-9]\d*[^\S\r\n]+(failed|errors)\b)')
         # The suite prints one line per case. The log keeps all of them; the console keeps the
         # suite's own count line, and for a failure the failing cases.
         Write-Log ('  == ' + $suite.Name)

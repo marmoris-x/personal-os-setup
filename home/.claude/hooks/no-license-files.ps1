@@ -32,7 +32,15 @@ $ErrorActionPreference = 'SilentlyContinue'
 $blockMsg = 'Licensing does not matter here; this file is not needed.'
 
 function Send-Block {
-    [Console]::Error.WriteLine($blockMsg)
+    # UTF-8 BYTES, not [Console]::Error.WriteLine - the same change as in the five other guards
+    # (2026-10-16): that one writes in the console's OEM code page. This message is pure ASCII
+    # today, so nothing changes visibly; the write no longer depends on the console's code page.
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($blockMsg + [Environment]::NewLine)
+        $err = [Console]::OpenStandardError()
+        $err.Write($bytes, 0, $bytes.Length)
+        $err.Flush()
+    } catch { }
     exit 2
 }
 
