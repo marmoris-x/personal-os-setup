@@ -498,16 +498,22 @@ try {
                     if (Test-Path -LiteralPath $abs -PathType Container) {
                         foreach ($f in @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force)) {
                             $childRel = $f.FullName.Substring($abs.Length).TrimStart('\', '/')
-                            $pairs += @{ File = $f; Rel = ($targetRel + '/' + ($childRel -replace '\\', '/')) }
+                            $pairs += @{ Path = $f.FullName; Rel = ($targetRel + '/' + ($childRel -replace '\\', '/')) }
                         }
                     }
-                    elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $pairs = @(@{ File = (Get-Item -LiteralPath $abs); Rel = $targetRel }) }
+                    elseif ((Test-Path -LiteralPath $abs -PathType Leaf) -and (Test-ExecutableTarget $targetRel)) {
+                        # The PATH, not a Get-Item object, and only for a target that can be a
+                        # hook at all: on Linux that call failed on a hidden file - a dot name -
+                        # and took the whole files stage with it (measured: ubuntu CI run
+                        # 38864252345, "Could not find item .../.claude/.gitattributes").
+                        $pairs = @(@{ Path = $abs; Rel = $targetRel })
+                    }
                     foreach ($pair in $pairs) {
                         if (-not (Test-ExecutableTarget $pair.Rel)) { continue }
-                        $null = (& chmod +x $pair.File.FullName 2>&1)
+                        $null = (& chmod +x $pair.Path 2>&1)
                         if ($LASTEXITCODE -ne 0) {
                             $stageErrors++
-                            Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $pair.File.FullName)
+                            Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $pair.Path)
                         }
                     }
                 }
