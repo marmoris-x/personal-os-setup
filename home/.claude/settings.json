@@ -53,7 +53,10 @@
       "Edit(//c/Users/*/.claude/profiles/**)",
       "Bash(git push --force*)",
       "Bash(git push -f*)",
-      "Bash(git push --force-with-lease*)"
+      "Bash(git push --force-with-lease*)",
+      "PowerShell(git push --force*)",
+      "PowerShell(git push -f*)",
+      "PowerShell(git push --force-with-lease*)"
     ],
     "defaultMode": "auto"
   },
