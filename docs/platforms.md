@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `9c5f1e2514f247e7`
+- Manifest checksum: `7ace140506004a58`
 
 ## What each system can do
 

@@ -639,7 +639,9 @@ components:
     type: mcp
     core: true
     name: "exa"
-    json: '{"type":"http","url":"https://mcp.exa.ai/mcp"}'
+    # the header value is the ${EXA_API_KEY} TEMPLATE, expanded by Claude Code at connect time
+    # from its own process environment - the key itself never stands in a file (2026-10-17)
+    json: '{"type":"http","url":"https://mcp.exa.ai/mcp","headers":{"x-api-key":"${EXA_API_KEY}"}}'
 
   - id: mcp-parallel
     area: research
