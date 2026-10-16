@@ -135,10 +135,10 @@ is more specific and wins where the two differ. My explicit request in the chat 
 - A protection that lets everything through when its tool is missing (the gitleaks hook does)
   counts only while the tool is there: prove it after setup and at every check
   (`gitleaks version`).
-- A change to the system is mirrored in the same task: run `setup\export.ps1`, then
-  `setup\tools\check.ps1` in `{{DEV}}\Projects\personal-os-setup`, then commit and push that repo.
-  It is done only when the export wrote nothing unexpected and the checks stay green
-  (replaces printed-vs-live).
+- A change to the system is mirrored in the same task: `setup\export.ps1`, then
+  `setup\tools\drift-check.ps1` (it must say `0 new, 0 changed, 0 removed`), then
+  `setup\tools\check.ps1` in `{{DEV}}\Projects\personal-os-setup`, then commit and push that repo
+  (replaces printed-vs-live). `check.ps1` renders from the repo and cannot see leftover drift.
 - If I correct you, or the same mistake happens a second time: in the same task write a one-line
   rule where it belongs and log it in `claude-config/docs/lessons.md` (date, occasion, rule, file).
 - A stop condition from me ("do not merge on hits") holds even if the hits look harmless: stop,
