@@ -691,14 +691,32 @@ try {
         $req = Join-Path $RepoRoot 'home/.claude/life-os/requirements.txt'
         $venv = Get-PlatformVenvDir -Os $platformOs
         $venvPy = Get-PlatformVenvPython -Os $platformOs
+        # The interpreter comes from Get-PlatformLifeOsPython, never from a bare `python3` on
+        # PATH. Measured 2026-10-16: Homebrew's `python` formula already points at 3.15 (Python
+        # 3.15.0 came out 2026-10-09), but ctranslate2 - faster-whisper's engine - ships wheels
+        # up to 3.14 only, so a venv built with the PATH python dies on "No matching
+        # distribution found for ctranslate2" and names no cause. The resolver reads the version
+        # from each interpreter itself and prefers the pin: 3.13, the version macos/Brewfile and
+        # windows/winget-core.json install.
+        $py = Get-PlatformLifeOsPython -Os $platformOs
         if ($TestMode) {
-            Save-Preview 'life-os-venv.txt' ('python3 -m venv ' + $venv + "`n" + $venvPy + ' -m pip install -r ' + $req + "`n")
+            # the preview names the interpreter the live run would use; a machine where nothing
+            # usable was found keeps the old stand-in text
+            $cmdText = if ($py -and $py['Argv']) { $py.Command } else { 'python3' }
+            Save-Preview 'life-os-venv.txt' ($cmdText + ' -m venv ' + $venv + "`n" + $venvPy + ' -m pip install -r ' + $req + "`n")
             Add-Result 'life-os-venv' 'PREVIEW' 'preview/life-os-venv.txt'
             Save-Journal 'life-os-venv'
         }
         else {
-            $python = Get-PlatformPythonCommand
-            if (-not $python) { Add-Result 'life-os-venv' 'WARN' 'python3 not found'; Add-Manual 'install Python (package stage), then -Resume' }
+            if ($py -and $py.ContainsKey('TooNew')) {
+                # a clear abort with the cause, instead of the pip error later that names none
+                $tooNewMsg = ('python ' + $py.TooNew + ' (' + $py.Command + ') is newer than the newest Python ' +
+                    'ctranslate2 has wheels for (3.' + (Get-PlatformLifeOsPythonMaxMinor) + ')')
+                Write-Host ('  ' + $tooNewMsg)
+                Add-Result 'life-os-venv' 'ERROR' $tooNewMsg
+                Add-Manual 'install Python 3.13 (macOS: brew install python@3.13; Windows: winget install Python.Python.3.13), then run install.ps1 -Resume'
+            }
+            elseif (-not $py) { Add-Result 'life-os-venv' 'WARN' 'no usable python found'; Add-Manual 'install Python 3.13 (the package stage does), then run install.ps1 -Resume' }
             elseif ($WhatIfPreference) {
                 Add-Result 'life-os-venv' 'PREVIEW' ('DryRun: venv ' + $venv)
             }
@@ -711,7 +729,11 @@ try {
                     # never retried; and the model download was reported as OK when it failed.
                     try {
                         if (-not (Test-Path -LiteralPath $venvPy)) {
-                            & $python -m venv $venv
+                            # the resolved argv carries the pin (Windows: `py -3.13`, Unix:
+                            # `python3.13`); the splat keeps argv[0] and the selector separate
+                            $pyExe = $py.Argv[0]
+                            $pyPre = @($py.Argv | Select-Object -Skip 1)
+                            & $pyExe @pyPre -m venv $venv
                         }
                         # Measured in the first full-setup CI run (2026-10-14): on macos-latest the
                         # pip install failed ("No matching distribution found for nvidia-cublas-cu12")

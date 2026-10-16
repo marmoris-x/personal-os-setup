@@ -2,6 +2,13 @@
 
 - Date: 2026-10-11
 - Status: decided
+- Amended (2026-10-16): the venv is built with the pinned interpreter through
+  `Get-PlatformLifeOsPython` (`python3.13` on macOS and Linux, `py -3.13` on Windows), not with
+  a bare `python`/`python3` from PATH - Python 3.15.0 (2026-10-09) has no ctranslate2 wheel, so
+  a fresh Mac failed the whole venv on "No matching distribution found for ctranslate2". The
+  installer aborts with a named cause when the only interpreter found is newer than the newest
+  wheel (3.14); the pins are `python@3.13` in macos/Brewfile and `Python.Python.3.13` in
+  windows/winget-core.json.
 
 ## Context
 

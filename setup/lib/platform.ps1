@@ -222,14 +222,102 @@ function Get-PlatformVenvPython {
     return (Join-Path $venv 'bin/python')
 }
 
-function Get-PlatformPythonCommand {
-    # the interpreter that builds the venv. python3 is the name on macOS and Linux; Windows
-    # installs python.exe and has no python3 shim.
+function Get-PlatformLifeOsPythonMaxMinor {
+    # The newest Python MINOR version ctranslate2 ships wheels for. ctranslate2 is the engine
+    # under faster-whisper and the one Life OS package that must have a prebuilt wheel; without
+    # one pip stops at "No matching distribution found for ctranslate2" and the venv stays
+    # empty. Measured 2026-10-16 against PyPI (pypi.org/pypi/ctranslate2/4.8.2/json): the wheel
+    # tags run cp39 to cp314 and stop there, while Python 3.15.0 (released 2026-10-09) is what
+    # Homebrew's `python` formula already points at. Raise this number TOGETHER with the pins
+    # (macos/Brewfile, windows/winget-core.json) and the first candidate below once a newer
+    # Python has wheels - tests/Platforms.Tests.ps1 holds the three in agreement.
     [CmdletBinding()]
     param()
-    if (Get-Command python3 -ErrorAction SilentlyContinue) { return 'python3' }
-    if (Get-Command python -ErrorAction SilentlyContinue) { return 'python' }
-    return $null
+    return 14
+}
+
+function Get-PlatformLifeOsPythonCandidates {
+    # The interpreters the Life OS venv may be built with, in order of preference, each as an
+    # argv array (the Windows launcher needs its version selector as a second argument, so a
+    # bare name could not carry the pin). The first candidate IS the pin: 3.13, the version
+    # macos/Brewfile (python@3.13) and windows/winget-core.json (Python.Python.3.13) install.
+    # A bare `python3` from PATH is the last resort and only while its version is not above
+    # Get-PlatformLifeOsPythonMaxMinor - the check in Get-PlatformLifeOsPython decides.
+    [CmdletBinding()]
+    param([string]$Os = (Get-PlatformId))
+    if ($Os -eq 'windows') {
+        # `py -3.13` is the launcher python.org installs (the winget package is that installer)
+        # and the only way to name a specific version on a machine carrying several. python3.exe
+        # is deliberately absent: on Windows it is the App Execution Alias of the Store.
+        return @(
+            @('py', '-3.13'),
+            @('py', '-3.14'),
+            @('python')
+        )
+    }
+    if ($Os -eq 'macos') {
+        # python3.13 comes from `brew install python@3.13`; measured 2026-10-16 against the
+        # Homebrew API, that formula is NOT keg-only, so Homebrew links python3.13 into its bin.
+        # The two keg paths stay behind it as a fallback for a keg-only future.
+        return @(
+            @('python3.13'),
+            @('/opt/homebrew/opt/python@3.13/bin/python3.13'),
+            @('/usr/local/opt/python@3.13/bin/python3.13'),
+            @('python3.14'),
+            @('python3')
+        )
+    }
+    # Linux: the distribution's own python3. linux/packages.yaml names the package without a
+    # version on purpose - no supported distribution carries a python3.13 package - so the
+    # version check below is what decides, and the python3.13 candidate above only wins where
+    # the distribution or the person provides one.
+    return @(
+        @('python3.13'),
+        @('python3.14'),
+        @('python3'),
+        @('python')
+    )
+}
+
+function Get-PlatformLifeOsPython {
+    # Resolves the interpreter that builds the Life OS venv and reads its version back FROM the
+    # interpreter, never from its name - `python3` says nothing about what it is. Returns
+    #   @{ Argv = @('python3.13'); Command = 'python3.13'; Version = '3.13' }  ready to use
+    #   @{ TooNew = '3.15'; Command = 'python3' }  found, but newer than wheels exist for
+    #   $null                                      nothing usable found
+    # The venv must be built through this function and not with a bare `python3` from PATH:
+    # measured 2026-10-16, a fresh Mac (Homebrew `python` now points at 3.15) failed the whole
+    # venv on "No matching distribution found for ctranslate2" while 3.13 sat next to it.
+    [CmdletBinding()]
+    param([string]$Os = (Get-PlatformId))
+    $maxMinor = Get-PlatformLifeOsPythonMaxMinor
+    $tooNew = $null
+    foreach ($argv in @(Get-PlatformLifeOsPythonCandidates -Os $Os)) {
+        $exe = $argv[0]
+        if ($exe -match '[\\/]') {
+            if (-not (Test-Path -LiteralPath $exe)) { continue }
+        }
+        elseif (-not (Get-Command $exe -CommandType Application -ErrorAction SilentlyContinue)) { continue }
+        # the probe is one line of python without a single space in it: the argument then
+        # survives every quoting rule of PowerShell 5.1 and cmd alike
+        $code = "import sys;print('%d.%d'%sys.version_info[:2])"
+        $pre = @($argv | Select-Object -Skip 1)
+        $out = ''
+        try { $out = ((& $exe @pre -c $code 2>&1) | Out-String).Trim() } catch { continue }
+        if ($LASTEXITCODE -ne 0) { continue }
+        if ($out -notmatch '^(\d+)\.(\d+)$') { continue }
+        $version = $Matches[1] + '.' + $Matches[2]
+        $major = [int]$Matches[1]
+        $minor = [int]$Matches[2]
+        if (($major -gt 3) -or (($major -eq 3) -and ($minor -gt $maxMinor))) {
+            # remembered, not returned: an older interpreter further down the list may still
+            # work, and only when none does is this the finding the caller reports
+            if (-not $tooNew) { $tooNew = @{ TooNew = $version; Command = ($argv -join ' ') } }
+            continue
+        }
+        return @{ Argv = $argv; Command = ($argv -join ' '); Version = $version }
+    }
+    return $tooNew
 }
 
 function Get-PlatformUserSid {

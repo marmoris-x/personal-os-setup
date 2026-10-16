@@ -417,3 +417,132 @@ Describe 'the PATH folders of a machine (Get-PlatformToolDirs)' {
         }
     }
 }
+
+Describe 'the Life OS python pin' {
+    # Measured 2026-10-16: ctranslate2 4.8.2 ships wheels up to cp314 and stops (PyPI JSON,
+    # pypi.org/pypi/ctranslate2/4.8.2/json), Python 3.15.0 came out 2026-10-09 and Homebrew's
+    # `python` formula already points at it. Three places must agree or a fresh Mac fails the
+    # venv on "No matching distribution found for ctranslate2": the two pins (which version is
+    # INSTALLED) and the candidate list in setup/lib/platform.ps1 (which interpreter builds the
+    # VENV). The wheel ceiling is the number those three have to stay under.
+    It 'keeps the two pins, the resolver candidates and the wheel ceiling in agreement' {
+        $max = Get-PlatformLifeOsPythonMaxMinor
+        $brew = [regex]::Match([IO.File]::ReadAllText((Join-Path $repoRoot 'macos/Brewfile')), 'brew "python@3\.(\d+)"')
+        $brew.Success | Should -BeTrue -Because 'macos/Brewfile must pin python@3.<minor>'
+        $pinned = [int]$brew.Groups[1].Value
+        $pinned | Should -BeLessOrEqual $max -Because ('the installed python must not be newer than the newest ctranslate2 wheel (3.' + $max + ')')
+        $winget = [IO.File]::ReadAllText((Join-Path $repoRoot 'windows/winget-core.json'))
+        @([regex]::Matches($winget, '"Python\.Python\.3\.(\d+)"')).Count | Should -Be 1 -Because 'the winget inventory pins exactly one python version'
+        [int]([regex]::Match($winget, '"Python\.Python\.3\.(\d+)"').Groups[1].Value) | Should -Be $pinned -Because 'both pins name the same version'
+        $dsc = [IO.File]::ReadAllText((Join-Path $repoRoot 'windows/configuration.winget'))
+        [int]([regex]::Match($dsc, 'Python\.Python\.3\.(\d+)').Groups[1].Value) | Should -Be $pinned -Because 'the declarative route and the fallback inventory name the same package'
+        ((Get-PlatformLifeOsPythonCandidates -Os 'macos')[0] -join ' ') | Should -BeExactly ('python3.' + $pinned) -Because 'the first macOS candidate is the pin'
+        ((Get-PlatformLifeOsPythonCandidates -Os 'windows')[0] -join ' ') | Should -BeExactly ('py -3.' + $pinned) -Because 'the first Windows candidate is the pin'
+    }
+
+    It 'orders every candidate list pin first, bare PATH python last' {
+        # The order IS the preference rule of Get-PlatformLifeOsPython; a reordering here
+        # changes which interpreter builds the venv.
+        $expected = @{
+            windows = 'py -3.13 ; py -3.14 ; python'
+            macos   = 'python3.13 ; /opt/homebrew/opt/python@3.13/bin/python3.13 ; /usr/local/opt/python@3.13/bin/python3.13 ; python3.14 ; python3'
+            linux   = 'python3.13 ; python3.14 ; python3 ; python'
+        }
+        foreach ($os in $script:oses) {
+            $flat = @((Get-PlatformLifeOsPythonCandidates -Os $os) | ForEach-Object { @($_) -join ' ' })
+            ($flat -join ' ; ') | Should -BeExactly $expected[$os] -Because ($os + ': the list order decides which interpreter wins')
+        }
+    }
+}
+
+Describe 'the Life OS python resolver (Get-PlatformLifeOsPython)' {
+    # The defect these cases pin: measured 2026-10-16, a fresh Mac resolves `python3` to 3.15
+    # while ctranslate2 ships wheels up to cp314 only, and the old code took `python3` from
+    # PATH, so the whole venv died on a package error that names no cause. The fakes below
+    # stand in for interpreters of hosts that cannot be reached from here: each one ANSWERS the
+    # version probe like a real python, sits in front of PATH, and is judged through
+    # Get-Command exactly like production.
+    BeforeAll {
+        $script:hostOs = Get-PlatformId
+        $scratchRoot = if ($env:PERSONAL_OS_CHECK_WORKDIR) { $env:PERSONAL_OS_CHECK_WORKDIR } else { Join-Path $PSScriptRoot '_tmp' }
+        $script:fakeDir = Join-Path $scratchRoot 'python-fakes'
+        if (Test-Path -LiteralPath $script:fakeDir) { Remove-Item -LiteralPath $script:fakeDir -Recurse -Force }
+        New-Item -ItemType Directory -Force -Path $script:fakeDir | Out-Null
+
+        function New-FakePython([string]$Name, [string]$Version) {
+            # Version '' writes a dead interpreter: it exists, runs, and fails - like a py
+            # launcher whose requested version is not installed
+            if ($script:hostOs -eq 'windows') {
+                $p = Join-Path $script:fakeDir ($Name + '.cmd')
+                $text = if ($Version) { '@echo ' + $Version + "`r`n" } else { "@exit /b 1`r`n" }
+            }
+            else {
+                $p = Join-Path $script:fakeDir $Name
+                $text = if ($Version) { "#!/bin/sh`necho $Version`n" } else { "#!/bin/sh`nexit 1`n" }
+            }
+            [IO.File]::WriteAllText($p, $text, (New-Object Text.UTF8Encoding($false)))
+            if ($script:hostOs -ne 'windows') { & chmod +x $p | Out-Null }
+        }
+
+        function Invoke-Resolved([hashtable]$Fakes) {
+            # one fake per candidate NAME of this host (missing entry = dead), the folder in
+            # front of PATH, resolve, PATH back
+            $names = @((Get-PlatformLifeOsPythonCandidates -Os $script:hostOs) | ForEach-Object { @($_)[0] } | Select-Object -Unique)
+            foreach ($n in $names) { New-FakePython -Name $n -Version ([string]$Fakes[$n]) }
+            $saved = $env:PATH
+            try {
+                $env:PATH = $script:fakeDir + [IO.Path]::PathSeparator + $saved
+                return (Get-PlatformLifeOsPython -Os $script:hostOs)
+            }
+            finally { $env:PATH = $saved }
+        }
+
+        $script:pinName = if ($script:hostOs -eq 'windows') { 'py' } else { 'python3.13' }
+        $script:pinCommand = if ($script:hostOs -eq 'windows') { 'py -3.13' } else { 'python3.13' }
+        $script:fallbackName = if ($script:hostOs -eq 'windows') { 'python' } else { 'python3' }
+    }
+
+    It 'takes the pinned 3.13 when both the pin and an older fallback answer' {
+        # the fallback answers too, so this fails if the resolver ever takes the PATH python
+        # before the pin - the preference, not mere availability
+        $fakes = @{}
+        $fakes[$script:pinName] = '3.13'
+        $fakes[$script:fallbackName] = '3.12'
+        $py = Invoke-Resolved $fakes
+        $py | Should -Not -BeNullOrEmpty
+        $py.ContainsKey('TooNew') | Should -BeFalse
+        $py.Version | Should -BeExactly '3.13'
+        $py.Command | Should -BeExactly $script:pinCommand -Because 'the pin must win before any PATH python is asked'
+    }
+
+    It 'reports TooNew when only a python newer than the wheels answers' {
+        $fakes = @{}
+        $fakes[$script:pinName] = '3.15'
+        $py = Invoke-Resolved $fakes
+        $py | Should -Not -BeNullOrEmpty
+        $py.ContainsKey('TooNew') | Should -BeTrue -Because 'a 3.15 cannot build the venv and must not be handed back as usable'
+        $py.TooNew | Should -BeExactly '3.15'
+        $py.Command | Should -BeExactly $script:pinCommand
+        $py.ContainsKey('Argv') | Should -BeFalse -Because 'the caller aborts on TooNew; it must never find an argv to run'
+    }
+
+    It 'walks past the too-new interpreter to an older one that works' {
+        $fakes = @{}
+        $fakes[$script:pinName] = '3.15'
+        $fakes[$script:fallbackName] = '3.12'
+        $py = Invoke-Resolved $fakes
+        $py | Should -Not -BeNullOrEmpty
+        $py.ContainsKey('TooNew') | Should -BeFalse
+        $py.Version | Should -BeExactly '3.12'
+        $py.Command | Should -BeExactly $script:fallbackName -Because '3.12 still has ctranslate2 wheels, so the venv may use it'
+    }
+
+    It 'returns nothing when no candidate answers' {
+        $py = Invoke-Resolved @{}
+        $py | Should -BeNullOrEmpty -Because 'the caller reports a manual step on $null'
+    }
+
+    AfterAll {
+        if (Test-Path -LiteralPath $script:fakeDir) { Remove-Item -LiteralPath $script:fakeDir -Recurse -Force }
+    }
+}

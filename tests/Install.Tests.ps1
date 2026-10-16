@@ -47,6 +47,20 @@ Describe 'the Life OS venv stage' {
         }
     }
 
+    It 'aborts with a named cause when the found python is newer than the wheels' {
+        # Measured 2026-10-16: the stage called `python3` from PATH, and a fresh Mac resolves
+        # that to 3.15 while ctranslate2 ships wheels up to cp314 only - pip then failed the
+        # whole venv on a message that names no cause. The stage must resolve through
+        # Get-PlatformLifeOsPython and turn TooNew into a clear abort with a manual step.
+        $text = [IO.File]::ReadAllText((Join-Path $repoRoot 'install.ps1'))
+        $text | Should -Not -Match 'Get-PlatformPythonCommand' -Because 'the bare PATH python is exactly what resolved to 3.15'
+        $block = [regex]::Match($text, "Get-PlatformLifeOsPython.*?Add-Result 'life-os-venv' 'WARN'", 'Singleline').Value
+        $block | Should -Not -BeNullOrEmpty -Because 'the venv stage must ask the resolver'
+        $block | Should -Match "ContainsKey\('TooNew'\)"
+        $block | Should -Match "Add-Result 'life-os-venv' 'ERROR'" -Because 'a python that cannot build the venv is an error, not a warning'
+        $block | Should -Match 'Add-Manual' -Because 'the abort must tell the person what to install'
+    }
+
     It 'reports a stage that throws as an ERROR line and keeps going (behaviour, not text)' {
         # Measured on ubuntu-latest (2026-10-14, run 38584744785): the release install threw a
         # parameter binding error and the whole run ended there - the install printed 6 of its 15

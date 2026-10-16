@@ -12,6 +12,13 @@
 #   kopia        - it has its own repository, see `repositories` below (kopia.io/docs/installation)
 #   trufflehog   - no distribution package; see `releases` below (official GitHub release)
 #   wget on dnf  - Fedora ships wget2; "wget2-wget" is the shim that provides the command
+#
+# The python3 entries are deliberately the distribution's own version, not a pin on 3.13: the
+# archives this list was checked against (Ubuntu noble, Debian bookworm, Fedora 44) carry
+# python3.12 or older, and Life OS runs on whatever python3 the system provides as long as it
+# is not NEWER than the newest wheel ctranslate2 ships (3.14, measured 2026-10-16). The venv
+# stage reads the version from the interpreter itself (Get-PlatformLifeOsPython in
+# setup/lib/platform.ps1) and aborts with a named cause above that.
 version: 1
 
 apt:

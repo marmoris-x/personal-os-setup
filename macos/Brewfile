@@ -23,7 +23,11 @@
 brew "git"              # version control
 brew "gh"               # GitHub CLI: the sign-in the pushes need
 brew "powershell"       # PowerShell 7 - the one script language of this repo (decision D2)
-brew "python@3.13"      # Life OS: the venv and faster-whisper
+# Life OS: the venv and faster-whisper. Keep the pin on python@3.13: plain `python` has been
+# 3.15 since 2026-10-09 and ctranslate2 (the engine under faster-whisper) has wheels up to 3.14
+# only - a venv built with the newer python dies on a pip error that names no cause.
+# setup/lib/platform.ps1 (Get-PlatformLifeOsPython) resolves this interpreter explicitly.
+brew "python@3.13"
 brew "jq"               # JSON on the command line
 brew "wget"
 brew "uv"               # python tool runner
