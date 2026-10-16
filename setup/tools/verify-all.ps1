@@ -494,8 +494,13 @@ if (Test-Selected '9') { try {
 if (Test-Selected '10') { try {
     $hooksDir = Join-Path $HomeRoot '.claude\hooks'
     $hookFiles = @(Get-ChildItem -LiteralPath $hooksDir -File -ErrorAction SilentlyContinue)
-    $guardHashA = '898F22DE7B7E6EE6D5B9C3D3E26D5C3F10C23190D8D4393D6C950C219E2F5CE6'
-    $guardHashB = '85D56E1B445B89FC66CF533FB11CF160831F8C184D1F7CFF797ADD4863432C8D'
+    # The two window guards carry a pinned live-file hash so a change that never went through
+    # the repo stays visible here. Re-recorded 2026-10-16: both pins still carried their 3741935
+    # (initial release) values while the umlaut commit fb5b0b9 rewrote both guards - found stale
+    # by the first acceptance run since that commit. Live equals the repo modulo placeholders
+    # (drift-check.ps1, green in the same run).
+    $guardHashA = '9F8DBFFC5E5CFF909AD1009F3E1AE7402145AD66048F9A2B2C19A8358CE61BDF'
+    $guardHashB = '8CED3ADF762F091C1F5C252F80F215502D02FC33E0899241D0E321A9C7E48D50'
     $hashAOk = $false; $hashBOk = $false
     if (Test-Path -LiteralPath (Join-Path $hooksDir 'onedrive-guard.ps1')) { $hashAOk = ((Get-FileHash -LiteralPath (Join-Path $hooksDir 'onedrive-guard.ps1') -Algorithm SHA256).Hash -eq $guardHashA) }
     if (Test-Path -LiteralPath (Join-Path $hooksDir 'trifecta-guard.ps1')) { $hashBOk = ((Get-FileHash -LiteralPath (Join-Path $hooksDir 'trifecta-guard.ps1') -Algorithm SHA256).Hash -eq $guardHashB) }
@@ -798,11 +803,15 @@ if (Test-Selected 'C') { try {
     if ($oldPatterns.Count -eq 0) { throw 'the pattern file is empty' }
     Push-Location $RepoRoot
     $repoHits = New-Object System.Collections.Generic.List[string]
-    # Four documented exceptions, each with its reason in the output. They are the files that
+    # Five documented exceptions, each with its reason in the output. They are the files that
     # have to name the old paths: the record of what was true (CHANGELOG), the record of the move
-    # itself (ADR 0014), the pattern list, and the German word list of check E.
+    # itself (ADR 0014), the pattern list, the German word list of check E, and the unmanaged
+    # scan of drift-check.ps1 (its exclusion table must spell the owner's live German vault
+    # folder to exclude it - found by the first acceptance run after the unmanaged scan landed,
+    # 2026-10-16; this very file may not spell that name, or the search finds itself).
     $skipOldPathFiles = @('CHANGELOG.md', 'docs/decisions/0014-final-layout.md',
-                          'setup/tools/old-paths.txt', 'setup/tools/check-language.ps1')
+                          'setup/tools/old-paths.txt', 'setup/tools/check-language.ps1',
+                          'setup/tools/drift-check.ps1')
     # The documented scratch paths are skipped by their REPO-RELATIVE path, not by name: review 5
     # showed that a plain name match silently skipped docs/install-test/ (which is content, not
     # scratch). Junctions and symlinks are not followed - the walk stays inside the repository.
@@ -1250,6 +1259,7 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/tests/test-downloads-guard.ps1'; Reason = 'the same task: the umlaut block; 64 -> 73 cases, including the byte-exact message case that goes red against the old Send-Block and against a console-code-page stdin read' }
         @{ Path = 'HOME/.config/gitleaks/gitleaks.toml'; Reason = '2026-10-16: repo-authored now (type: doc-only). Mirroring the live file with the three personal paths dropped left an EMPTY [[allowlists]], and gitleaks 8.30.1 refuses such a config - a fresh install would have blocked every commit in every repository. The stored file keeps the public docs/vendor allowlist and the two extra rules and says where the personal exemptions live' }
         @{ Path = 'HOME/.claude/setup/tests/test-block-dangerous.ps1'; Reason = 'the same day, the previous task''s last fixes that had never been exported: the read-only exception for `git config core.hooksPath` and its two cases' }
+        @{ Path = 'HOME/.claude/docs/repositories.md'; Reason = '2026-10-16: found by drift-check.ps1''s new unmanaged scan - the file sat live with no manifest entry. The same genre as agent-tooling.md, so it is mirrored like it (claude-docs-repositories)' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

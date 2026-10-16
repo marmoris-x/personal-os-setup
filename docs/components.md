@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `5066bc396e075e8a` (SHA256, first 16 characters)
+- Manifest checksum: `9c5f1e2514f247e7` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (66 of 81)
+## Core (63 of 75)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -23,10 +23,7 @@ file no longer matches the manifest (`-Check`).
 | `claude-hook-tests` | guards | core | file/folder to `HOME/.claude/setup/tests` |
 | `claude-agents` | research | core | file/folder to `HOME/.claude/agents` |
 | `claude-rules` | claude | core | file/folder to `HOME/.claude/rules` |
-| `claude-skill-research` | research | core | file/folder to `HOME/.claude/skills/research` |
-| `claude-skill-docs-import` | research | core | file/folder to `HOME/.claude/skills/docs-import` |
-| `claude-skill-life-os-morning` | life-os | core | file/folder to `HOME/.claude/skills/life-os-morning` |
-| `claude-skill-reuse-first` | claude | core | file/folder to `HOME/.claude/skills/reuse-first` |
+| `claude-skills` | claude | core | file/folder to `HOME/.claude/skills` |
 | `claude-docs-research-standard` | research | core | file/folder to `HOME/.claude/docs/research-standard.md` |
 | `claude-lessons-skeleton` | claude | core | skeleton to `HOME/.claude/docs/lessons.md` (only when nothing is there) |
 | `claude-changelog-skeleton` | claude | core | skeleton to `HOME/.claude/docs/CHANGELOG.md` (only when nothing is there) |
@@ -57,7 +54,7 @@ file no longer matches the manifest (`-Check`).
 | `vault-obsidian-git-data` | vault | core | file/folder to `VAULT/.obsidian/plugins/obsidian-git/data.json` |
 | `vault-claude-settings` | vault | core | template with placeholders to `VAULT/.claude/settings.json` |
 | `vault-rule-sources` | vault | core | file/folder to `VAULT/.claude/rules/sources.md` |
-| `vault-skill-vault-lint` | vault | core | file/folder to `VAULT/.claude/skills/vault-lint` |
+| `vault-skills` | vault | core | file/folder to `VAULT/.claude/skills` |
 | `vault-meta-overview-base` | vault | core | file/folder to `VAULT/000-meta/overview.base` |
 | `vault-meta-templates` | vault | core | file/folder to `VAULT/000-meta/templates` |
 | `vault-meta-backup-doc` | backup | core | template with placeholders to `VAULT/000-meta/backup.md` |
@@ -78,21 +75,18 @@ file no longer matches the manifest (`-Check`).
 | `os-backup` | backup | core | Kopia and KopiaUI from the OS package source. Connecting the repository and typing the password stays manual (decision D8) |
 | `os-onedrive` | backup | core | The OneDrive client and the document archive beside the documents folder. Windows and macOS only - there is no official OneDrive client for Linux (decision D9) |
 
-## Optional (15)
+## Optional (12)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
 | `claude-docs-agent-tooling` | research | optional | file/folder to `HOME/.claude/docs/agent-tooling.md` |
+| `claude-docs-repositories` | research | optional | file/folder to `HOME/.claude/docs/repositories.md` |
 | `claude-repair-script` | claude | optional | file/folder to `HOME/.claude/setup/repair-claude-code.ps1` |
 | `claude-other-harnesses` | claude | optional | file/folder to `HOME/.claude/setup/other-harnesses` |
 | `vault-readme` | vault | optional | template with placeholders to `VAULT/README.md` |
 | `vault-obsidian-appearance` | vault | optional | file/folder to `VAULT/.obsidian/appearance.json` |
 | `vault-obsidian-graph` | vault | optional | file/folder to `VAULT/.obsidian/graph.json` |
 | `vault-obsidian-types` | vault | optional | file/folder to `VAULT/.obsidian/types.json` |
-| `vault-skill-json-canvas` | vault | optional | file/folder to `VAULT/.claude/skills/json-canvas` |
-| `vault-skill-obsidian-bases` | vault | optional | file/folder to `VAULT/.claude/skills/obsidian-bases` |
-| `vault-skill-obsidian-cli` | vault | optional | file/folder to `VAULT/.claude/skills/obsidian-cli` |
-| `vault-skill-obsidian-markdown` | vault | optional | file/folder to `VAULT/.claude/skills/obsidian-markdown` |
 | `vault-meta-laptop-setup` | vault | optional | file/folder to `VAULT/000-meta/laptop-setup.md` |
 | `vault-meta-script-setup-laptop` | vault | optional | file/folder to `VAULT/000-meta/scripts/setup-laptop.ps1` |
 | `winget-optional` | windows | optional | programs from `windows/winget-optional.json` |

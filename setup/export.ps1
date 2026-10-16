@@ -70,19 +70,10 @@ foreach ($k in @('VAULT', 'DEV')) {
 }
 
 # --- sources that never leave the machine, even by manifest typo -------------
-$forbiddenSourcePatterns = @(
-    '\\profiles\\', '\.credentials\.json$', '\\projects\\', '\\sessions\\', 'history\.jsonl$',
-    '\\telemetry\\', '\\cache\\', '\\file-history\\', '\\shell-snapshots\\', '\\paste-cache\\',
-    '\\debug\\', '\\jobs\\', '\\tasks\\', '\\teams\\', '\\daemon', '\\backups\\', '\\state\\',
-    '\\security\\', '\\plugins\\', '\\chrome\\', '\\session-env\\', '\\downloads\\', '\\ide\\',
-    '\\skills\\synced\\', '\.claude\.json$', '\.env$', '\.pem$', '\\outbox\\', '\\trash\\'
-)
-# targets may legitimately contain words like "plugins" (Obsidian settings); the target-side
-# check only blocks names that would smuggle runtime data or secrets in through the back door
-$forbiddenTargetPatterns = @(
-    '\.credentials', '\.env$', '\.pem$', '\.claude\.json$', 'history\.jsonl$',
-    '\\profiles\\', '\\sessions\\', '\\telemetry\\', '\\file-history\\', 'skills\\synced'
-)
+# The two pattern lists live in lib/manifest.ps1 now: drift-check.ps1's unmanaged scan needs
+# the same source list, and two copies would drift apart.
+$forbiddenSourcePatterns = @(Get-ForbiddenSourcePatterns)
+$forbiddenTargetPatterns = @(Get-ForbiddenTargetPatterns)
 function Assert-SourceAllowed([string]$resolved) {
     foreach ($p in $forbiddenSourcePatterns) {
         if ($resolved -match $p) { throw "refusing to export forbidden source: $resolved (pattern $p)" }
@@ -218,16 +209,8 @@ function Get-EntryPairs($entry) {
 }
 
 # --- exclusion helper -------------------------------------------------------
-function Test-Excluded([string]$relPath, $patterns) {
-    if (-not $patterns) { return $false }
-    $name = Split-Path $relPath -Leaf
-    foreach ($p in $patterns) {
-        if ($name -like $p) { return $true }
-        if ($relPath -like $p) { return $true }
-        if ($relPath -like ('*\' + $p + '\*')) { return $true }
-    }
-    return $false
-}
+# Test-Excluded lives in lib/manifest.ps1: tests/Roundtrip.Tests.ps1 needs exactly the same
+# matching, and the two copies had drifted apart (see the function's own note).
 
 $binaryExtensions = @('.png', '.jpg', '.jpeg', '.gif', '.ico', '.bmp', '.webp', '.pdf', '.zip', '.gz',
     '.exe', '.dll', '.so', '.pyc', '.woff', '.woff2', '.ttf', '.eot', '.mp3', '.mp4', '.wav')

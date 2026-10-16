@@ -128,13 +128,11 @@ Describe 'placeholder vocabulary' {
             foreach ($f in $files) {
                 $ext = $f.Extension.ToLowerInvariant()
                 if (@('.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.zip', '.exe', '.dll', '.pyc') -contains $ext) { continue }
-                # an excluded child is not mirrored either - the same matching as the export
+                # an excluded child is not mirrored either - the same matching as the export.
+                # The guard: a non-recursive entry checks the FILE itself, its childRel is
+                # empty, and Test-Excluded takes a real relative path.
                 $childRel = $f.FullName.Substring($repoPath.Length).TrimStart('\', '/')
-                $skip = $false
-                foreach ($p in $excludes) {
-                    if (($f.Name -like $p) -or ($childRel -like $p) -or ($childRel -like ('*\' + $p + '\*'))) { $skip = $true; break }
-                }
-                if ($skip) { continue }
+                if ($childRel -and (Test-Excluded -RelPath $childRel -Patterns $excludes)) { continue }
                 $text = [IO.File]::ReadAllText($f.FullName)
                 foreach ($t in $renderTime) {
                     if ($text.Contains($t)) { $hits.Add(($f.FullName.Substring($repoRoot.Length).TrimStart('\')) + ' carries ' + $t) }
@@ -168,17 +166,10 @@ Describe 'repo renders back to the live system (needs the live machine)' {
         $manifest = Get-Manifest -Path (Join-Path $repoRoot 'setup\manifest.yaml')
         $bad = New-Object System.Collections.Generic.List[string]
         $checked = 0; $skipped = 0
-        function Test-ExcludedRel([string]$relPath, $patterns) {
-            # the same matching as export.ps1: this test compares only what export wrote
-            if (-not $patterns) { return $false }
-            $name = Split-Path $relPath -Leaf
-            foreach ($p in $patterns) {
-                if ($name -like $p) { return $true }
-                if ($relPath -like $p) { return $true }
-                if ($relPath -like ('*\' + $p + '\*')) { return $true }
-            }
-            return $false
-        }
+        # Test-Excluded comes from setup/lib/manifest.ps1 - the same function export.ps1 uses.
+        # It used to be a local copy here, and the copies had drifted (measured 2026-10-16:
+        # neither knew the top-level folder case, so this test demanded files the export
+        # rightly refuses to mirror).
         $platforms = Get-PlatformData -RepoRoot $repoRoot
         foreach ($e in @($manifest.components)) {
             $type = [string](Get-ManifestField $e 'type')
@@ -197,7 +188,7 @@ Describe 'repo renders back to the live system (needs the live machine)' {
                 if (-not (Test-Path -LiteralPath $src -PathType Container)) { $bad.Add('live missing: ' + $src); continue }
                 foreach ($rf in (Get-ChildItem -LiteralPath $src -Recurse -File -Force)) {
                     $childRel = $rf.FullName.Substring($src.Length).TrimStart('\', '/')
-                    if (Test-ExcludedRel $childRel (Get-ManifestField $e 'exclude')) { continue }
+                    if (Test-Excluded -RelPath $childRel -Patterns (Get-ManifestField $e 'exclude')) { continue }
                     $repoChild = Join-Path $repoFile $childRel
                     if (-not (Test-Path -LiteralPath $repoChild)) { $bad.Add('repo missing: ' + $repoChild); continue }
                     $checked++

@@ -62,6 +62,7 @@ These rules are binding for every agent that installs, exports, verifies or rest
 ```powershell
 pwsh setup/tools/check.ps1                # PSScriptAnalyzer + Pester + hook suites (same as CI)
 pwsh setup/tools/drift-check.ps1          # live vs repo in one line; exit 1 when they drifted apart
+                                          # or a live file under the watched roots is unmanaged
 pwsh setup/export.ps1                     # live -> repo; afterwards `git status` must be clean
 pwsh install.ps1 -TargetRoot <empty dir> -NonInteractive   # install into a test target
 pwsh setup/verify.ps1 -TargetRoot <empty dir>   # verify an installed target

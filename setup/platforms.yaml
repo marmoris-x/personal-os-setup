@@ -108,22 +108,8 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
-  # --- area research ---
-  claude-skill-research:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  claude-skill-docs-import:
-    windows: "files"
-    macos: "files"
-    linux: "files"
   # --- area claude ---
-  claude-skill-reuse-first:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  # --- area life-os ---
-  claude-skill-life-os-morning:
+  claude-skills:
     windows: "files"
     macos: "files"
     linux: "files"
@@ -133,6 +119,10 @@ components:
     macos: "files"
     linux: "files"
   claude-docs-agent-tooling:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  claude-docs-repositories:
     windows: "files"
     macos: "files"
     linux: "files"
@@ -283,23 +273,7 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
-  vault-skill-vault-lint:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  vault-skill-json-canvas:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  vault-skill-obsidian-bases:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  vault-skill-obsidian-cli:
-    windows: "files"
-    macos: "files"
-    linux: "files"
-  vault-skill-obsidian-markdown:
+  vault-skills:
     windows: "files"
     macos: "files"
     linux: "files"

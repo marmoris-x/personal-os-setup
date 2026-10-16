@@ -216,6 +216,7 @@ home/.claude/CLAUDE.md
 home/.claude/docs/agent-tooling.md
 home/.claude/docs/CHANGELOG.md
 home/.claude/docs/lessons.md
+home/.claude/docs/repositories.md
 home/.claude/docs/research-standard.md
 home/.claude/gitattributes
 home/.claude/gitignore

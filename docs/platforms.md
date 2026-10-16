@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `5066bc396e075e8a`
+- Manifest checksum: `9c5f1e2514f247e7`
 
 ## What each system can do
 
@@ -39,12 +39,10 @@ written next to it. An agent that meets one of these skips the component and say
 | `claude-hook-tests` | `files` | `files` | `files` |
 | `claude-agents` | `files` | `files` | `files` |
 | `claude-rules` | `files` | `files` | `files` |
-| `claude-skill-research` | `files` | `files` | `files` |
-| `claude-skill-docs-import` | `files` | `files` | `files` |
-| `claude-skill-life-os-morning` | `files` | `files` | `files` |
-| `claude-skill-reuse-first` | `files` | `files` | `files` |
+| `claude-skills` | `files` | `files` | `files` |
 | `claude-docs-research-standard` | `files` | `files` | `files` |
 | `claude-docs-agent-tooling` | `files` | `files` | `files` |
+| `claude-docs-repositories` | `files` | `files` | `files` |
 | `claude-lessons-skeleton` | `files` | `files` | `files` |
 | `claude-changelog-skeleton` | `files` | `files` | `files` |
 | `claude-setup-scripts` | `files` | `files` | `files` |
@@ -80,11 +78,7 @@ written next to it. An agent that meets one of these skips the component and say
 | `vault-obsidian-git-data` | `files` | `files` | `files` |
 | `vault-claude-settings` | `files` | `files` | `files` |
 | `vault-rule-sources` | `files` | `files` | `files` |
-| `vault-skill-vault-lint` | `files` | `files` | `files` |
-| `vault-skill-json-canvas` | `files` | `files` | `files` |
-| `vault-skill-obsidian-bases` | `files` | `files` | `files` |
-| `vault-skill-obsidian-cli` | `files` | `files` | `files` |
-| `vault-skill-obsidian-markdown` | `files` | `files` | `files` |
+| `vault-skills` | `files` | `files` | `files` |
 | `vault-meta-overview-base` | `files` | `files` | `files` |
 | `vault-meta-templates` | `files` | `files` | `files` |
 | `vault-meta-laptop-setup` | `files` | `files` | `files` |

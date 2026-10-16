@@ -152,48 +152,20 @@ components:
       - { root: HOME, to: "{{HOME}}" }
       - { root: VAULT, to: "{{VAULT}}" }
 
-  - id: claude-skill-research
-    area: research
-    type: copy
-    core: true
-    source: "{HOME}/.claude/skills/research"
-    target: "HOME/.claude/skills/research"
-    recursive: true
-    exclude: ["__pycache__", "*.pyc"]
-    replace:
-      - { root: HOME, to: "{{HOME}}" }
-      - { root: VAULT, to: "{{VAULT}}" }
-      - { root: DEV, to: "{{DEV}}" }
-
-  - id: claude-skill-docs-import
-    area: research
-    type: copy
-    core: true
-    source: "{HOME}/.claude/skills/docs-import"
-    target: "HOME/.claude/skills/docs-import"
-    recursive: true
-    replace:
-      - { root: HOME, to: "{{HOME}}" }
-      - { root: VAULT, to: "{{VAULT}}" }
-
-  - id: claude-skill-life-os-morning
-    area: life-os
-    type: copy
-    core: true
-    source: "{HOME}/.claude/skills/life-os-morning"
-    target: "HOME/.claude/skills/life-os-morning"
-    recursive: true
-    replace:
-      - { root: HOME, to: "{{HOME}}" }
-      - { root: VAULT, to: "{{VAULT}}" }
-
-  - id: claude-skill-reuse-first
+  - id: claude-skills
     area: claude
     type: copy
     core: true
-    source: "{HOME}/.claude/skills/reuse-first"
-    target: "HOME/.claude/skills/reuse-first"
+    # The whole folder, not four named skills: a fifth skill folder then travels by itself,
+    # on the export side (live -> repo) and on the install side (repo -> machine) alike. A
+    # per-name list can only ever mirror what it already knows - the gap drift-check.ps1's
+    # unmanaged half exists for.
+    source: "{HOME}/.claude/skills"
+    target: "HOME/.claude/skills"
     recursive: true
+    # synced holds skills Claude Code synced from elsewhere - runtime, the same reason
+    # export.ps1's forbidden list refuses it.
+    exclude: ["synced", "__pycache__", "*.pyc"]
     replace:
       - { root: HOME, to: "{{HOME}}" }
       - { root: VAULT, to: "{{VAULT}}" }
@@ -212,6 +184,15 @@ components:
     core: false
     source: "{HOME}/.claude/docs/agent-tooling.md"
     target: "HOME/.claude/docs/agent-tooling.md"
+
+  - id: claude-docs-repositories
+    area: research
+    type: copy
+    core: false
+    # found by drift-check.ps1's unmanaged half (2026-10-16): the file sat live and in no
+    # list - the same genre as agent-tooling.md, so it is mirrored like it.
+    source: "{HOME}/.claude/docs/repositories.md"
+    target: "HOME/.claude/docs/repositories.md"
 
   - id: claude-lessons-skeleton
     area: claude
@@ -523,46 +504,15 @@ components:
     source: "{VAULT}/.claude/rules/sources.md"
     target: "VAULT/.claude/rules/sources.md"
 
-  - id: vault-skill-vault-lint
+  - id: vault-skills
     area: vault
     type: copy
     core: true
-    source: "{VAULT}/.claude/skills/vault-lint"
-    target: "VAULT/.claude/skills/vault-lint"
+    # The whole folder, like claude-skills: a new vault skill travels by itself.
+    source: "{VAULT}/.claude/skills"
+    target: "VAULT/.claude/skills"
     recursive: true
     exclude: ["__pycache__", "*.pyc"]
-
-  - id: vault-skill-json-canvas
-    area: vault
-    type: copy
-    core: false
-    source: "{VAULT}/.claude/skills/json-canvas"
-    target: "VAULT/.claude/skills/json-canvas"
-    recursive: true
-
-  - id: vault-skill-obsidian-bases
-    area: vault
-    type: copy
-    core: false
-    source: "{VAULT}/.claude/skills/obsidian-bases"
-    target: "VAULT/.claude/skills/obsidian-bases"
-    recursive: true
-
-  - id: vault-skill-obsidian-cli
-    area: vault
-    type: copy
-    core: false
-    source: "{VAULT}/.claude/skills/obsidian-cli"
-    target: "VAULT/.claude/skills/obsidian-cli"
-    recursive: true
-
-  - id: vault-skill-obsidian-markdown
-    area: vault
-    type: copy
-    core: false
-    source: "{VAULT}/.claude/skills/obsidian-markdown"
-    target: "VAULT/.claude/skills/obsidian-markdown"
-    recursive: true
 
   - id: vault-meta-overview-base
     area: vault

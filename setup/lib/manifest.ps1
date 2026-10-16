@@ -115,6 +115,60 @@ function Get-MirrorFolder {
     )
 }
 
+function Get-ForbiddenSourcePatterns {
+    # Sources that never leave the machine, even by manifest typo: runtime data, caches,
+    # secrets and the owner's own working folders. export.ps1 REFUSES a source matching one of
+    # these; drift-check.ps1 uses the same list to skip them when it looks for live files that
+    # no manifest entry covers. One list, two callers - a second copy would drift (measured
+    # 2026-10-16: the copy in export.ps1 was the only one, and the unmanaged check needed it).
+    [CmdletBinding()]
+    param()
+    return @(
+        '\\profiles\\', '\.credentials\.json$', '\\projects\\', '\\sessions\\', 'history\.jsonl$',
+        '\\telemetry\\', '\\cache\\', '\\file-history\\', '\\shell-snapshots\\', '\\paste-cache\\',
+        '\\debug\\', '\\jobs\\', '\\tasks\\', '\\teams\\', '\\daemon', '\\backups\\', '\\state\\',
+        '\\security\\', '\\plugins\\', '\\chrome\\', '\\session-env\\', '\\downloads\\', '\\ide\\',
+        '\\skills\\synced\\', '\.claude\.json$', '\.env$', '\.pem$', '\\outbox\\', '\\trash\\',
+        '\\__pycache__\\', '\\\.git\\'
+    )
+}
+
+function Get-ForbiddenTargetPatterns {
+    # targets may legitimately contain words like "plugins" (Obsidian settings); the target-side
+    # check only blocks names that would smuggle runtime data or secrets in through the back door
+    [CmdletBinding()]
+    param()
+    return @(
+        '\.credentials', '\.env$', '\.pem$', '\.claude\.json$', 'history\.jsonl$',
+        '\\profiles\\', '\\sessions\\', '\\telemetry\\', '\\file-history\\', 'skills\\synced'
+    )
+}
+
+function Test-Excluded {
+    # Does an exclude pattern of a recursive manifest entry match this path? Used by EXACTLY
+    # two callers that must not drift apart: export.ps1 (what it mirrors) and
+    # tests/Roundtrip.Tests.ps1 (what it compares back). Measured 2026-10-16: the two copies
+    # HAD drifted - both missed the top-level case, and the whole-folder skills entry then
+    # wanted to copy skills\synced into the repo while the roundtrip test demanded the same
+    # files be there. Whether the name is excluded counts by leaf, by whole relative path, or
+    # as a path segment anywhere (export.ps1's original three rules).
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$RelPath,
+        $Patterns
+    )
+    if (-not $Patterns) { return $false }
+    $name = Split-Path $RelPath -Leaf
+    foreach ($p in $Patterns) {
+        if ($name -like $p) { return $true }
+        if ($RelPath -like $p) { return $true }
+        if ($RelPath -like ('*\' + $p + '\*')) { return $true }
+        # a TOP-LEVEL folder name: "synced" must exclude skills\synced\ and its whole subtree
+        if ($RelPath -like ($p + '\*')) { return $true }
+    }
+    return $false
+}
+
 function Get-Manifest {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path)

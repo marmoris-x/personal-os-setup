@@ -714,7 +714,7 @@ try {
                     'ctranslate2 has wheels for (3.' + (Get-PlatformLifeOsPythonMaxMinor) + ')')
                 Write-Host ('  ' + $tooNewMsg)
                 Add-Result 'life-os-venv' 'ERROR' $tooNewMsg
-                Add-Manual 'install Python 3.13 (macOS: brew install python@3.13; Windows: winget install Python.Python.3.13), then run install.ps1 -Resume'
+                Add-Manual 'install Python 3.13 (macOS: brew install python@3.13; Windows: winget, package Python.Python.3.13), then run install.ps1 -Resume'
             }
             elseif (-not $py) { Add-Result 'life-os-venv' 'WARN' 'no usable python found'; Add-Manual 'install Python 3.13 (the package stage does), then run install.ps1 -Resume' }
             elseif ($WhatIfPreference) {

@@ -50,6 +50,7 @@ $germanWords = @(
 $toleratedPhrases = @(
     @{ text = 'inbox/audio/erledigt';                           reason = 'a folder inside the owner vault (his word for done)' },
     @{ text = 'Dokumentenarchiv';                               reason = 'the owner archive folder name, from his personal.yaml' },
+    @{ text = 'auftraege';                                      reason = 'a folder inside the owner vault (his tasks folder): a scanner that must exclude it has to spell the name' },
     @{ text = 'Fuer das andere bitte eine neue Sitzung starten'; reason = 'the sentence the session guard relays to the owner' },
     @{ text = 'noch nicht';                                     reason = 'a German phrase the research standard looks for in German texts' },
     @{ text = '2026_Maerz';                                     reason = 'the owner real document file name' },
