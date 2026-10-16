@@ -1,4 +1,4 @@
-# block-dangerous.ps1  --  Version 12 (2026-09-29)
+# block-dangerous.ps1  --  Version 13 (2026-10-16)
 #
 # PreToolUse hook for the Bash and PowerShell tools. Keeps the agent
 # autonomous and only steps in for the few things that lose data by accident:
@@ -9,12 +9,15 @@
 #                        deleting a dependency lock file or anything in .git,
 #                        throwing away uncommitted git work
 #                        (reset --hard, clean -f, checkout/restore of ".",
-#                        stash drop/clear). The agent is told to ask you in
+#                        stash drop/clear), and since version 13 the two git
+#                        operations that are never routine: a force push in
+#                        any spelling, and anything that switches the
+#                        pre-commit chain off. The agent is told to ask you in
 #                        the chat; after your yes it re-runs the command
 #                        with the marker  #confirmed-by-user  appended.
 #   ALLOW (everything else): single-file deletes, deleting regenerable
 #                        build folders (node_modules, dist, build, ...),
-#                        force-push, installs, scripts, ...
+#                        installs, scripts, a normal commit and push, ...
 #
 #   Version 10 adds one ALLOW: a whole folder INSIDE a scratch root
 #   ({{DEV}}\Temp and %TEMP%/%TMP%) may be deleted without asking. Scratch
@@ -51,6 +54,19 @@
 #   (a tool without one) is still allowed. What no hook can do is guard against its own
 #   file being missing or unparsable: hooks/session-check.ps1 warns about that at every
 #   session start.
+#
+#   Version 13 adds the git rules. The permission rules in settings.json name a few spellings of
+#   them, but the docs are clear that those patterns are a convenience and not a boundary - and
+#   git has many spellings of the same operation. This hook judges the command itself: a force
+#   push in any form (--force, --force-with-lease, --force-if-includes, -f, a refspec with a
+#   leading +, --mirror), wherever the switch stands and also behind git -C/-c, and every way of
+#   switching the hook chain off (--no-verify or a prefix of it at commit and push, -n at commit,
+#   -c core.hooksPath, --config-env with hooksPath, the GIT_CONFIG_COUNT / GIT_CONFIG_KEY_* /
+#   GIT_CONFIG_PARAMETERS prefixes). Quoted text is never read as a switch, so a commit message
+#   that merely mentions one ("add --no-validation flag") stays allowed. Checked before writing
+#   this (reuse-first): kenryu42/claude-code-safety-net (1638 stars, active) blocks --force and
+#   -f and none of the hook-bypass family, and it would put an npx runtime in the path of a
+#   guard that has to answer on every single shell call.
 #
 # Claude Code itself already protects drive roots, top-level folders
 # ({{DEV}}, {{VAULT}}, C:\Windows), your home folder and wildcard
@@ -259,9 +275,113 @@ function Test-AllScratch([string[]]$paths) {
 # Split compound commands so each part is judged on its own.
 $segments = $cmd -split '\r?\n|;|&&|\|\||\|'
 
+# --- git rules (version 13) -------------------------------------------------
+function Get-SegmentTokens([string]$segment) {
+    # A quoted span stays ONE token and keeps its quotes: a commit message is quoted, a switch is
+    # not, and telling those two apart is what keeps -m "add --no-validation flag" allowed.
+    # No "return ,$x" here: the caller wraps the result in @(), and a comma-wrapped array would
+    # arrive as ONE element (a nested array) whose -match is true for everything - measured, the
+    # whole git block stayed silent because of it.
+    return [regex]::Matches($segment, '"[^"]*"|''[^'']*''|\S+') | ForEach-Object { $_.Value }
+}
+
+function Get-GitCall([string[]]$tokens) {
+    # The git call of one segment, or $null. "git -C <path> push -f" and "git --no-pager push" are
+    # found like the plain "git push"; a word that merely contains git is not a call. The global
+    # options before the subcommand are handed back too, because -c core.hooksPath lives there.
+    for ($i = 0; $i -lt $tokens.Count; $i++) {
+        if ($tokens[$i] -inotmatch '^(git|git\.exe|git\.cmd)$') { continue }
+        $global = @()
+        $j = $i + 1
+        while ($j -lt $tokens.Count -and $tokens[$j] -match '^-') {
+            $global += $tokens[$j]
+            # global options that take a SEPARATE value: -C <path>, -c <key=value>, --config-env ...
+            if ($tokens[$j] -match '^(-C|-c|--git-dir|--work-tree|--namespace|--exec-path|--config-env)$' -and ($j + 1) -lt $tokens.Count) {
+                $global += $tokens[$j + 1]
+                $j += 2
+                continue
+            }
+            $j++
+        }
+        if ($j -ge $tokens.Count) { return $null }
+        $rest = @()
+        if (($j + 1) -lt $tokens.Count) { $rest = @($tokens[($j + 1)..($tokens.Count - 1)]) }
+        return @{ Global = $global; Verb = $tokens[$j].ToLower().Trim('"', "'"); Args = $rest }
+    }
+    return $null
+}
+
+function Test-GitRules([string]$segment) {
+    # The reason to ask for, or '' when the git call in this segment is an ordinary one.
+    if ($segment -imatch '^\s*(echo|Write-(Output|Host))\b') { return '' }   # text, not an action
+    $tokens = @(Get-SegmentTokens $segment)
+    $call = Get-GitCall $tokens
+    if (-not $call) { return '' }
+
+    # 1. Switching the pre-commit chain off. core.hooksPath is looked for in the global options and
+    #    in the arguments (quoted arguments are values - a message may name it). The GIT_CONFIG_*
+    #    prefixes are judged once per command, outside this function, because they usually stand as
+    #    their own segment before the call.
+    foreach ($t in $call.Global) {
+        if ($t -imatch 'hookspath') { return "this points git at another hooks folder -> $t, which switches the pre-commit chain off" }
+    }
+    # Reading the value is not a change: "git config --get core.hooksPath" stays allowed.
+    $readOnlyConfig = ($call.Verb -eq 'config') -and (@($call.Args | Where-Object { $_ -imatch '^--get(-all|-regexp)?$|^--list$|^-l$' }).Count -gt 0)
+    if (-not $readOnlyConfig) {
+        foreach ($t in $call.Args) {
+            if ($t -match '^["'']') { continue }
+            if ($t -imatch 'hookspath') { return "this names core.hooksPath -> $t, which switches the pre-commit chain off" }
+        }
+    }
+
+    # 2. Force push, in every spelling, wherever the switch stands. A quoted argument counts here:
+    #    git push has no message argument, and a quoted refspec ("+main") forces just the same.
+    if ($call.Verb -eq 'push') {
+        foreach ($t in $call.Args) {
+            $bare = $t.Trim('"', "'")
+            if ($bare -imatch '^--force') { return "this overwrites remote history -> $bare" }   # --force, --force-with-lease, --force-if-includes
+            if ($bare -imatch '^--mirror$') { return 'git push --mirror overwrites every ref on the remote' }
+            if ($bare -imatch '^-[A-Za-z]*f[A-Za-z]*$') { return "this overwrites remote history -> $bare" }
+            if ($bare -match '^\+') { return "this refspec carries a leading + and forces the update -> $bare" }
+        }
+    }
+
+    # 3. Hook bypass written as a switch. A quoted token is a value and is never read as one.
+    if ($call.Verb -eq 'commit' -or $call.Verb -eq 'push') {
+        foreach ($t in $call.Args) {
+            if ($t -match '^["'']') { continue }
+            if ($t -imatch '^--no-veri') { return "this skips the pre-commit chain -> $t" }
+        }
+    }
+    # -n means --no-verify at commit and --dry-run at push, so it is judged at commit only.
+    if ($call.Verb -eq 'commit') {
+        foreach ($t in $call.Args) {
+            if ($t -match '^["'']') { continue }
+            if ($t -imatch '^-[A-Za-z]*n[A-Za-z]*$') { return "this skips the pre-commit chain -> $t" }
+        }
+    }
+    return ''
+}
+
+# --- 1b. git rules (version 13): before the text-skip below, because a git call that carries
+#     only a message is skipped there - and --no-verify lives in exactly such a call.
+#     The GIT_CONFIG_* prefixes are judged per COMMAND, not per segment: they usually stand as
+#     their own segment in front of the call ("$env:GIT_CONFIG_COUNT='1'; git commit ..."), so a
+#     per-segment rule never sees both halves together (measured: the probe ran through). Quoted
+#     spans are cut out first, so a message naming one of them is not a setting.
+$cmdUnquoted = $cmd -replace '"[^"]*"', ' ' -replace "'[^']*'", ' '
+if (($cmdUnquoted -imatch '(\$env:)?GIT_CONFIG_(COUNT|KEY_\w*|PARAMETERS)\s*=') -and
+    ($cmdUnquoted -imatch '(^|[\s;&|])(git|git\.exe|git\.cmd)(\s|$)')) {
+    Send-Confirm 'this sets git configuration through the environment (GIT_CONFIG_*), and that is one way of switching the pre-commit chain off'
+}
+
 foreach ($seg in $segments) {
     $s = $seg.Trim()
     if ($s -eq '') { continue }
+
+    $gitReason = Test-GitRules $s
+    if ($gitReason -ne '') { Send-Confirm $gitReason }
+
     if ($s -imatch '^(git\s+commit|echo|Write-(Output|Host))\b') { continue }   # text, not an action
 
     # Does this segment run cmd? Only then do %TEMP% and %TMP% mean the temp

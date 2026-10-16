@@ -112,7 +112,10 @@ $cases = @(
     @('allow', 'git restore src/app.js'),
     @('allow', 'git stash pop'),
     @('allow', 'git rm -r --cached node_modules'),
-    @('allow', 'git push --force origin main'),
+    # Version 13 turns this one around: the owner's rule is that a force push asks first, so the
+    # case that pinned "force-push is allowed" now pins the ask (the git-rules block below has the
+    # spellings; this line keeps the old spelling visible where it stood).
+    @('block', 'git push --force origin main'),
     @('allow', 'git commit -m "remove rm -rf usage"'),
     @('allow', 'npm install'),
     @('allow', 'npm ci'),
@@ -185,7 +188,51 @@ $cases = @(
     @('allow', ('Remove-Item "{{DEV}}\Temp\Pr' + $ue + 'fung\notes.txt"')),
     @('allow', 'Remove-Item "{{DEV}}\Temp\Pruefung\notes.txt"'),
     @('allow', ('Remove-Item {{DEV}}\Temp\Pr' + $ue + 'fung -Recurse -Force')),
-    @('allow', ('git commit -m "fix: B' + $ue + 'cher sortiert"'))
+    @('allow', ('git commit -m "fix: B' + $ue + 'cher sortiert"')),
+
+    # --- git rules (version 13): force push and hook bypass ----------------------
+    # The owner's order: the permission rules in settings.json are the first hurdle, but they are
+    # not a boundary, so the guard judges the command itself. Force push in every spelling,
+    # wherever the switch stands and behind git -C/-c; every way of switching the hook chain off;
+    # and NOT a normal commit or push, not -n at push (that is --dry-run there), and not a
+    # message that merely names one of these words - which is why the quoted cases sit here.
+    @('block', 'git push --force origin main'),
+    @('block', 'git push -f'),
+    @('block', 'git push --force-with-lease origin main'),
+    @('block', 'git push --force-if-includes origin main'),
+    @('block', 'git push origin +main'),
+    @('block', 'git push origin +refs/heads/main:refs/heads/main'),
+    @('block', 'git push --mirror'),
+    @('block', 'git push --FORCE origin main'),
+    @('block', 'git push -fu origin main'),
+    @('block', ('git -C {{DEV}}\Temp\Pr' + $ue + 'fung push --force')),
+    @('block', 'git -C {{DEV_FWD}}/Temp/x push -f'),
+    @('block', 'cd {{DEV_BASH}}/Temp/x && git push --force origin main'),
+    @('block', 'git -c core.hooksPath=/dev/null commit -m "x"'),
+    @('block', 'git -c core.hookspath=.git/hooks-disabled commit -m "x"'),
+    @('block', 'git --config-env=core.hooksPath=GIT_HOOKS commit -m "x"'),
+    @('block', 'GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.hooksPath GIT_CONFIG_VALUE_0=/dev/null git commit -m "x"'),
+    @('block', 'GIT_CONFIG_PARAMETERS="''core.hooksPath=/dev/null''" git commit -m "x"'),
+    @('block', 'git commit --no-verify -m "x"'),
+    @('block', 'git commit --no-veri'),
+    @('block', 'git commit -nm "x"'),
+    @('block', 'git commit -m "x" -n'),
+    @('block', 'git push --no-veri origin main'),
+    @('block', ('git -C {{DEV}}\Temp\Pr' + $ue + 'fung commit -n -m "x"')),
+    @('allow', 'git push origin main'),
+    @('allow', 'git push -u origin main'),
+    @('allow', 'git push -n origin main'),
+    @('allow', 'git push --tags origin'),
+    @('allow', 'git commit -m "add --no-validation flag"'),
+    @('allow', 'git commit -m "notes: for emergencies only, see the runbook"'),
+    @('allow', 'git commit -am "x"'),
+    @('allow', 'git commit --amend --no-edit'),
+    @('allow', ('git -C {{DEV}}\Temp\Pr' + $ue + 'fung push origin main')),
+    @('allow', 'git config --get core.hooksPath'),
+    @('allow', 'git config --get-all core.hooksPath'),
+    @('allow', 'git status --short'),
+    @('allow', 'git commit -m "x" #confirmed-by-user'),
+    @('allow', 'git push origin +main #confirmed-by-user')
 )
 
 $errors = 0
