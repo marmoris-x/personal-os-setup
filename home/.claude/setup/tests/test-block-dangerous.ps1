@@ -230,6 +230,8 @@ $cases = @(
     @('allow', ('git -C {{DEV}}\Temp\Pr' + $ue + 'fung push origin main')),
     @('allow', 'git config --get core.hooksPath'),
     @('allow', 'git config --get-all core.hooksPath'),
+    @('allow', 'git config core.hooksPath'),
+    @('block', 'git config core.hooksPath /dev/null'),
     @('allow', 'git status --short'),
     @('allow', 'git commit -m "x" #confirmed-by-user'),
     @('allow', 'git push origin +main #confirmed-by-user')

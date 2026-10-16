@@ -311,6 +311,7 @@ setup/config/repo.yaml
 setup/config/secrets.example.md
 setup/export.ps1
 setup/githooks/pre-commit
+setup/githooks/pre-push
 setup/lib/manifest.ps1
 setup/lib/personal.ps1
 setup/lib/placeholders.ps1

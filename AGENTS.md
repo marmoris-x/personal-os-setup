@@ -45,8 +45,8 @@ These rules are binding for every agent that installs, exports, verifies or rest
    before it is trusted. Show it, then make it pass.
 4. **Encoding:** hook `.ps1` files stay ASCII-only (Windows PowerShell 5.1 reads BOM-less files
    in the ANSI code page; a crash lets calls through). JSON/Markdown as UTF-8 without BOM.
-5. **The pre-commit hook stays fail-closed:** missing gitleaks/pwsh blocks the commit instead
-   of passing it silently.
+5. **The git hooks stay fail-closed:** missing gitleaks/pwsh blocks the commit, a missing pwsh
+   blocks the push, instead of passing it silently. Both live in `setup/githooks/`.
 6. **Two naming rules, one place.** Where a target lives in the repo and how a target file is
    stored are decided only in `setup/lib/manifest.ps1`. Never spell a mirror path out by hand
    in a script; call `Get-RepoFileRel`. See `docs/structure.md`.
@@ -65,6 +65,7 @@ pwsh setup/export.ps1                     # live -> repo; afterwards `git status
 pwsh install.ps1 -TargetRoot <empty dir> -NonInteractive   # install into a test target
 pwsh setup/verify.ps1 -TargetRoot <empty dir>   # verify an installed target
 pwsh setup/tools/privacy-scan.ps1         # denylist + general patterns; exit 1 on findings
+pwsh setup/tools/archive-name-scan.ps1    # vault folder names in tree + commit messages; exit 1 on findings
 pwsh setup/tools/check-structure.ps1      # repo tree vs the block in docs/structure.md
 pwsh setup/tools/check-language.ps1       # every tracked file must be in English
 pwsh setup/tools/verify-all.ps1           # the acceptance run (twelve points plus A-P)
@@ -90,7 +91,9 @@ start CI on purpose, not in a loop.
 - `home/Documents/` is the Windows Documents folder, resolved through the known-folder API.
 - `windows/` — machine-level setup that is configured, not copied (winget lists, task template).
 - `setup/` — the tooling: manifest, export, install support, check scripts, `setup/lib/` with
-  the shared naming rules, `setup/githooks/` with this repo's own pre-commit hook.
+  the shared naming rules, `setup/githooks/` with this repo's own pre-commit and pre-push hooks.
+  The pre-commit judges the staged worktree (gitleaks, privacy-scan `-Staged`); the pre-push
+  judges the history it is about to publish (privacy-scan `-History`, archive-name-scan).
 - `tests/` — Pester (`*.Tests.ps1`), fixtures, the Windows sandbox description.
 - `docs/` — English docs for humans, plus `docs/decisions/` (MADR).
 - `install.ps1` at the root — the only entry point for humans.

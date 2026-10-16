@@ -1,0 +1,25 @@
+#!/bin/sh
+# Fail-closed pre-push hook for personal-os-setup.
+#   1. privacy scan over the history (local denylist + general patterns + the archive category
+#      names of the personal layer)
+#   2. archive-name scan: every vault folder name, in the tree and in the commit messages
+# A push is what publishes the commits, so the history is what this hook judges; the worktree is
+# judged by the pre-commit hook on every commit and by the acceptance run.
+# Deliberate difference from the owner's global hooks: if a tool is missing this hook BLOCKS
+# instead of passing silently, because a guard that passes when its tool is missing is no guard.
+# --no-verify still overrides it by hand (self-declaration).
+
+fail() {
+    echo "pre-push BLOCKED: $1" >&2
+    exit 1
+}
+
+command -v pwsh >/dev/null 2>&1 || fail "pwsh (PowerShell 7) is not installed - refusing this push (fail-closed by design)"
+
+pwsh -NoProfile -File setup/tools/privacy-scan.ps1 -History \
+    || fail "privacy scan found personal data or secret-shaped content in the history"
+
+pwsh -NoProfile -File setup/tools/archive-name-scan.ps1 \
+    || fail "archive-name scan found a vault folder name in the tree or in a commit message"
+
+exit 0

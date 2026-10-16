@@ -325,8 +325,11 @@ function Test-GitRules([string]$segment) {
     foreach ($t in $call.Global) {
         if ($t -imatch 'hookspath') { return "this points git at another hooks folder -> $t, which switches the pre-commit chain off" }
     }
-    # Reading the value is not a change: "git config --get core.hooksPath" stays allowed.
-    $readOnlyConfig = ($call.Verb -eq 'config') -and (@($call.Args | Where-Object { $_ -imatch '^--get(-all|-regexp)?$|^--list$|^-l$' }).Count -gt 0)
+    # Reading the value is not a change: "git config --get core.hooksPath" stays allowed, and so
+    # does "git config core.hooksPath" - git prints the value when the key stands alone.
+    $readOnlyConfig = ($call.Verb -eq 'config') -and (
+        (@($call.Args | Where-Object { $_ -imatch '^--get(-all|-regexp)?$|^--list$|^-l$' }).Count -gt 0) -or
+        (@($call.Args).Count -eq 1))
     if (-not $readOnlyConfig) {
         foreach ($t in $call.Args) {
             if ($t -match '^["'']') { continue }
