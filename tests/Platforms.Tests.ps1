@@ -472,6 +472,13 @@ Describe 'the Life OS python resolver (Get-PlatformLifeOsPython)' {
         function New-FakePython([string]$Name, [string]$Version) {
             # Version '' writes a dead interpreter: it exists, runs, and fails - like a py
             # launcher whose requested version is not installed
+            if ($Name -match '[\\/]') {
+                # measured on the macos CI job 2026-10-16 (run 38877351306): the fake folder
+                # shadows NAMES on PATH, and an absolute candidate (the Homebrew keg paths)
+                # cannot be shadowed this way - Join-Path + WriteAllText died on a path that
+                # does not exist, and all four cases below failed. Fail with the reason instead.
+                throw ('the fake folder cannot shadow the absolute candidate ' + $Name + ' - the behaviour cases need a bare-name list')
+            }
             if ($script:hostOs -eq 'windows') {
                 $p = Join-Path $script:fakeDir ($Name + '.cmd')
                 $text = if ($Version) { '@echo ' + $Version + "`r`n" } else { "@exit /b 1`r`n" }
@@ -485,21 +492,28 @@ Describe 'the Life OS python resolver (Get-PlatformLifeOsPython)' {
         }
 
         function Invoke-Resolved([hashtable]$Fakes) {
-            # one fake per candidate NAME of this host (missing entry = dead), the folder in
+            # one fake per candidate NAME of the test list (missing entry = dead), the folder in
             # front of PATH, resolve, PATH back
-            $names = @((Get-PlatformLifeOsPythonCandidates -Os $script:hostOs) | ForEach-Object { @($_)[0] } | Select-Object -Unique)
+            $names = @((Get-PlatformLifeOsPythonCandidates -Os $script:testOs) | ForEach-Object { @($_)[0] } | Select-Object -Unique)
             foreach ($n in $names) { New-FakePython -Name $n -Version ([string]$Fakes[$n]) }
             $saved = $env:PATH
             try {
                 $env:PATH = $script:fakeDir + [IO.Path]::PathSeparator + $saved
-                return (Get-PlatformLifeOsPython -Os $script:hostOs)
+                return (Get-PlatformLifeOsPython -Os $script:testOs)
             }
             finally { $env:PATH = $saved }
         }
 
-        $script:pinName = if ($script:hostOs -eq 'windows') { 'py' } else { 'python3.13' }
-        $script:pinCommand = if ($script:hostOs -eq 'windows') { 'py -3.13' } else { 'python3.13' }
-        $script:fallbackName = if ($script:hostOs -eq 'windows') { 'python' } else { 'python3' }
+        # The macOS candidate list carries two absolute keg paths, and a PATH fake folder cannot
+        # shadow those (New-FakePython says so loudly). The four behaviour cases therefore run
+        # against a list that is all bare names - windows on a Windows host, linux everywhere
+        # else. It is the same resolver code path, and the real macOS list is pinned by the
+        # order test above. The fakes themselves stay HOST-native (cmd/sh), which is what the
+        # Get-Command lookup has to judge.
+        $script:testOs = if ($script:hostOs -eq 'windows') { 'windows' } else { 'linux' }
+        $script:pinName = if ($script:testOs -eq 'windows') { 'py' } else { 'python3.13' }
+        $script:pinCommand = if ($script:testOs -eq 'windows') { 'py -3.13' } else { 'python3.13' }
+        $script:fallbackName = if ($script:testOs -eq 'windows') { 'python' } else { 'python3' }
     }
 
     It 'takes the pinned 3.13 when both the pin and an older fallback answer' {
