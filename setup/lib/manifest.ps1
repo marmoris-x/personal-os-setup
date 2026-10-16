@@ -1,5 +1,5 @@
 <#
-setup/lib/manifest.ps1 - the manifest, and the two naming rules of this repo.
+setup/lib/manifest.ps1 - the manifest, and the naming rules of this repo.
 
 Used by export, install, verify, the docs generator and the tests. Dot-source this file, then:
   $m = Get-Manifest -Path <manifest.yaml>
@@ -20,6 +20,11 @@ NAMING RULES - the only place they are written down (see docs/structure.md, ADR 
    Hidden FOLDERS keep their dot: git does not interpret them.
    `store_as:` is the exception for a starter template, which is stored with a
    trailing .tmpl and installed without it.
+
+3. Which targets must be EXECUTABLE on macOS and Linux: every file under a
+   githooks folder, `.githooks` or `githooks` (Test-ExecutableTarget).
+   install.ps1 sets the bit after copying, and the git index carries it so a
+   clone has it too.
 
 Keep this file ASCII-only: Windows PowerShell 5.1 reads a BOM-less file in the
 ANSI code page, and a stray umlaut can break the parser.
@@ -64,6 +69,20 @@ function Get-StoredLeaf {
     param([Parameter(Mandatory)][string]$Leaf)
     if ($script:DotStoredNames -contains $Leaf) { return $Leaf.Substring(1) }
     return $Leaf
+}
+
+function Test-ExecutableTarget {
+    # Rule 3: which installed files need the executable bit on macOS and Linux. Git runs the
+    # files under a githooks folder by itself, and git skips a hook that is not executable -
+    # silently, which is the failure mode this repo refuses. Both spellings count: the hooks git
+    # is pointed at (`~/.githooks`, `setup/githooks`) and the stored copies under
+    # `~/.claude/setup/security/githooks`. install.ps1 sets the bit after copying (a copy does
+    # not carry it), and the git index carries it for a clone.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$Path)
+    $p = $Path -replace '\\', '/'
+    $segments = @($p -split '/' | Where-Object { $_ })
+    return (@($segments | Where-Object { $_ -eq '.githooks' -or $_ -eq 'githooks' }).Count -gt 0)
 }
 
 function Get-RepoFileRel {

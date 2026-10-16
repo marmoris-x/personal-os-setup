@@ -316,14 +316,23 @@ foreach ($entry in $manifest.components) {
 }
 
 # --- removals: files from the previous run that are gone now ----------------
+# A doc-only component installs a REPO-AUTHORED file (requirements.txt, the gitleaks config):
+# this run never writes one, and it must never remove one either - an entry that used to be a
+# copy leaves its old path in the registry, and deleting it would take the installed file's
+# source away.
+$repoAuthored = New-Object System.Collections.Generic.List[string]
+foreach ($entry in $manifest.components) {
+    if ([string]$entry.type -ne 'doc-only' -or -not $entry.target) { continue }
+    $repoAuthored.Add((Get-RepoFileRel -Target ([string]$entry.target) -StoreAs ([string]$entry.store_as)))
+}
 $removed = New-Object System.Collections.Generic.List[string]
 foreach ($old in $oldRegistry) {
-    if (-not ($newRegistry -contains $old)) {
-        $p = Join-Path $RepoRoot $old
-        if (Test-Path -LiteralPath $p) {
-            if (-not $WhatIf) { Remove-Item -LiteralPath $p -Force }
-            $removed.Add($old)
-        }
+    if ($newRegistry -contains $old) { continue }
+    if ($repoAuthored -contains $old) { continue }
+    $p = Join-Path $RepoRoot $old
+    if (Test-Path -LiteralPath $p) {
+        if (-not $WhatIf) { Remove-Item -LiteralPath $p -Force }
+        $removed.Add($old)
     }
 }
 

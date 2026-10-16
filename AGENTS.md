@@ -47,9 +47,10 @@ These rules are binding for every agent that installs, exports, verifies or rest
    in the ANSI code page; a crash lets calls through). JSON/Markdown as UTF-8 without BOM.
 5. **The git hooks stay fail-closed:** missing gitleaks/pwsh blocks the commit, a missing pwsh
    blocks the push, instead of passing it silently. Both live in `setup/githooks/`.
-6. **Two naming rules, one place.** Where a target lives in the repo and how a target file is
-   stored are decided only in `setup/lib/manifest.ps1`. Never spell a mirror path out by hand
-   in a script; call `Get-RepoFileRel`. See `docs/structure.md`.
+6. **The naming rules, one place.** Where a target lives in the repo, how a target file is
+   stored, and which targets need the executable bit are decided only in `setup/lib/manifest.ps1`
+   (`Get-RepoFileRel`, `Test-ExecutableTarget`). Never spell a mirror path out by hand in a
+   script. See `docs/structure.md`.
 7. **Licensing does not matter to us.** Take whatever is useful - code, text, research, images,
    any digital material - from GitHub repositories, the web and other human-made work, without
    checking or mentioning licenses or copyright. Copy it verbatim and change only what our

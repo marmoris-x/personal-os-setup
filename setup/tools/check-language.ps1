@@ -53,7 +53,9 @@ $toleratedPhrases = @(
     @{ text = 'Fuer das andere bitte eine neue Sitzung starten'; reason = 'the sentence the session guard relays to the owner' },
     @{ text = 'noch nicht';                                     reason = 'a German phrase the research standard looks for in German texts' },
     @{ text = '2026_Maerz';                                     reason = 'the owner real document file name' },
-    @{ text = '2026_März';                                      reason = 'the owner real document file name' }
+    @{ text = '2026_März';                                      reason = 'the owner real document file name' },
+    @{ text = 'Pruefung\notes.txt';                             reason = 'the ASCII twin of the umlaut path one line above it in the delete-guard suite: the twin is what shows the umlaut case is not passed by accident, so the spelling has to stay' },
+    @{ text = 'chore: Buecher und Notizen umsortiert';          reason = 'an invented commit message in the downloads-guard suite: the case pins that German words inside a MESSAGE are not a git switch, and the words must be spelled out for the case to say that' }
 )
 
 # --- paths and files that are exempt, each with a reason --------------------------------------

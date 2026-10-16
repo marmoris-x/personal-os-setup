@@ -46,9 +46,9 @@ empty starter template (`.tmpl`); anything that records the owner's own situatio
 notes, research results, recordings, transcripts, run records — never enters the repo.
 `tests/Structure.Tests.ps1` enforces the mechanical part of that rule.
 
-### Two naming rules, written down in one place
+### Three naming rules, written down in one place
 
-Both live in `setup/lib/manifest.ps1` and nowhere else:
+All live in `setup/lib/manifest.ps1` and nowhere else:
 
 1. **Where a target lives in the repo.** Manifest targets start with a root token:
    `HOME/` → `home/`, `DOCUMENTS/` → `home/Documents/`, `VAULT/` → `vault/`, `DEV/` → `dev/`.
@@ -58,6 +58,10 @@ Both live in `setup/lib/manifest.ps1` and nowhere else:
    Hidden *folders* (`.claude`, `.obsidian`, `.config`, `.githooks`) keep their dot — git does
    not interpret those. `store_as:` is the one exception, for a starter template that is stored
    as `<name>.tmpl` and installed as `<name>`.
+3. **Which targets must be executable** on macOS and Linux: every file under a githooks
+   folder (`Test-ExecutableTarget`). A copy carries no mode, and git skips a hook that is not
+   executable — silently. `install.ps1` sets the bit, the git index carries it for a clone, and
+   `tests/Hooks.Tests.ps1` proves both.
 
 Further conventions:
 
@@ -329,6 +333,7 @@ setup/tools/check-language.ps1
 setup/tools/check-structure.ps1
 setup/tools/check.ps1
 setup/tools/ci-full-setup.ps1
+setup/tools/ci-gitleaks.ps1
 setup/tools/ci-smoke.ps1
 setup/tools/drift-check.ps1
 setup/tools/generate-docs.ps1
@@ -342,6 +347,7 @@ tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
 tests/fixtures/personal.dummy.yaml
 tests/Format-Strings.Tests.ps1
+tests/Hooks.Tests.ps1
 tests/Install.Tests.ps1
 tests/LineEndings.Tests.ps1
 tests/Manifest.Tests.ps1

@@ -217,3 +217,26 @@ Describe 'repo renders back to the live system (needs the live machine)' {
         Write-Host ('    (Roundtrip: ' + $checked + ' files compared, ' + $skipped + ' entries with append/drop_lines skipped)')
     }
 }
+
+Describe 'the 5.1 twin of the main guard suite' {
+    # The twin exists to start the guard under Windows PowerShell 5.1 instead of pwsh - the host
+    # whose pipe encoding broke the umlaut payloads. It is the main suite with exactly ONE line
+    # changed, and until now nothing checked that property: measured 2026-10-16, the stored twin
+    # silently fell two cases behind the main suite and both files stayed green, because each is
+    # internally consistent. The rule is written down here, in the check that enforces it: the
+    # spawn line of the main suite becomes the platform placeholder, which the export stores for
+    # the concrete powershell.exe of the live copy.
+    It 'is the main suite with the one host line changed, byte for byte' {
+        $mainRel = 'home/.claude/setup/tests/test-block-dangerous.ps1'
+        $twinRel = 'home/.claude/setup/tests/test-block-dangerous-51.ps1'
+        $main = [IO.File]::ReadAllText((Join-Path $repoRoot $mainRel))
+        $twin = [IO.File]::ReadAllText((Join-Path $repoRoot $twinRel))
+        $main.Length | Should -BeGreaterThan 0 -Because 'an empty main suite would make the comparison below pass by saying nothing'
+        $twin.Length | Should -BeGreaterThan 0 -Because 'an empty twin would make the comparison below pass by saying nothing'
+        $needle = '& pwsh -NoProfile -File $hookPath'
+        $spawns = ([regex]::Matches($main, [regex]::Escape($needle))).Count
+        $spawns | Should -Be 1 -Because 'the twin is derived by replacing exactly this one line; zero or two spawns make that rule ambiguous, and a changed main suite must be looked at rather than patted through'
+        $expected = $main.Replace($needle, '& {{PWSH_HOST}} -NoProfile -File $hookPath')
+        $twin | Should -Be $expected -Because 'the twin must be regenerated from the main suite whenever a case is added or changed - it is not a second suite, it is the same one under the other host'
+    }
+}

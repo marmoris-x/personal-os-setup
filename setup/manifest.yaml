@@ -301,17 +301,18 @@ components:
     target: "HOME/.githooks"
     recursive: true
 
+  # Repo-authored (type: doc-only, the same pattern as claude-life-os-requirements). The live
+  # file carries one more allowlist - three former vault imports, exempted by exact path - whose
+  # paths name personal projects. Dropping those lines while mirroring left an EMPTY
+  # [[allowlists]] behind, and gitleaks 8.30.1 refuses to load such a config ("must contain at
+  # least one check"), so a fresh install would have blocked every commit in every repository
+  # (measured 2026-10-16 by tests/Hooks.Tests.ps1). The stored file is written by hand instead,
+  # without the personal paths; an existing live file is never overwritten.
   - id: home-gitleaks-config
     area: git
-    type: copy
+    type: doc-only
     core: true
-    source: "{HOME}/.config/gitleaks/gitleaks.toml"
     target: "HOME/.config/gitleaks/gitleaks.toml"
-    drop_lines:
-      - "former vault imports"
-      - "user decision 2026-10-08"
-      - "botghost"
-      - "harpa-ai"
 
   - id: dev-external-templates
     area: dev

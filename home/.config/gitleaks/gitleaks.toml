@@ -1,10 +1,12 @@
 # gitleaks extra rules (default rules stay active). Tested 2026-09-23 with gitleaks 8.30.1.
+# Repo-authored (type: doc-only in setup/manifest.yaml) - see the comment there for why this
+# file is not mirrored from a live copy.
 [extend]
 useDefault = true
 
 # Imported public documentation contains sample keys and tokens on purpose. It is third-party
 # text, stored in exactly two places (see the docs rule in CLAUDE.md), and only those two
-# decision 2026-10-08). A real key anywhere else is still caught.
+# paths are exempt. A real key anywhere else is still caught.
 [[allowlists]]
 description = "imported public documentation: docs/vendor/ in a project, 500-sources/docs/ in the vault"
 paths = [
@@ -12,13 +14,10 @@ paths = [
   '''(^|[\\/])500-sources[\\/]docs[\\/]''',
 ]
 
-# 2026-10-08 (user decision): three imported project docs that used to live in the vault under
-# 500-sources/<project>/docs/... and were moved to their project's docs\vendor\ on 2026-09-29.
-# They stay in the vault's history (91d903b), so a full-history scan needs them exempted - and
-# only them: by exact path, nothing else under 500-sources gained an exemption.
-[[allowlists]]
-paths = [
-]
+# A live copy may carry one more allowlist here: three former vault imports, exempted by exact
+# path (user decision 2026-10-08). Their paths name personal projects, so they stay out of this
+# repository. A config is installed once and never overwritten, so a person who needs those
+# exemptions adds them to their own file and keeps them.
 
 [[rules]]
 id = "deepseek-api-key"

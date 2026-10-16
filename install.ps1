@@ -476,6 +476,28 @@ try {
             }
         }
         if ($script:filesForceSkipped -gt 0) { $manualSteps.Add($script:filesForceSkipped.ToString() + ' different file(s) were left in place - rerun with -Force to replace them (ADR 0006).') }
+        # The executable bit is not part of a file's content, so a copy cannot carry it, and git
+        # SKIPS a hook that is not executable - silently. Rule 3 of setup/lib/manifest.ps1 names
+        # the targets that need the bit; it is set here for every selected entry, including files
+        # this run found unchanged (an install from before the rule carries no bit).
+        if ($platformOs -ne 'windows') {
+            foreach ($e in @($manifest.components)) {
+                if (-not (Test-EntrySelected $e)) { continue }
+                $targetRel = [string](Get-ManifestField $e 'target')
+                if (-not (Test-ExecutableTarget $targetRel)) { continue }
+                $abs = Get-TargetPathFor $targetRel
+                $files = @()
+                if (Test-Path -LiteralPath $abs -PathType Container) { $files = @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force) }
+                elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $files = @(Get-Item -LiteralPath $abs) }
+                foreach ($f in $files) {
+                    $null = (& chmod +x $f.FullName 2>&1)
+                    if ($LASTEXITCODE -ne 0) {
+                        $stageErrors++
+                        Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $f.FullName)
+                    }
+                }
+            }
+        }
         $forceText = if ($script:filesForceSkipped -gt 0) { ', different-without-Force ' + $script:filesForceSkipped } else { '' }
         $detail = 'new ' + $script:filesCreated + ', replaced ' + $script:filesReplaced + ', same ' + $script:filesSame + ', kept ' + $script:filesKept + $forceText
         if ($stageErrors -gt 0) { Add-Result 'files' 'ERROR' $detail } else { Add-Result 'files' 'OK' $detail; Save-Journal 'files' }

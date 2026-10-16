@@ -54,6 +54,17 @@ jobs:
           $PSVersionTable.PSVersion
           pwsh -NoProfile -Command '. ./setup/lib/manifest.ps1; . ./setup/lib/platform.ps1; "platform=" + (Get-PlatformId)'
 
+      # Before the checks step, because tests/Hooks.Tests.ps1 commits into a scratch repository
+      # whose hooksPath is the INSTALLED global hook - and that hook execs `gitleaks`. Without
+      # the tool on PATH the test could only show a fail-open hook, which proves nothing. The
+      # download is checksum-verified in one place (setup/tools/ci-gitleaks.ps1) so the scan
+      # below and the test cannot run against two different versions.
+      - name: gitleaks on PATH (secret scan and the installed-hook test)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/ci-gitleaks.ps1
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-gitleaks.ps1 failed" }
+
       - name: Test install, verify, second install changes nothing
         shell: pwsh
         run: |
@@ -77,19 +88,7 @@ jobs:
       - name: gitleaks (full history)
         shell: pwsh
         run: |
-          $ver = '8.30.1'
-          $base = "https://github.com/gitleaks/gitleaks/releases/download/v$ver"
-          if ($IsWindows) { $asset = "gitleaks_${ver}_windows_x64.zip" } else { $asset = "gitleaks_${ver}_linux_x64.tar.gz" }
-          Invoke-WebRequest -Uri "$base/$asset" -OutFile "gitleaks-$asset"
-          Invoke-WebRequest -Uri "$base/gitleaks_${ver}_checksums.txt" -OutFile checksums.txt
-          $expected = ((Get-Content checksums.txt | Select-String ([regex]::Escape($asset))) -split '\s+')[0]
-          $actual = (Get-FileHash "gitleaks-$asset" -Algorithm SHA256).Hash.ToLower()
-          if ($expected -ne $actual) { throw "gitleaks download checksum mismatch" }
-          if ($IsWindows) { Expand-Archive "gitleaks-$asset" -DestinationPath ./gitleaks-bin -Force }
-          else { New-Item -ItemType Directory -Force ./gitleaks-bin | Out-Null; tar -xzf "gitleaks-$asset" -C ./gitleaks-bin }
-          $bin = if ($IsWindows) { './gitleaks-bin/gitleaks.exe' } else { './gitleaks-bin/gitleaks' }
-          if (-not $IsWindows) { chmod +x $bin }
-          & $bin git --redact --no-banner --config .gitleaks.toml
+          gitleaks git --redact --no-banner --config .gitleaks.toml
           if ($LASTEXITCODE -ne 0) { throw "gitleaks found findings" }
           Write-Host "gitleaks: clean"
 
@@ -132,6 +131,15 @@ jobs:
           pwsh -NoProfile -File setup/tools/ci-smoke.ps1 -WorkDir "${{ runner.temp }}/personal-os-smoke"
           if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-smoke.ps1 failed" }
 
+      # The same tool step as in the checks job: tests/Hooks.Tests.ps1 needs gitleaks on PATH,
+      # and this job is the only place where the executable bit of an installed hook can be
+      # measured at all (Windows has no such bit).
+      - name: gitleaks on PATH (secret scan and the installed-hook test)
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File setup/tools/ci-gitleaks.ps1
+          if ($LASTEXITCODE -ne 0) { throw "setup/tools/ci-gitleaks.ps1 failed" }
+
       - name: Repo checks (analyzer, Pester with install e2e, guard suites, docs freshness)
         shell: pwsh
         run: |
@@ -146,6 +154,8 @@ jobs:
           pwsh -NoProfile -File setup/tools/privacy-scan.ps1 -History
           if ($LASTEXITCODE -ne 0) { throw "privacy scan (history) found findings" }
 
+      # No gitleaks scan of the history in this job: a macOS minute costs ten (decision D-macos,
+      # docs/platforms.md). The binary is here for the installed-hook test alone.
       - name: shellcheck bootstrap.sh
         run: |
           brew install shellcheck || true

@@ -4,7 +4,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `1335470d4caa9149` (SHA256, first 16 characters)
+- Manifest checksum: `5066bc396e075e8a` (SHA256, first 16 characters)
 - Manifest version: 1
 
 ## Core (66 of 81)
@@ -36,7 +36,7 @@ file no longer matches the manifest (`-Check`).
 | `claude-life-os-requirements` | life-os | core | skeleton to `HOME/.claude/life-os/requirements.txt` (only when nothing is there) |
 | `claude-setup-security` | git | core | file/folder to `HOME/.claude/setup/security` |
 | `home-githooks` | git | core | file/folder to `HOME/.githooks` |
-| `home-gitleaks-config` | git | core | file/folder to `HOME/.config/gitleaks/gitleaks.toml` |
+| `home-gitleaks-config` | git | core | skeleton to `HOME/.config/gitleaks/gitleaks.toml` (only when nothing is there) |
 | `dev-external-templates` | dev | core | file/folder to `DEV/External` |
 | `dev-external-templates-mirror` | dev | core | file/folder to `HOME/.claude/setup/external` |
 | `dev-dirs` | dev | core | create folders |
