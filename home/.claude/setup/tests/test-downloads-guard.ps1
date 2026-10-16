@@ -18,6 +18,13 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# The tool call travels to the hook through a PowerShell pipe, and Windows PowerShell 5.1 encodes
+# such a pipe with $OutputEncoding, which is us-ascii there: an umlaut in a path reached the hook
+# as '?', the guard read a wildcard where the case meant a letter, and the umlaut cases tested
+# nothing - two suites even went red under 5.1 because of it (measured 2026-10-16). UTF-8 for the
+# pipe on both hosts, so the bytes that arrive are the bytes the case wrote.
+$OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+
 
 if (-not (Test-Path $Hook)) { Write-Error "hook not found: $Hook"; exit 2 }
 $hookPath = (Resolve-Path $Hook).Path

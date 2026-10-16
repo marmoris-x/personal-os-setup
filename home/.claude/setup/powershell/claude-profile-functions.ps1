@@ -11,16 +11,18 @@
 # No idle /goal check-ins: they wake a session that is waiting for nobody and resend the whole
 # context. The official switch is the environment variable below (code.claude.com/docs/en/costs).
 # It is set here, where the profile sets its other environment values, so it holds for `claude`,
-# `claude-ds` and `claude-or` alike - and not in settings.json, which the owner keeps uncommitted
-# for review.
+# `claude-ds` and `claude-or` alike.
 $env:CLAUDE_CODE_GOAL_CHECKIN_MINUTES = '0'
 
 # Claude Code returns to the project folder after every Bash and PowerShell command (docs: "Return
 # to the original working directory after each Bash or PowerShell command in the main session").
 # That is what stops a cd in one command from moving the next one - and it is why a test command
 # must name its own folder (measured 2026-10-16: a Set-Location from an earlier call was gone in
-# the next one, and a test commit landed in the real repository). settings.json carries this value
-# too; it stands here as well so the --settings profiles (claude-ds, claude-or) have it.
+# the next one, and a test commit landed in the real repository). The value also stands in
+# settings.json, where every session reads it; this file is where the setup's environment values
+# live, beside the goal-check-in above. The --settings profiles are not the reason for the line:
+# measured 2026-10-16 against the docs, such a file is applied above settings.json per key and
+# never replaces it, so those profiles inherit the value either way.
 $env:CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR = '1'
 
 function claude-ds { claude --settings "{{HOME_ENV}}\.claude\profiles\deepseek.json" @args }
