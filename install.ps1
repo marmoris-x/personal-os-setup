@@ -482,27 +482,41 @@ try {
         # (HOME/.claude/setup/security/githooks). Set here for every selected entry, including
         # files this run found unchanged - an install from before the rule carries no bit.
         if ($platformOs -ne 'windows') {
-            foreach ($e in @($manifest.components)) {
-                if (-not (Test-EntrySelected $e)) { continue }
-                if (Test-PlatformUnsupported (Get-ComponentPlatformValue $e)) { continue }
-                $targetRel = [string](Get-ManifestField $e 'target')
-                $abs = Get-TargetPathFor $targetRel
-                $pairs = @()
-                if (Test-Path -LiteralPath $abs -PathType Container) {
-                    foreach ($f in @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force)) {
-                        $childRel = $f.FullName.Substring($abs.Length).TrimStart('\', '/')
-                        $pairs += @{ File = $f; Rel = ($targetRel + '/' + ($childRel -replace '\\', '/')) }
+            try {
+                foreach ($e in @($manifest.components)) {
+                    # only entries that install FILES: a dir/winget/task entry has no target of
+                    # its own, and Get-TargetPathFor on an empty target aborts the whole install
+                    # (measured: ubuntu CI run 38862827700, "Cannot bind argument to parameter
+                    # 'Path' because it is an empty string")
+                    if ([string](Get-ManifestField $e 'type') -notin @('copy', 'template', 'doc-only')) { continue }
+                    if (-not (Test-EntrySelected $e)) { continue }
+                    if (Test-PlatformUnsupported (Get-ComponentPlatformValue $e)) { continue }
+                    $targetRel = [string](Get-ManifestField $e 'target')
+                    if (-not $targetRel) { continue }
+                    $abs = Get-TargetPathFor $targetRel
+                    $pairs = @()
+                    if (Test-Path -LiteralPath $abs -PathType Container) {
+                        foreach ($f in @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force)) {
+                            $childRel = $f.FullName.Substring($abs.Length).TrimStart('\', '/')
+                            $pairs += @{ File = $f; Rel = ($targetRel + '/' + ($childRel -replace '\\', '/')) }
+                        }
+                    }
+                    elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $pairs = @(@{ File = (Get-Item -LiteralPath $abs); Rel = $targetRel }) }
+                    foreach ($pair in $pairs) {
+                        if (-not (Test-ExecutableTarget $pair.Rel)) { continue }
+                        $null = (& chmod +x $pair.File.FullName 2>&1)
+                        if ($LASTEXITCODE -ne 0) {
+                            $stageErrors++
+                            Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $pair.File.FullName)
+                        }
                     }
                 }
-                elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $pairs = @(@{ File = (Get-Item -LiteralPath $abs); Rel = $targetRel }) }
-                foreach ($pair in $pairs) {
-                    if (-not (Test-ExecutableTarget $pair.Rel)) { continue }
-                    $null = (& chmod +x $pair.File.FullName 2>&1)
-                    if ($LASTEXITCODE -ne 0) {
-                        $stageErrors++
-                        Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $pair.File.FullName)
-                    }
-                }
+            }
+            catch {
+                # one broken entry is one ERROR line, not the end of the install (the same rule
+                # the file loop above follows)
+                $stageErrors++
+                Add-Result 'files' 'ERROR' ('the executable bit could not be set: ' + $_.Exception.Message)
             }
         }
         $forceText = if ($script:filesForceSkipped -gt 0) { ', different-without-Force ' + $script:filesForceSkipped } else { '' }
