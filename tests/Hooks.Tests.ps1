@@ -90,9 +90,17 @@ Describe 'the installed hook' {
 
     It 'has the executable bit on macOS and Linux (skipped on Windows, which has no such bit)' -Skip:$script:onWindows {
         # POSIX `test -x` asks the kernel, not a copy of the rule: exactly what git asks before
-        # it starts a hook.
-        $null = & sh -c 'test -x "$1"' sh $script:hook 2>&1
-        $LASTEXITCODE | Should -Be 0 -Because 'git skips a hook that is not executable, and the whole point of this suite is that something would notice'
+        # it starts a hook. Every installed file under a githooks folder is judged, not only the
+        # one git is pointed at - rule 3 in setup/lib/manifest.ps1 says "every file", and the
+        # target carries a second copy under .claude/setup/security.
+        $hooks = @(Get-ChildItem -LiteralPath $script:targetHome -Recurse -File -Force | Where-Object { $_.FullName -match '[\\/]githooks[\\/]' })
+        $hooks.Count | Should -BeGreaterThan 0 -Because 'an empty list would let the rule below pass by saying nothing'
+        $notExec = @()
+        foreach ($h in $hooks) {
+            $null = & sh -c 'test -x "$1"' sh $h.FullName 2>&1
+            if ($LASTEXITCODE -ne 0) { $notExec += $h.FullName.Substring($script:targetHome.Length) }
+        }
+        ($notExec -join '; ') | Should -Be '' -Because 'git skips a hook that is not executable, and the whole point of this suite is that something would notice'
     }
 }
 

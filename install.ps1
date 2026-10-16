@@ -477,23 +477,30 @@ try {
         }
         if ($script:filesForceSkipped -gt 0) { $manualSteps.Add($script:filesForceSkipped.ToString() + ' different file(s) were left in place - rerun with -Force to replace them (ADR 0006).') }
         # The executable bit is not part of a file's content, so a copy cannot carry it, and git
-        # SKIPS a hook that is not executable - silently. Rule 3 of setup/lib/manifest.ps1 names
-        # the targets that need the bit; it is set here for every selected entry, including files
-        # this run found unchanged (an install from before the rule carries no bit).
+        # SKIPS a hook that is not executable - silently. Rule 3 of setup/lib/manifest.ps1 judges
+        # every INSTALLED path, not the component target: a hook can sit inside a bigger folder
+        # (HOME/.claude/setup/security/githooks). Set here for every selected entry, including
+        # files this run found unchanged - an install from before the rule carries no bit.
         if ($platformOs -ne 'windows') {
             foreach ($e in @($manifest.components)) {
                 if (-not (Test-EntrySelected $e)) { continue }
+                if (Test-PlatformUnsupported (Get-ComponentPlatformValue $e)) { continue }
                 $targetRel = [string](Get-ManifestField $e 'target')
-                if (-not (Test-ExecutableTarget $targetRel)) { continue }
                 $abs = Get-TargetPathFor $targetRel
-                $files = @()
-                if (Test-Path -LiteralPath $abs -PathType Container) { $files = @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force) }
-                elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $files = @(Get-Item -LiteralPath $abs) }
-                foreach ($f in $files) {
-                    $null = (& chmod +x $f.FullName 2>&1)
+                $pairs = @()
+                if (Test-Path -LiteralPath $abs -PathType Container) {
+                    foreach ($f in @(Get-ChildItem -LiteralPath $abs -Recurse -File -Force)) {
+                        $childRel = $f.FullName.Substring($abs.Length).TrimStart('\', '/')
+                        $pairs += @{ File = $f; Rel = ($targetRel + '/' + ($childRel -replace '\\', '/')) }
+                    }
+                }
+                elseif (Test-Path -LiteralPath $abs -PathType Leaf) { $pairs = @(@{ File = (Get-Item -LiteralPath $abs); Rel = $targetRel }) }
+                foreach ($pair in $pairs) {
+                    if (-not (Test-ExecutableTarget $pair.Rel)) { continue }
+                    $null = (& chmod +x $pair.File.FullName 2>&1)
                     if ($LASTEXITCODE -ne 0) {
                         $stageErrors++
-                        Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $f.FullName)
+                        Add-Result ([string](Get-ManifestField $e 'id')) 'ERROR' ('chmod +x failed for ' + $pair.File.FullName)
                     }
                 }
             }
