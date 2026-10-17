@@ -193,6 +193,18 @@ foreach ($k in ($firstStages.Keys | Sort-Object)) {
     Write-Host ('  {0,-16} {1,-7} {2}' -f $k, $s.Status, $s.Detail)
 }
 
+# crawl4ai: if the install stage itself WARNed, the live verify's "crwl not found" is the same
+# named machine limit (a runner without uv, or a wheel that does not build), not an unexpected
+# defect. A stage that reported OK still has to pass the verify strictly.
+$crawl = $firstStages['crawl4ai']
+if ($crawl -and $crawl.Status -eq 'WARN') {
+    $script:expectedFails[$os] += @{
+        Id = 'crawl4ai'
+        Detail = 'crwl not found'
+        Why = ('the install stage reported: ' + $crawl.Detail)
+    }
+}
+
 # Where an install puts programs OUTSIDE the package manager, and where a real session has them
 # on PATH but a CI step does not. The list (and the Windows-only winget Links folder among it)
 # comes from setup/lib/platform.ps1 - Get-PlatformToolDirs: a folder name of one system belongs

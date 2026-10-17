@@ -859,14 +859,19 @@ try {
     if (-not (Test-StageSelected 'crawl4ai')) { Add-Result 'crawl4ai' 'SKIP' 'not selected (-Components)' }
     elseif (Test-StageDone 'crawl4ai') { Add-Result 'crawl4ai' 'SKIP' 'from journal' }
     else {
-        $binExt = if ($platformOs -eq 'windows') { '.exe' } else { '' }
-        $binDir = Join-Path $roots.HOME ('.local' + $sep + 'bin')
+        # Every place an install puts a tool: PATH, <home>/.local/bin, and on Windows winget's
+        # Links folder (uv lands there when the package stage installs it). The platform module
+        # owns the folder names; a login shell may not have them on PATH yet (CI, macOS).
+        $toolDirs = @(Get-PlatformToolDirs -Os $platformOs)
         $resolveTool = {
             param([string]$Name)
             $c = Get-Command $Name -ErrorAction SilentlyContinue
             if ($c) { return $c.Source }
-            $p = Join-Path $binDir ($Name + $binExt)
-            if (Test-Path -LiteralPath $p) { return $p }
+            foreach ($d in $toolDirs) {
+                $found = Get-ChildItem -LiteralPath $d -File -ErrorAction SilentlyContinue |
+                    Where-Object { $_.BaseName -eq $Name } | Select-Object -First 1
+                if ($found) { return $found.FullName }
+            }
             return $null
         }
         if ($TestMode) {
@@ -897,8 +902,8 @@ try {
                         $crwl = & $resolveTool 'crwl'
                         $setupExe = & $resolveTool 'crawl4ai-setup'
                         if (-not $crwl -or -not $setupExe) {
-                            Add-Result 'crawl4ai' 'WARN' 'uv installed the tool but crwl/crawl4ai-setup are not in <home>/.local/bin'
-                            Add-Manual 'check PATH: ' + $binDir + ' must be included (crwl)'
+                            Add-Result 'crawl4ai' 'WARN' 'uv installed the tool but crwl/crawl4ai-setup are not in the tool folders'
+                            Add-Manual ('check PATH: one of ' + ($toolDirs -join ', ') + ' must be included (crwl)')
                         }
                         else {
                             # the browser is a one-time download; a second attempt covers a
@@ -922,7 +927,7 @@ try {
                                 # install resolves the file in <home>/.local/bin even when a
                                 # non-login PATH does not; a fresh shell still needs the dir.
                                 if (-not (Get-Command crwl -ErrorAction SilentlyContinue)) {
-                                    Add-Manual ('add ' + $binDir + ' to PATH so a new shell finds crwl')
+                                    Add-Manual ('add ' + (Split-Path -Parent $crwl) + ' to PATH so a new shell finds crwl')
                                 }
                                 Save-Journal 'crawl4ai'
                             }
