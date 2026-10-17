@@ -266,6 +266,30 @@ components:
     target: "HOME/.claude/setup/other-harnesses"
     recursive: true
 
+  # The portable skills every other harness reads from ~/.agents/skills. The files carry the
+  # same {{PLACEHOLDER}} tokens as the templates under setup/other-harnesses, so a fresh machine
+  # renders its own paths; the export turns the live paths back into tokens.
+  - id: agents-skills
+    area: research
+    type: copy
+    core: false
+    source: "{HOME}/.agents/skills"
+    target: "HOME/.agents/skills"
+    recursive: true
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
+  # OpenCode and Codex: install.ps1 merges the MCP templates into the harness configuration
+  # when its folder exists. Existing values win; the templates carry only ${VAR}/{env:VAR}
+  # header templates, never a key value.
+  - id: other-harness-configs
+    area: research
+    type: generated
+    core: false
+    note: "install.ps1 merges home/.claude/setup/other-harnesses/{opencode,codex} into ~/.config/opencode/opencode.json and ~/.codex/config.toml when that harness folder exists; existing values win and every replaced file is backed up first"
+
   - id: claude-setup-security
     area: git
     type: copy
@@ -640,8 +664,10 @@ components:
     core: true
     name: "exa"
     # the header value is the ${EXA_API_KEY} TEMPLATE, expanded by Claude Code at connect time
-    # from its own process environment - the key itself never stands in a file (2026-10-17)
-    json: '{"type":"http","url":"https://mcp.exa.ai/mcp","headers":{"x-api-key":"${EXA_API_KEY}"}}'
+    # from its own process environment - the key itself never stands in a file (2026-10-17).
+    # web_search_advanced_exa is opt-in through the tools parameter; an explicit list replaces
+    # the defaults, so the two default tools stay in it (Exa MCP docs, 2026-10-17).
+    json: '{"type":"http","url":"https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa","headers":{"x-api-key":"${EXA_API_KEY}"}}'
 
   - id: mcp-parallel
     area: research
@@ -677,6 +703,12 @@ components:
     type: generated
     core: true
     note: "created by install.ps1: python -m venv %LOCALAPPDATA%\\life-os\\venv + home/.claude/life-os/requirements.txt; model loads on first run (-WithWhisperModel preloads)"
+
+  - id: crawl4ai
+    area: research
+    type: generated
+    core: false
+    note: "uv tool install crawl4ai + crawl4ai-setup (browser); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it"
 
   - id: own-tools
     area: windows

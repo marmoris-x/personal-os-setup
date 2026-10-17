@@ -12,7 +12,12 @@ only here. The texts are written for the user's private use first.
 - System notes and technical files are in English. Text for the user is in the chosen language.
 
 ## 2. Sources
-- Use every configured search service at least once per research run.
+- Use every configured search service at least once per research run, within its per-run cap:
+  a keyed service whose key is missing is skipped and reported, never called with an empty
+  header. `exa` is the exception: without `EXA_API_KEY` it runs on the anonymous daily limit.
+  Serper is the reserve and is used only for local (Austria), German-language, price, shop,
+  authority or very recent questions. The caps and the arithmetic for 90 runs a month are in
+  `~/.claude/docs/agent-tooling.md` ("Budget for 90 runs a month").
 - Run at least four passes: primary and official sources; secondary and expert sources; user
   experiences (forums, blogs, Reddit through the search services); counter-check (criticism,
   opposing views, corrections, recent changes).

@@ -115,6 +115,7 @@ Import-Module powershell-yaml -ErrorAction Stop
 . (Join-Path $RepoRoot 'setup/lib/manifest.ps1')
 . (Join-Path $RepoRoot 'setup/lib/platform.ps1')
 . (Join-Path $RepoRoot 'setup/lib/placeholders.ps1')
+. (Join-Path $RepoRoot 'setup/lib/harness.ps1')
 # how a GitHub release names its asset and its checksum - the platform modules call this when a
 # program has no package at all (setup/lib/releases.ps1, tested in tests/Releases.Tests.ps1)
 . (Join-Path $RepoRoot 'setup/lib/releases.ps1')
@@ -315,8 +316,14 @@ function Test-EntrySelected($e) {
 }
 function Test-StageSelected([string]$id) {
     # Fixed stages that carry a manifest id (packages, task, venv, ...); without -Components
-    # everything runs, git-config has no id and always runs.
+    # everything runs, git-config has no id and always runs. -Profile minimal narrows a stage
+    # by the same core flag the file entries use: an optional stage must not run in a minimal
+    # install (review 2026-10-17: crawl4ai and other-harness-configs ran there).
     if ($Components -and ($Components -notcontains $id)) { return $false }
+    if ($Profile -eq 'minimal') {
+        $entry = $manifest.components | Where-Object { [string](Get-ManifestField $_ 'id') -eq $id } | Select-Object -First 1
+        if ($entry -and ((Get-ManifestField $entry 'core') -ne $true)) { return $false }
+    }
     return $true
 }
 function Test-HasKnownPlaceholder([string]$text) {
@@ -460,8 +467,13 @@ try {
             try {
                 if (($type -in @('copy', 'template')) -and (Get-ManifestField $e 'recursive')) {
                     if (-not (Test-Path -LiteralPath $repoFile -PathType Container)) { throw ('repo folder missing: ' + $repoFile) }
+                    # The manifest's exclude list is what export.ps1 and the roundtrip test
+                    # already honor. Without it here, a __pycache__ or a notes-* folder in the
+                    # source was copied into every target (found by acceptance check J).
+                    $excludes = @(Get-ManifestField $e 'exclude') | Where-Object { $_ }
                     foreach ($rf in (Get-ChildItem -LiteralPath $repoFile -Recurse -File -Force)) {
                         $childRel = $rf.FullName.Substring($repoFile.Length).TrimStart('\', '/')
+                        if ($childRel -and (Test-Excluded -RelPath $childRel -Patterns $excludes)) { continue }
                         Write-OneFile -Abs (Join-Path $abs $childRel) -RepoFile $rf.FullName -EntryType $type
                     }
                 }
@@ -528,6 +540,44 @@ try {
         $forceText = if ($script:filesForceSkipped -gt 0) { ', different-without-Force ' + $script:filesForceSkipped } else { '' }
         $detail = 'new ' + $script:filesCreated + ', replaced ' + $script:filesReplaced + ', same ' + $script:filesSame + ', kept ' + $script:filesKept + $forceText
         if ($stageErrors -gt 0) { Add-Result 'files' 'ERROR' $detail } else { Add-Result 'files' 'OK' $detail; Save-Journal 'files' }
+    }
+
+    # ------------------------------------------- other harness configuration --
+    # OpenCode and Codex get the same MCP servers and key-header templates as Claude Code, but
+    # only when the harness is present (its config folder exists). An existing value always
+    # wins; the merge only adds what is missing. A config that does not parse is an ERROR and
+    # is left untouched - overwriting it would throw away the person's own settings.
+    if (-not (Test-StageSelected 'other-harness-configs')) { Add-Result 'other-harness-configs' 'SKIP' 'not selected (-Components)' }
+    elseif (Test-StageDone 'other-harness-configs') { Add-Result 'other-harness-configs' 'SKIP' 'from journal' }
+    else {
+        try {
+            $updates = @(Get-HarnessConfigUpdates -HomeDir $roots.HOME -RepoRoot $RepoRoot)
+            if ($updates.Count -eq 0) {
+                Add-Result 'other-harness-configs' 'OK' 'no OpenCode or Codex folder - nothing to merge'
+                Save-Journal 'other-harness-configs'
+            }
+            else {
+                $done = New-Object System.Collections.Generic.List[string]
+                $preview = New-Object System.Collections.Generic.List[string]
+                foreach ($u in $updates) {
+                    if (-not $u.Changed) { $done.Add($u.Name + ': already current'); continue }
+                    if ($WhatIfPreference) { $preview.Add($u.Name + ': would merge ' + $u.Target); continue }
+                    if (Test-Path -LiteralPath $u.Target) { Backup-File $u.Target }
+                    if ($PSCmdlet.ShouldProcess($u.Target, 'merge')) {
+                        New-Item -ItemType Directory -Force -Path (Split-Path $u.Target -Parent) | Out-Null
+                        [IO.File]::WriteAllText($u.Target, $u.Text, (New-Object Text.UTF8Encoding($false)))
+                        $done.Add($u.Name + ': merged')
+                    }
+                    else { $done.Add($u.Name + ': not written (ShouldProcess declined)') }
+                }
+                if ($WhatIfPreference) { Add-Result 'other-harness-configs' 'PREVIEW' ($preview -join '; ') }
+                else { Add-Result 'other-harness-configs' 'OK' ($done -join '; ') }
+                Save-Journal 'other-harness-configs'
+            }
+        }
+        catch {
+            Add-Result 'other-harness-configs' 'ERROR' ('the merge was refused: ' + $_.Exception.Message)
+        }
     }
 
     # ----------------------------------------------------------------- dirs --
@@ -798,6 +848,94 @@ try {
 
     # ------------------------------------------------------------- own-tools --
     Invoke-PlatformStage 'own-tools' 'Invoke-OwnToolsStage' 'own-tools' 'own-tools'
+
+    # -------------------------------------------------------------- crawl4ai --
+    # The first page fetcher of save_pages.py: local, no quota, no third party sees the URL.
+    # uv is already part of own-tools, so it comes after that stage. uv tool install puts the
+    # four entry points (crwl, crawl4ai-setup, crawl4ai-doctor, crawl4ai-migrate) into
+    # <home>/.local/bin; crawl4ai-setup then installs the browser once. A missing uv or a
+    # failed browser setup is a WARN with the exact manual step, never a silent skip: without
+    # crwl the research skill falls back to the paid-in-quota services.
+    if (-not (Test-StageSelected 'crawl4ai')) { Add-Result 'crawl4ai' 'SKIP' 'not selected (-Components)' }
+    elseif (Test-StageDone 'crawl4ai') { Add-Result 'crawl4ai' 'SKIP' 'from journal' }
+    else {
+        $binExt = if ($platformOs -eq 'windows') { '.exe' } else { '' }
+        $binDir = Join-Path $roots.HOME ('.local' + $sep + 'bin')
+        $resolveTool = {
+            param([string]$Name)
+            $c = Get-Command $Name -ErrorAction SilentlyContinue
+            if ($c) { return $c.Source }
+            $p = Join-Path $binDir ($Name + $binExt)
+            if (Test-Path -LiteralPath $p) { return $p }
+            return $null
+        }
+        if ($TestMode) {
+            Save-Preview 'crawl4ai.txt' ("uv tool install crawl4ai`r`ncrawl4ai-setup`r`ncrwl --version`r`n")
+            Add-Result 'crawl4ai' 'PREVIEW' 'preview/crawl4ai.txt'
+            Save-Journal 'crawl4ai'
+        }
+        elseif ($WhatIfPreference) {
+            Add-Result 'crawl4ai' 'PREVIEW' 'DryRun: uv tool install crawl4ai; crawl4ai-setup; crwl --version'
+            Save-Journal 'crawl4ai'
+        }
+        else {
+            try {
+                $uv = & $resolveTool 'uv'
+                if (-not $uv) {
+                    Add-Result 'crawl4ai' 'WARN' 'uv is not on PATH'
+                    Add-Manual 'install uv (the package stage does), then run install.ps1 -Resume'
+                }
+                else {
+                    $installOut = (& $uv tool install crawl4ai 2>&1 | Out-String)
+                    if ($LASTEXITCODE -ne 0) {
+                        $tail = (@($installOut -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 3) -join ' | ')
+                        if ($tail.Length -gt 300) { $tail = $tail.Substring(0, 300) + '...' }
+                        Add-Result 'crawl4ai' 'WARN' ('uv tool install failed: ' + $tail)
+                        Add-Manual 'run `uv tool install crawl4ai`, read uv''s error, then install.ps1 -Resume'
+                    }
+                    else {
+                        $crwl = & $resolveTool 'crwl'
+                        $setupExe = & $resolveTool 'crawl4ai-setup'
+                        if (-not $crwl -or -not $setupExe) {
+                            Add-Result 'crawl4ai' 'WARN' 'uv installed the tool but crwl/crawl4ai-setup are not in <home>/.local/bin'
+                            Add-Manual 'check PATH: ' + $binDir + ' must be included (crwl)'
+                        }
+                        else {
+                            # the browser is a one-time download; a second attempt covers a
+                            # flaky network without turning the stage into a loop
+                            $setupOk = $false
+                            $setupTail = ''
+                            for ($attempt = 1; $attempt -le 2; $attempt++) {
+                                $setupOut = (& $setupExe 2>&1 | Out-String)
+                                if ($LASTEXITCODE -eq 0) { $setupOk = $true; break }
+                                $setupTail = (@($setupOut -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 3) -join ' | ')
+                                if ($setupTail.Length -gt 300) { $setupTail = $setupTail.Substring(0, 300) + '...' }
+                                if ($attempt -lt 2) { Start-Sleep -Seconds 10 }
+                            }
+                            if (-not $setupOk) {
+                                Add-Result 'crawl4ai' 'WARN' ('the browser setup failed: ' + $setupTail)
+                                Add-Manual 'run `crawl4ai-setup`, then `crawl4ai-doctor`, then install.ps1 -Resume'
+                            }
+                            else {
+                                $ver = ((& $crwl --version 2>&1 | Out-String) -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+                                Add-Result 'crawl4ai' 'OK' ('crwl ready: ' + $ver + ' (' + $crwl + ')')
+                                # install resolves the file in <home>/.local/bin even when a
+                                # non-login PATH does not; a fresh shell still needs the dir.
+                                if (-not (Get-Command crwl -ErrorAction SilentlyContinue)) {
+                                    Add-Manual ('add ' + $binDir + ' to PATH so a new shell finds crwl')
+                                }
+                                Save-Journal 'crawl4ai'
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                Add-Result 'crawl4ai' 'WARN' ('the stage threw: ' + $_.Exception.Message)
+                Add-Manual 'run `uv tool install crawl4ai` and `crawl4ai-setup` by hand, then install.ps1 -Resume'
+            }
+        }
+    }
 
     # --------------------------------------------------- os-extras --
     Invoke-PlatformStage 'os-extras' 'Invoke-OsExtrasStage' 'os-extras' 'os-extras'

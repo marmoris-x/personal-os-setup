@@ -209,6 +209,8 @@ docs/platforms.md
 docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
+home/.agents/skills/docs-import/SKILL.md
+home/.agents/skills/web-research/SKILL.md
 home/.claude/agents/evidence-extractor.md
 home/.claude/agents/research-writer.md
 home/.claude/agents/web-researcher.md
@@ -282,6 +284,7 @@ home/.claude/setup/tests/test-session-check.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
 home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
+home/.claude/skills/quick-research/SKILL.md
 home/.claude/skills/research/references/style-rules.md
 home/.claude/skills/research/scripts/ai_patterns.py
 home/.claude/skills/research/scripts/build_references.py
@@ -317,6 +320,7 @@ setup/config/secrets.example.md
 setup/export.ps1
 setup/githooks/pre-commit
 setup/githooks/pre-push
+setup/lib/harness.ps1
 setup/lib/manifest.ps1
 setup/lib/personal.ps1
 setup/lib/placeholders.ps1
@@ -348,6 +352,7 @@ tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
 tests/fixtures/personal.dummy.yaml
 tests/Format-Strings.Tests.ps1
+tests/Harness.Tests.ps1
 tests/Hooks.Tests.ps1
 tests/Install.Tests.ps1
 tests/LineEndings.Tests.ps1
@@ -357,6 +362,7 @@ tests/Platforms.Tests.ps1
 tests/Privacy-Scan.Tests.ps1
 tests/README.md
 tests/Releases.Tests.ps1
+tests/ResearchKeys.Tests.ps1
 tests/Roundtrip.Tests.ps1
 tests/sandbox/personal-os.wsb
 tests/sandbox/smoke-install.ps1

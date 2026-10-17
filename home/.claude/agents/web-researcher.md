@@ -22,7 +22,9 @@ mcpServers:
   - parallel
   - exa-key:
       type: http
-      url: https://mcp.exa.ai/mcp
+      # web_search_advanced_exa is opt-in; the explicit list replaces the defaults, so the
+      # two default tools stay in it (Exa MCP docs, 2026-10-17)
+      url: https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa
       headers:
         x-api-key: ${EXA_API_KEY}
   - you-free:
@@ -87,12 +89,23 @@ service answers with a limit, quota or authentication error, switch to the next 
 it, and name the switch in `services_failed`. The order below is only for a pass without named
 services; allowances match `docs/agent-tooling.md`.
 
-1. `exa` (no account, 150 calls a day): `web_search_exa`, default 10 results.
+**Budget, every pass:** your prompt names the call cap for each assigned service; never exceed
+it, and stop searching when the cap is reached. The four passes of a run together stay inside
+the caps that make 90 runs a month fit the free tiers (the caller's `SKILL.md` and
+`docs/agent-tooling.md` carry the arithmetic). A keyed service whose environment variable is
+empty is skipped, never called with an empty header: name it in `services_failed` with
+`"why": "no key"`. `parallel` and `you-free` need no key; `exa` falls back to the anonymous
+150-calls-a-day limit when `EXA_API_KEY` is empty. Serper's one call is the reserve: use it only
+for local (Austria), German-language, price, shop, authority or very recent questions; a general
+question leaves it unused.
+
+1. `exa` (`EXA_API_KEY` account, shared with `exa-key`; anonymous 150 calls a day only without
+   the key): `web_search_exa`, default 10 results.
 2. `parallel` (no account): `web_search`.
 3. TinyFish (free key, shell, 30 searches a minute):
    `Invoke-RestMethod "https://api.search.tinyfish.ai?query=<url-encoded query>" -Headers @{ "X-API-Key" = $env:TINYFISH_API_KEY }`
    Check the request format at docs.tinyfish.ai before the first call of a session.
-4. `exa-key` (free account, $10 a month): same tools as `exa`.
+4. `exa-key` (same key and account as `exa`, $10 a month): same tools as `exa`.
 5. `firecrawl` (1,000 credits a month): `firecrawl_search` (2 credits); afterwards call
    `firecrawl_search_feedback` with the search id (refunds 1 credit).
 6. `tavily` (1,000 credits a month): `tavily_search`, basic depth. `you-free` (100 a day), then

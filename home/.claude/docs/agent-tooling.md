@@ -57,12 +57,48 @@ index is measured below.
 | Tavily | — | 1,000 credits/month (basic search 1, extract 1 per 5 URLs) | extra search capacity, cheap extraction |
 | Firecrawl | search, scrape, parse (rate-limited) | 1,000 credits/month (search 2, refund 1 via feedback; page 1); crawl, map, interact | JavaScript pages, whole sites |
 | Jina Reader | 20 pages/minute | not needed | free fallback reader |
-| crawl4ai (optional) | local, unlimited | — | last-resort reader on this PC |
+| crawl4ai | local, unlimited | — | **first** page reader since 2026-10-17: installed by the setup (`uv tool install crawl4ai` + `crawl4ai-setup`), no quota and no provider sees the URL |
+
+## Budget for 90 runs a month (2026-10-17)
+
+The research skill runs at most 90 times a month in the intended use (about three a day). The
+per-run caps below make that fit every free tier, including the page fetches that fall back to
+a service when the local crawler cannot read a page:
+
+| Service | Calls per run | 90 runs = | Free allowance | Headroom |
+|---|---|---|---|---|
+| exa + exa-key (one `EXA_API_KEY`) | 10 | 900 searches | $10 a month at $7/1k = about 1,400 searches, plus $1/1k pages | about 1.4x with the page fallback (see below) |
+| parallel | 4 | 360 | 5,000 requests a month | 13x |
+| you-free | 3 | 270 | 100 searches a day | 11x |
+| you | 3 | 270 searches | $100 one-time at $5/1k = 20,000 searches | 74x |
+| tavily | 3 | 270 credits | 1,000 credits a month | 3.7x |
+| firecrawl | 2 | 180 net credits | 1,000 credits a month (search 2, feedback refunds 1) | 5.5x |
+| TinyFish | 4 | 360 | 500 searches an hour, 1,000 a day | 83x (daily) |
+| Serper (reserve) | 1 | 90 | 2,500 queries once (renewal not stated) | 27 months |
+
+Page fallback (`PAGE_CAP` in `save_pages.py`): at most 10 pages per run for exa, you, TinyFish
+and Jina, 5 for tavily and firecrawl; crawl4ai is local and unlimited. Worst case per month:
+exa/exa-key 900 searches ($6.30) + 900 pages ($0.90) = $7.20 of the $10 account; tavily 270
+search + 90 page credits (extract costs 1 credit per 5 URLs) = 360 of 1,000; firecrawl 180 +
+450 = 630 of 1,000; you 270 searches ($1.35) + 900 pages ($0.90) = $2.25 of the $100 (450
+search-equivalents at $5/1k); TinyFish 360 + 900 = 1,260 of 30,000. Every row stays inside its
+allowance.
+The anonymous 150-calls-a-day Exa limit applies only when `EXA_API_KEY` is empty; with the key
+both Exa servers draw on the same $10 account.
+
+**Serper is the reserve.** Its single call per run is spent only when the question is local
+(Austria), German-language, about a price, a shop, an authority or something from the last few
+days. A general question never gets it. **No key means no call:** a keyed service whose
+variable is empty is skipped and reported, never called with an empty header; `parallel` and
+`you-free` need no key, and `exa` runs anonymously when its key is absent. The same rules stand in `skills/research/SKILL.md` and
+`agents/web-researcher.md`.
 
 **Accounts worth creating** (all free, no card): You.com (the $100 is the biggest
-allowance), Tavily, Firecrawl, Exa. Keys go into Windows user environment variables
-(`YDC_API_KEY`, `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`, `EXA_API_KEY`) via
-`setup/powershell/set-research-keys.ps1`, never into files or the chat. The agent can read
+allowance), Tavily, Firecrawl, Exa. Keys go through
+`setup/powershell/set-research-keys.ps1`: on Windows into user environment variables
+(`YDC_API_KEY`, `TAVILY_API_KEY`, `FIRECRAWL_API_KEY`, `EXA_API_KEY`), on macOS/Linux into
+`~/.config/personal-os/research-keys.env` (mode 600) sourced from the shell profiles. Never
+into the repository or the chat. The agent can read
 environment variables through the shell; these are free-tier keys, so the risk is limited.
 
 **Not added:** Brave (card required since February 2026); mem0 (a second memory outside the

@@ -161,6 +161,15 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
+  # --- area research ---
+  agents-skills:
+    windows: "files"
+    macos: "files"
+    linux: "files"
+  other-harness-configs:
+    windows: "generated"
+    macos: "generated"
+    linux: "generated"
   # --- area git ---
   claude-setup-security:
     windows: "files"
@@ -358,6 +367,11 @@ components:
     linux: "plugin"
   # --- area life-os ---
   life-os-venv:
+    windows: "generated"
+    macos: "generated"
+    linux: "generated"
+  # --- area research ---
+  crawl4ai:
     windows: "generated"
     macos: "generated"
     linux: "generated"

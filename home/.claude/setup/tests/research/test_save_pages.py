@@ -77,6 +77,7 @@ class SavePages(unittest.TestCase):
         patches = [mock.patch.object(save_pages, "http", self.net),
                    mock.patch.dict(os.environ, KEYS),
                    mock.patch.object(save_pages.shutil, "which", return_value=None),
+                   mock.patch.object(save_pages, "LOCAL_BIN", self.work.path / "empty-bin"),
                    mock.patch.object(save_pages.time, "sleep")]
         for p in patches:
             p.start()
@@ -122,6 +123,79 @@ class SavePages(unittest.TestCase):
         self.assertEqual(dropped, ["http://localhost/y"])
 
     # --- fetching and saving
+
+    def test_crawl4ai_is_the_first_fetcher_and_the_services_are_the_fallback(self):
+        # The order is the point: local first (no quota, no third party), the services only
+        # for what the browser cannot read. A crwl that fails for one URL must not stop the
+        # other URL nor the fallback chain.
+        self.candidates({"url": "https://example.org/local"}, {"url": "https://example.org/blocked"})
+        calls = []
+        http_calls_seen = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            http_calls_seen.append(len(self.net.calls))
+            if argv[1].endswith("/blocked"):
+                return type("P", (), {"returncode": 1, "stdout": "", "stderr": "blocked"})()
+            return type("P", (), {"returncode": 0, "stdout": LONG, "stderr": ""})()
+
+        self.net.exa = exa_ok(("https://example.org/blocked", "B", LONG + " via exa"))
+        with mock.patch.object(save_pages.shutil, "which", return_value="crwl"), \
+                mock.patch.object(save_pages.subprocess, "run", fake_run):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        methods = {i["url"]: i["method"] for i in self.index()}
+        self.assertEqual(methods, {"https://example.org/local": "crawl4ai",
+                                   "https://example.org/blocked": "exa"})
+        self.assertEqual(calls[0][1:], ["https://example.org/local", "-o", "markdown"])
+        # the first crwl call happens before any HTTP service call: that is the order
+        self.assertEqual(http_calls_seen[0], 0)
+        self.assertNotIn("crawl4ai: crwl not on PATH", out)
+
+    def test_fallback_pages_are_capped_per_service(self):
+        # The cap is what keeps 90 runs a month inside tavily's 1,000 credits: five pages a
+        # run, not forty. It applies to the service's own request, not to the candidate list.
+        urls = [f"https://example.org/{n}" for n in range(8)]
+        self.candidates(*({"url": u} for u in urls))
+        seen = []
+
+        def tavily(body):
+            seen.append(body["urls"])
+            return {"results": [], "failed_results": []}
+
+        self.net.tavily = tavily
+        self.run_script()
+        self.assertTrue(seen)
+        self.assertLessEqual(len(seen[0]), save_pages.PAGE_CAP["tavily"])
+
+    def test_crwl_in_the_uv_bin_dir_is_found_without_path(self):
+        # macOS does not put ~/.local/bin on a non-login PATH. The installer finds crwl there;
+        # save_pages must find the same file, or it silently falls back to the metered services.
+        bin_dir = self.work.path / "local-bin"
+        bin_dir.mkdir()
+        exe = bin_dir / ("crwl.exe" if os.name == "nt" else "crwl")
+        exe.write_text("", encoding="utf-8")
+        self.candidates({"url": "https://example.org/local"})
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            return type("P", (), {"returncode": 0, "stdout": LONG, "stderr": ""})()
+
+        with mock.patch.object(save_pages, "LOCAL_BIN", bin_dir), \
+                mock.patch.object(save_pages.subprocess, "run", fake_run):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertTrue(calls)
+        self.assertEqual(calls[0][0], str(exe))
+        self.assertEqual(self.index()[0]["method"], "crawl4ai")
+
+    def test_a_missing_crawl4ai_is_noted_not_silent(self):
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("crawl4ai: crwl not on PATH, skipped", out)
 
     def test_exa_page_is_saved_with_header_and_index(self):
         self.candidates({"url": "https://example.org/wien", "title": "Wien"})

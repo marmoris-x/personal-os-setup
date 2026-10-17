@@ -61,12 +61,13 @@ provider check is dated there. If a service answers with a limit, quota or
 authentication error, switch to the next one and do not retry it in this run.
 
 **Search** (in this order):
-1. `exa` (no account, 150 calls per day): `web_search_exa`, keep the default 10 results.
+1. `exa` (`EXA_API_KEY` account, shared with `exa-key`; anonymous 150 calls a day only without
+   the key): `web_search_exa`, keep the default 10 results.
 2. `parallel` (no account, free rate limits): `web_search`.
 3. TinyFish (free key, shell, 30 searches per minute):
    `Invoke-RestMethod "https://api.search.tinyfish.ai?query=<url-encoded query>" -Headers @{ "X-API-Key" = $env:TINYFISH_API_KEY }`
    Check the current request format at docs.tinyfish.ai before the first call of a session.
-4. `exa-key` (free account, $10 a month): same tools as `exa`.
+4. `exa-key` (same key and account as `exa`, $10 a month): same tools as `exa`.
 5. `firecrawl` (free account, 1,000 credits a month): `firecrawl_search` (2 credits). After
    using its results, call `firecrawl_search_feedback` with the search id: it refunds 1 credit.
 6. `tavily` (1,000 credits a month): `tavily_search`, basic depth. `you-free` (100 per day),

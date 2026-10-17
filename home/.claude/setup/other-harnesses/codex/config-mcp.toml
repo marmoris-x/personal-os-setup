@@ -2,13 +2,14 @@
 # Keys come from your Windows environment variables, never from this file.
 
 [mcp_servers.exa]
-url = "https://mcp.exa.ai/mcp"
+url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa"
+env_http_headers = { "x-api-key" = "EXA_API_KEY" }
 
 [mcp_servers.parallel]
 url = "https://search.parallel.ai/mcp"
 
 [mcp_servers.exa-key]
-url = "https://mcp.exa.ai/mcp"
+url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa"
 env_http_headers = { "x-api-key" = "EXA_API_KEY" }
 
 [mcp_servers.you-free]

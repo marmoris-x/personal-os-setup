@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `7ace140506004a58` (SHA256, first 16 characters)
+- Manifest checksum: `f6b8552dae91a98a` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (63 of 75)
+## Core (63 of 78)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -75,7 +75,7 @@ file no longer matches the manifest (`-Check`).
 | `os-backup` | backup | core | Kopia and KopiaUI from the OS package source. Connecting the repository and typing the password stays manual (decision D8) |
 | `os-onedrive` | backup | core | The OneDrive client and the document archive beside the documents folder. Windows and macOS only - there is no official OneDrive client for Linux (decision D9) |
 
-## Optional (12)
+## Optional (15)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -83,6 +83,8 @@ file no longer matches the manifest (`-Check`).
 | `claude-docs-repositories` | research | optional | file/folder to `HOME/.claude/docs/repositories.md` |
 | `claude-repair-script` | claude | optional | file/folder to `HOME/.claude/setup/repair-claude-code.ps1` |
 | `claude-other-harnesses` | claude | optional | file/folder to `HOME/.claude/setup/other-harnesses` |
+| `agents-skills` | research | optional | file/folder to `HOME/.agents/skills` |
+| `other-harness-configs` | research | optional | install.ps1 merges home/.claude/setup/other-harnesses/{opencode,codex} into ~/.config/opencode/opencode.json and ~/.codex/config.toml when that harness folder exists; existing values win and every replaced file is backed up first |
 | `vault-readme` | vault | optional | template with placeholders to `VAULT/README.md` |
 | `vault-obsidian-appearance` | vault | optional | file/folder to `VAULT/.obsidian/appearance.json` |
 | `vault-obsidian-graph` | vault | optional | file/folder to `VAULT/.obsidian/graph.json` |
@@ -91,6 +93,7 @@ file no longer matches the manifest (`-Check`).
 | `vault-meta-script-setup-laptop` | vault | optional | file/folder to `VAULT/000-meta/scripts/setup-laptop.ps1` |
 | `winget-optional` | windows | optional | programs from `windows/winget-optional.json` |
 | `plugins-claude-code` | claude | optional | Claude Code marketplaces and plugins are installed by install.ps1 from settings.json (enabledPlugins). |
+| `crawl4ai` | research | optional | uv tool install crawl4ai + crawl4ai-setup (browser); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it |
 
 ## Fixed installer stages (deliberately not in the manifest, see `docs/decisions/0013-install-stages.md`)
 

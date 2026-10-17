@@ -1260,6 +1260,20 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.config/gitleaks/gitleaks.toml'; Reason = '2026-10-16: repo-authored now (type: doc-only). Mirroring the live file with the three personal paths dropped left an EMPTY [[allowlists]], and gitleaks 8.30.1 refuses such a config - a fresh install would have blocked every commit in every repository. The stored file keeps the public docs/vendor allowlist and the two extra rules and says where the personal exemptions live' }
         @{ Path = 'HOME/.claude/setup/tests/test-block-dangerous.ps1'; Reason = 'the same day, the previous task''s last fixes that had never been exported: the read-only exception for `git config core.hooksPath` and its two cases' }
         @{ Path = 'HOME/.claude/docs/repositories.md'; Reason = '2026-10-16: found by drift-check.ps1''s new unmanaged scan - the file sat live with no manifest entry. The same genre as agent-tooling.md, so it is mirrored like it (claude-docs-repositories)' }
+        @{ Path = 'HOME/.claude/agents/web-researcher.md'; Reason = '2026-10-17: exa-key points at the tools-enabled URL (web_search_advanced_exa), and the agent carries the per-run caps, the Serper reserve and the skip-without-key rule' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/save_pages.py'; Reason = '2026-10-17: crawl4ai is the first fetcher, the services are the fallback, and PAGE_CAP bounds the fallback pages per service (arithmetic for 90 runs a month)' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_save_pages.py'; Reason = '2026-10-17: tests for the crawl4ai-first order (red-proved against the old order) and for the per-service page cap' }
+        @{ Path = 'HOME/.claude/skills/research/SKILL.md'; Reason = '2026-10-17: per-run service caps, the Serper reserve rule, the skip-without-key rule, and a trigger narrowed so quick-research owns the single fact' }
+        @{ Path = 'HOME/.claude/skills/quick-research/SKILL.md'; Reason = '2026-10-17: new skill for one quick fact - two searches and one page, no subagent, no scripts' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-17: the quick-lookup line names the quick-research skill instead of sending the reader to Exa/Parallel by hand' }
+        @{ Path = 'HOME/.claude/docs/research-standard.md'; Reason = '2026-10-17: section 2 states the per-run cap, the skipped service without a key, and the Serper reserve' }
+        @{ Path = 'HOME/.claude/docs/agent-tooling.md'; Reason = '2026-10-17: crawl4ai is the first page reader, and the budget section carries the 90-runs-a-month arithmetic for every free tier' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/opencode/opencode.json'; Reason = '2026-10-17: the exa server carries the x-api-key env template and the tools URL; exa-key gets the same URL' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/codex/config-mcp.toml'; Reason = '2026-10-17: the exa server carries env_http_headers (x-api-key) and the tools URL; exa-key gets the same URL' }
+        @{ Path = 'HOME/.agents/skills/web-research/SKILL.md'; Reason = '2026-10-17: new manifest component agents-skills deploys the portable skills to ~/.agents/skills; this is the web-research twin' }
+        @{ Path = 'HOME/.agents/skills/docs-import/SKILL.md'; Reason = '2026-10-17: the same component, the docs-import twin' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-17: the portable twin now names exa and exa-key as one EXA_API_KEY account, matching the installed servers' }
+        @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-10-17: on macOS/Linux the keys persist in a 0600 env file sourced from the profiles; Windows keeps its user environment variables' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

@@ -3,8 +3,11 @@
   "mcp": {
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
-      "enabled": true
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa",
+      "enabled": true,
+      "headers": {
+        "x-api-key": "{env:EXA_API_KEY}"
+      }
     },
     "parallel": {
       "type": "remote",
@@ -13,7 +16,7 @@
     },
     "exa-key": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
+      "url": "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa",
       "enabled": true,
       "headers": {
         "x-api-key": "{env:EXA_API_KEY}"

@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `7ace140506004a58`
+- Manifest checksum: `f6b8552dae91a98a`
 
 ## What each system can do
 
@@ -51,6 +51,8 @@ written next to it. An agent that meets one of these skips the component and say
 | `claude-life-os` | `files` | `files` | `files` |
 | `claude-life-os-requirements` | `files` | `files` | `files` |
 | `claude-other-harnesses` | `files` | `files` | `files` |
+| `agents-skills` | `files` | `files` | `files` |
+| `other-harness-configs` | `generated` | `generated` | `generated` |
 | `claude-setup-security` | `files` | `files` | `files` |
 | `home-githooks` | `files` | `files` | `files` |
 | `home-gitleaks-config` | `files` | `files` | `files` |
@@ -98,6 +100,7 @@ written next to it. An agent that meets one of these skips the component and say
 | `obsidian-plugin-obsidian-git` | `plugin` | `plugin` | `plugin` |
 | `obsidian-plugin-tasks` | `plugin` | `plugin` | `plugin` |
 | `life-os-venv` | `generated` | `generated` | `generated` |
+| `crawl4ai` | `generated` | `generated` | `generated` |
 | `own-tools` | `generated` | `generated` | `generated` |
 | `os-sync` | `manual: start SyncTrayzor once - it carries the Syncthing service and sets up its own autostart` | `homebrew-service:syncthing` | `systemd-user:syncthing.service` |
 | `os-backup` | `packages:windows/configuration.winget` | `packages:macos/Brewfile` | `packages:linux/packages.yaml` |

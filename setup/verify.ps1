@@ -43,6 +43,7 @@ Import-Module powershell-yaml -ErrorAction Stop
 . (Join-Path $PSScriptRoot 'lib/manifest.ps1')
 . (Join-Path $PSScriptRoot 'lib/platform.ps1')
 . (Join-Path $PSScriptRoot 'lib/placeholders.ps1')
+. (Join-Path $PSScriptRoot 'lib/harness.ps1')
 
 $platformOs = Get-PlatformId
 $platforms = Get-PlatformData -RepoRoot $RepoRoot
@@ -162,8 +163,13 @@ foreach ($e in @($manifest.components)) {
                 if (-not (Test-Path -LiteralPath $repoFile -PathType Container)) { Add-Check $id 'FAIL' ('repo folder missing: ' + $repoFile); break }
                 $bad = New-Object System.Collections.Generic.List[string]
                 $count = 0
+                # install, export and the roundtrip all honor the manifest's exclude list; a
+                # verify that counted an excluded __pycache__ as missing would call a correct
+                # install broken (found by the install e2e test, 2026-10-17).
+                $excludes = @(Get-ManifestField $e 'exclude') | Where-Object { $_ }
                 foreach ($rf in (Get-ChildItem -LiteralPath $repoFile -Recurse -File -Force)) {
                     $childRel = $rf.FullName.Substring($repoFile.Length).TrimStart('\', '/')
+                    if ($childRel -and (Test-Excluded -RelPath $childRel -Patterns $excludes)) { continue }
                     $absChild = Join-Path $abs $childRel
                     $count++
                     if (-not (Test-Path -LiteralPath $absChild)) { $bad.Add('missing: ' + $childRel); continue }
@@ -341,6 +347,46 @@ foreach ($e in @($manifest.components)) {
                         $probe = (& $venvPy -m pip show faster-whisper 2>&1 | Out-String)
                         if ($LASTEXITCODE -eq 0) { Add-Check $id 'OK' ('venv present with its packages (' + $venvPy + ')') }
                         else { Add-Check $id 'FAIL' ('venv present but incomplete: faster-whisper is not installed - run install.ps1 -Resume') }
+                    }
+                }
+                'other-harness-configs' {
+                    if (-not $TestMode -and $SkipSystemChecks) { Add-Check $id 'SKIP' $systemSkipReason }
+                    else {
+                        try {
+                            $updates = @(Get-HarnessConfigUpdates -HomeDir $roots.HOME -RepoRoot $RepoRoot)
+                            $todo = @($updates | Where-Object { $_.Changed })
+                            $names = @($updates | ForEach-Object { $_.Name })
+                            if ($todo.Count -gt 0) { Add-Check $id 'FAIL' ('not merged: ' + (($todo | ForEach-Object { $_.Name }) -join ', ')) }
+                            elseif ($names.Count -eq 0) { Add-Check $id 'OK' 'no OpenCode or Codex folder - nothing to merge' }
+                            else { Add-Check $id 'OK' ('current: ' + ($names -join ', ')) }
+                        }
+                        catch { Add-Check $id 'FAIL' $_.Exception.Message }
+                    }
+                }
+                'crawl4ai' {
+                    if ($TestMode) {
+                        if (Test-Path -LiteralPath (Join-Path $stateDir 'preview/crawl4ai.txt')) { Add-Check $id 'OK' 'preview present' } else { Add-Check $id 'FAIL' 'preview missing' }
+                    }
+                    elseif ($SkipSystemChecks) { Add-Check $id 'SKIP' $systemSkipReason }
+                    else {
+                        # the browser is not launched here (a crawl takes seconds and needs a
+                        # network); the entry point proves the tool completed its setup.
+                        # The same two places install.ps1 resolves it from: a login shell may
+                        # not have ~/.local/bin on PATH (macOS), but the tool is still there.
+                        $crwlPath = $null
+                        $crwl = Get-Command crwl -ErrorAction SilentlyContinue
+                        if ($crwl) { $crwlPath = $crwl.Source }
+                        else {
+                            # BaseName, not a host-specific file name: Windows has crwl.exe,
+                            # the other systems have crwl; the platform module owns the folder.
+                            foreach ($d in @(Get-PlatformToolDirs -Os $platformOs)) {
+                                $found = Get-ChildItem -LiteralPath $d -File -ErrorAction SilentlyContinue |
+                                    Where-Object { $_.BaseName -eq 'crwl' } | Select-Object -First 1
+                                if ($found) { $crwlPath = $found.FullName; break }
+                            }
+                        }
+                        if ($crwlPath) { Add-Check $id 'OK' ('crwl ready (' + $crwlPath + ')') }
+                        else { Add-Check $id 'FAIL' 'crwl not found - run install.ps1 -Resume (the crawler is the first page fetcher)' }
                     }
                 }
                 'own-tools' {

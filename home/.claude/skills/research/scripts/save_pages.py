@@ -7,8 +7,9 @@ Reads every *.jsonl in the candidates folder (lines from the web-researcher pass
 {"url", "title", "lang", "pass", "type", "date", "why"}), cleans and de-duplicates the URLs,
 fetches them and writes pages/NNN-<domain>.md (header + Markdown) and pages/index.json.
 Fetch methods in order, each only for the URLs the earlier ones could not read:
-Exa Contents, You.com Contents, Tavily Extract, Firecrawl Scrape, TinyFish Fetch, Jina Reader
-(public pages only), crawl4ai (local). Reddit goes through the content services only.
+crawl4ai (local, first: no quota and no third party sees the URL), Exa Contents, You.com
+Contents, Tavily Extract, Firecrawl Scrape, TinyFish Fetch, Jina Reader (public pages only).
+Reddit goes through the content services only.
 Keys come from the environment (EXA_API_KEY, YDC_API_KEY, TAVILY_API_KEY, FIRECRAWL_API_KEY,
 TINYFISH_API_KEY, optional JINA_API_KEY) and are never printed. Prints counts, never page text.
 The Internet Archive is only asked for the nearest snapshot (nothing is archived).
@@ -35,12 +36,18 @@ from common import DataError, clean_url, normalize, read_jsonl, utf8_output  # n
 
 MIN_CHARS = 200
 TYPE_RANK = {"primary": 0, "secondary": 1, "experience": 2}
+# A run is allowed at most this many fallback pages per service. crawl4ai is local and has no
+# cap beyond --max-pages. The caps are what makes 90 runs a month fit the free tiers: with them
+# the worst case stays under every monthly allowance (arithmetic in docs/agent-tooling.md).
+PAGE_CAP = {"exa": 10, "you": 10, "tavily": 5, "firecrawl": 5, "tinyfish": 10, "jina": 10}
 WAYBACK_PAUSE = 2.5      # seconds between asks; the availability API rate-limits bursts
 WAYBACK_RETRY_WAIT = 30  # seconds after a failed ask; three failures end the asking for the run
 SECRET_QUERY = re.compile(r"token|key|session|auth|passw|secret|sig|code", re.I)
 REDDIT = re.compile(r"(^|\.)(reddit\.com|redd\.it)$", re.I)
 PROVIDERS = ("exa", "you", "tavily", "firecrawl", "tinyfish")
-ORDER = ("exa", "you", "tavily", "firecrawl", "tinyfish", "jina", "crawl4ai")
+# crawl4ai runs first: it is local, unlimited and no provider sees the URL. The services are
+# the fallback for pages the browser cannot read (JavaScript walls, bot checks, timeouts).
+ORDER = ("crawl4ai", "exa", "you", "tavily", "firecrawl", "tinyfish", "jina")
 KEYS = {"exa": "EXA_API_KEY", "you": "YDC_API_KEY", "tavily": "TAVILY_API_KEY",
         "firecrawl": "FIRECRAWL_API_KEY", "tinyfish": "TINYFISH_API_KEY"}
 
@@ -101,6 +108,20 @@ def public_for_third_party(url):
 def domain_slug(url):
     host = (urlsplit(url).hostname or "page").lower().removeprefix("www.")
     return re.sub(r"[^a-z0-9.-]", "-", host)
+
+
+# Where `uv tool install` puts its entry points. A login shell normally adds this to PATH, a
+# non-login process (and macOS's default PATH) does not: resolve it explicitly, like install.ps1.
+LOCAL_BIN = Path.home() / ".local" / "bin"
+
+
+def find_crwl():
+    """The crawl4ai CLI, from PATH or from the uv tool bin directory."""
+    exe = shutil.which("crwl")
+    if exe:
+        return exe
+    candidate = LOCAL_BIN / ("crwl.exe" if os.name == "nt" else "crwl")
+    return str(candidate) if candidate.is_file() else None
 
 
 def load_candidates(folder, max_pages):
@@ -253,7 +274,7 @@ def fetch_jina(urls, max_age_hours):
 
 
 def fetch_crawl4ai(urls, max_age_hours):
-    exe = shutil.which("crwl")
+    exe = find_crwl()
     out = {}
     if not exe:
         return out
@@ -336,8 +357,13 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True):
         if name in KEYS and not _key(name):
             notes.append(f"{name}: no key in the environment, skipped")
             continue
+        if name == "crawl4ai" and not find_crwl():
+            notes.append("crawl4ai: crwl not on PATH, skipped - install it with the setup")
+            continue
         todo = [u for u in info if u not in results
                 and not (name not in PROVIDERS and is_reddit(u))]
+        if name in PAGE_CAP:
+            todo = todo[:PAGE_CAP[name]]
         if not todo or name in dead:
             continue
         try:

@@ -206,6 +206,8 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         $r = Invoke-Install -Dir $t3 -Extra @('-Profile', 'minimal')
         $r.code | Should -Be 0 -Because $r.out
         $r.out | Should -Match 'INSTALL-OK'
+        $r.out | Should -Match 'crawl4ai\s+SKIP' -Because 'an optional OS stage must not run in a minimal install'
+        $r.out | Should -Match 'other-harness-configs\s+SKIP' -Because 'an optional generated stage must not run in a minimal install'
         Test-Path -LiteralPath (Join-Path $t3 'HOME\.claude\CLAUDE.md') | Should -BeTrue
         Test-Path -LiteralPath (Join-Path $t3 'VAULT\README.md') | Should -BeFalse
         $files = @(Get-ChildItem -LiteralPath $t3 -Recurse -File -Force | Where-Object { $_.FullName -notmatch '[\\/]\.install-state[\\/]' })
