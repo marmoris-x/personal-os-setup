@@ -11,6 +11,8 @@
 # argument - never through a shell. Never pass --bare: bare mode skips hooks and CLAUDE.md, so
 # the guards would not run. The profile name maps to the same --settings file the user's
 # launcher function uses; hooks and deny rules come from the global settings either way.
+# A workflow launched inside a -p item dies when the item's turn ends and the session exits:
+# run workflows in the main session, not through this script.
 #
 # State: <list>.state.jsonl, one JSON line per item and attempt:
 #   item, status (done/failed/skipped), exit_code, total_cost_usd, duration_ms, session_id,
