@@ -534,6 +534,10 @@ if (Test-Selected '10') { try {
     $disabled = New-Object System.Collections.Generic.List[string]
     $deadMatchers = New-Object System.Collections.Generic.List[string]
     $misplaced = New-Object System.Collections.Generic.List[string]
+    # The only script allowed to sit behind a tool matcher outside PreToolUse: the skill usage
+    # logger (PostToolUse, async, fail-open). It observes; it does not decide. Any other script
+    # there is still reported as dead wiring.
+    $postToolObservers = @('skill-usage.ps1')
     $unknownEvents = New-Object System.Collections.Generic.List[string]
     $knownEvents = @('PreToolUse', 'PostToolUse', 'UserPromptSubmit', 'Notification', 'Stop',
         'SubagentStop', 'PreCompact', 'SessionStart', 'SessionEnd')
@@ -584,6 +588,13 @@ if (Test-Selected '10') { try {
                 $eventPaths = New-Object System.Collections.Generic.List[string]
                 if ($knownEvents -notcontains $ev.Name) { $unknownEvents.Add($ev.Name) }
                 foreach ($entry in @($ev.Value)) {
+                    # Deferred on purpose: a matcher naming tools outside PreToolUse is dead
+                    # wiring only when the entry registers no allowed observer. The skill usage
+                    # logger runs under PostToolUse, async and fail-open; it cannot block and is
+                    # the one script allowed there. Everything else still fails below.
+                    $entryMatcher = ''
+                    $entryMatchesATool = $false
+                    $entryScriptLeaves = New-Object System.Collections.Generic.List[string]
                     if ($entry.PSObject.Properties.Name -contains 'matcher') {
                         $matcher = [string]$entry.matcher
                         if ($matcher -and ($matcher -ne '*')) {
@@ -594,7 +605,8 @@ if (Test-Selected '10') { try {
                                 if ($a -like 'mcp__*') { $matchesATool = $true; break }
                                 if ($knownTools -contains $a) { $matchesATool = $true; break }
                             }
-                            if ($matchesATool -and ($ev.Name -ne 'PreToolUse')) { $misplaced.Add($matcher + ' under ' + $ev.Name) }
+                            $entryMatcher = $matcher
+                            $entryMatchesATool = $matchesATool
                             if ((-not $matchesATool) -and ($ev.Name -eq 'PreToolUse')) { $deadMatchers.Add($matcher) }
                         }
                     }
@@ -633,12 +645,21 @@ if (Test-Selected '10') { try {
                         }
                         foreach ($rawPath in $execPaths) {
                             $p = $rawPath -replace '/', '\'
+                            $leafName = Split-Path $p -Leaf
+                            if (-not $entryScriptLeaves.Contains($leafName)) { $entryScriptLeaves.Add($leafName) }
                             if (-not $eventPaths.Contains($p)) { $eventPaths.Add($p) }
                             if (-not $registered.Contains($p)) {
                                 $registered.Add($p)
                                 if (-not (Test-Path -LiteralPath $p -PathType Leaf)) { $missingHooks.Add($p) }
                             }
                         }
+                    }
+                    if ($entryMatchesATool -and ($ev.Name -ne 'PreToolUse')) {
+                        $observerOnly = ($ev.Name -eq 'PostToolUse') -and ($entryScriptLeaves.Count -gt 0)
+                        foreach ($leaf in $entryScriptLeaves) {
+                            if ($postToolObservers -notcontains $leaf) { $observerOnly = $false }
+                        }
+                        if (-not $observerOnly) { $misplaced.Add($entryMatcher + ' under ' + $ev.Name) }
                     }
                 }
                 $eventSummary.Add($ev.Name + ' ' + $eventPaths.Count)
@@ -669,7 +690,7 @@ if (Test-Selected '10') { try {
                   $(if ($misplaced.Count -gt 0) { '; TOOL MATCHER OUTSIDE PreToolUse: ' + ($misplaced -join ', ') } else { '' }) +
                   $(if ($unknownEvents.Count -gt 0) { '; EVENT NAME NOT KNOWN: ' + ($unknownEvents -join ', ') } else { '' }) +
                   $(if ($notUnderPreToolUse.Count -gt 0) { '; GUARD NOT REGISTERED UNDER PreToolUse: ' + ($notUnderPreToolUse -join ', ') } else { '; all five tool guards sit under PreToolUse' })
-    Add-Result 10 'guards wired, nothing paused' 'settings.json and its siblings parsed as JSON; disableAllHooks must not be true anywhere; every PreToolUse matcher must name a known tool and a matcher naming tools must sit under PreToolUse; the event names must be known ones; every hook command path must exist and every hook file must be named; SHA256 of the two window guards; safety folder for *.ps1; test-add-to-archive.ps1 (live; it uses one fixed scratch folder of its own, so two runs at the same time can disturb it)' ($hookFiles.Count.ToString() + ' hook files; ' + $hookDetail + '; Hash A ok: ' + $hashAOk + '; Hash B ok: ' + $hashBOk + '; paused: ' + $paused + '; add-to-archive: ' + $sLine + ' (Exit ' + $sExit + '; suites 1-7: check 5)') '0' $ok
+    Add-Result 10 'guards wired, nothing paused' 'settings.json and its siblings parsed as JSON; disableAllHooks must not be true anywhere; every PreToolUse matcher must name a known tool and a matcher naming tools must sit under PreToolUse (PostToolUse may register only the listed observer skill-usage.ps1); the event names must be known ones; every hook command path must exist and every hook file must be named; SHA256 of the two window guards; safety folder for *.ps1; test-add-to-archive.ps1 (live; it uses one fixed scratch folder of its own, so two runs at the same time can disturb it)' ($hookFiles.Count.ToString() + ' hook files; ' + $hookDetail + '; Hash A ok: ' + $hashAOk + '; Hash B ok: ' + $hashBOk + '; paused: ' + $paused + '; add-to-archive: ' + $sLine + ' (Exit ' + $sExit + '; suites 1-7: check 5)') '0' $ok
 } catch { Add-Result 10 'guards active, nothing paused' 'check hooks' $_.Exception.Message '2' $false } }
 
 # --------------------------------------------------------------- 11 review ---

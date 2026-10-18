@@ -22,6 +22,12 @@ unchanged. The steps stay the fallback for OpenCode, Codex and every session wit
   `research_standard`, `style_rules`, `vault_root`, `serper_allowed`, `gap_pass` (absolute paths).
   The two language args may be language names (`Deutsch`, `English`) or ISO codes (`de`, `en`);
   the script maps names to the code the check scripts need.
+- The workflow keeps the skill's step 3 recovery pass: a callable service that failed in one of
+  the four passes gets one small extra pass (the passes' `services_failed` lines decide it;
+  `skipped: no key` and the Serper reserve never do). The authoritative per-service count still
+  comes from `check_services.py` after the run.
+- The workflow shows the check's warnings to the writer once: with the first repair when errors
+  exist, otherwise as one warning pass after the checks; error repairs stay at two rounds.
 - After the run, pass the `transcriptDir` from the Workflow result to
   `python -I -X utf8 "${CLAUDE_SKILL_DIR}/scripts/check_services.py" --transcript-dir <dir>`;
   that record decides the service counts, never an agent's own line.

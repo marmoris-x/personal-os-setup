@@ -73,7 +73,7 @@ $exemptRules = @(
     @{ pattern = '^vault/\.claude/skills/[^/]+/SKILL\.md$';                 reason = 'quoted phrases the owner speaks' },
     @{ pattern = '^vault/(AGENTS|CLAUDE)\.md$';                             reason = 'the owner vault: names his own notes and note types' },
     @{ pattern = '^vault/000-meta/templates/.*';                            reason = 'vault templates with the owner German headings' },
-    @{ pattern = '^home/\.claude/life-os/(cleanup|transcribe|life-os-common)\.ps1$'; reason = 'operates on German folder and heading names inside the owner vault' },
+    @{ pattern = '^home/\.claude/life-os/(cleanup|transcribe|life-os-common|morning)\.ps1$'; reason = 'operates on German folder and heading names inside the owner vault' },
     @{ pattern = '^home/\.claude/life-os/register-tasks.*\.ps1$';           reason = 'registers the owner scheduled task' },
     @{ pattern = '^docs/phone-setup\.md$';                                  reason = 'quotes the label a German phone really shows' },
     @{ pattern = '^setup/tools/old-paths\.txt$';                            reason = 'the pattern list that check C of verify-all searches for: it has to name the old German file names' },

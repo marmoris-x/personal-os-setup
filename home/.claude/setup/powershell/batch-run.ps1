@@ -169,6 +169,7 @@ foreach ($item in $plan) {
     [IO.File]::AppendAllText($logPath, ("--- item " + $index + "/" + $plan.Count + ": " + $item + "`n"), $utf8)
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $exitCode = $null
+    $launchFailed = $false
     $global:LASTEXITCODE = 0
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -177,6 +178,7 @@ foreach ($item in $plan) {
         try { & $resolvedExe @arguments 1> $outFile 2> $errFile } finally { Pop-Location }
         $exitCode = $LASTEXITCODE
     } catch {
+        $launchFailed = $true
         [IO.File]::AppendAllText($errFile, ('launch error: ' + $_.Exception.Message + "`n"), $utf8)
     } finally {
         $ErrorActionPreference = $previous
@@ -202,7 +204,8 @@ foreach ($item in $plan) {
     $sessionId = $null
     $isError = $true
     $reason = ''
-    if ($null -eq $exitCode -or [string]$exitCode -eq '') { $exitCode = 0 }
+    # A launch that never produced an exit code is not a clean exit: record -1, not 0.
+    if ($null -eq $exitCode -or [string]$exitCode -eq '') { $exitCode = -1 }
     if ($result) {
         $isError = [bool]$result.is_error
         if ($null -ne $result.total_cost_usd) { $cost = [double]$result.total_cost_usd }
@@ -211,7 +214,8 @@ foreach ($item in $plan) {
     } else {
         $reason = 'invalid-json'
     }
-    if ($exitCode -ne 0) { $reason = 'exit-' + $exitCode; $isError = $true }
+    if ($launchFailed) { $reason = 'launch-error'; $isError = $true }
+    elseif ($exitCode -ne 0) { $reason = 'exit-' + $exitCode; $isError = $true }
 
     $ok = ($exitCode -eq 0) -and ($null -ne $result) -and (-not $isError) -and ($reason -eq '')
     $status = if ($ok) { 'done' } else { 'failed' }

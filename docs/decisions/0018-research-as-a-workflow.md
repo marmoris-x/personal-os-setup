@@ -47,6 +47,15 @@ only the Workflow tool call, not the search agents' tool calls. The workflow ret
 files. Two tests cover that (a workflow dir alone, and a workflow dir together with a
 session).
 
+Step 3's recovery pass and step 8's warning rule stay in the workflow. A callable service that
+failed in one of the four passes gets one small extra pass (at most five candidates, one or two
+queries from the plan); `skipped: no key` and the Serper reserve never trigger it. The
+authoritative per-service count is still `check_services.py` after the run. The check's warnings
+travel with the first repair, or, when no error repair happens, go to the writer once as a
+warning pass; error repairs stay at two rounds. The comparison runs needed no recovery pass
+(TinyFish was skipped for a missing key, which is not a failure), and their warnings travelled
+with the repair, so the table's agent counts are unaffected by these two steps.
+
 `quick-research`, `docs-import`, `vault-lint` and `life-os-morning` stay as they are: they are
 too small for a workflow to pay off. `batch-run.ps1` stays harness-independent.
 
@@ -72,8 +81,8 @@ too small for a workflow to pay off. `batch-run.ps1` stays harness-independent.
 
 ## Comparison (same question, `claude-ds`)
 
-Question: "Wie hoch ist das Kilometergeld in Österreich 2026, und welche Voraussetzungen
-gelten?" Both runs used the same `plan.md` and stopped after the article check; neither stored
+Question (asked in German): how high is the kilometre allowance (Kilometergeld) in Austria in
+2026, and which conditions apply? Both runs used the same `plan.md` and stopped after the article check; neither stored
 or cleaned up, so the same stretch is measured.
 
 | Measure | Old skill path | Workflow |
