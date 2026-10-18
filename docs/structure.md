@@ -228,6 +228,7 @@ home/.claude/gitleaksignore
 home/.claude/hooks/archive-guard.ps1
 home/.claude/hooks/block-dangerous.ps1
 home/.claude/hooks/downloads-guard.ps1
+home/.claude/hooks/fetch-guard.ps1
 home/.claude/hooks/no-license-files.ps1
 home/.claude/hooks/notification-events.ps1
 home/.claude/hooks/notification-idle.ps1
@@ -281,6 +282,7 @@ home/.claude/setup/tests/test-archive-guard.ps1
 home/.claude/setup/tests/test-block-dangerous-51.ps1
 home/.claude/setup/tests/test-block-dangerous.ps1
 home/.claude/setup/tests/test-downloads-guard.ps1
+home/.claude/setup/tests/test-fetch-guard.ps1
 home/.claude/setup/tests/test-no-license-files.ps1
 home/.claude/setup/tests/test-onedrive-guard.ps1
 home/.claude/setup/tests/test-session-check.ps1
@@ -296,6 +298,7 @@ home/.claude/skills/research/scripts/check_note.py
 home/.claude/skills/research/scripts/check_services.py
 home/.claude/skills/research/scripts/common.py
 home/.claude/skills/research/scripts/crawl4ai_fetch.py
+home/.claude/skills/research/scripts/fetch_page.py
 home/.claude/skills/research/scripts/save_pages.py
 home/.claude/skills/research/scripts/store_results.py
 home/.claude/skills/research/scripts/verify_evidence.py
