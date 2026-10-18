@@ -127,3 +127,9 @@ Use absolute paths and check the file that came out, not the exit code. Work in
   In the vault, push yourself and prove with `git status -sb` that nothing is `ahead`.
 - Report in the user's language: where it went and why (the measured use), the page count, what
   was missing or noisy, and what you did not check.
+
+## Gotchas
+
+- A doc was filed in the vault although exactly one project used it, so the agent could not see it -> count the projects first; one user means `docs/vendor/` in that project, several or none means `500-sources/docs/` plus an overview.
+- A 404 redirect was believed to block imported docs, and `/DOCS/vendor/...` was still served -> a website publishes only a dedicated output folder; probe the served path in several letter cases before calling it private.
+- The skill pointed at `~/.claude/skills/vault-lint/SKILL.md`, which does not exist there -> name the vault's real path (`{{VAULT}}\.claude\skills\vault-lint\SKILL.md`) and check that the path resolves in the harness that loads the skill.

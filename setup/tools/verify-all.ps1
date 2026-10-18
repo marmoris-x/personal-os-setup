@@ -1304,6 +1304,18 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/docs-import/SKILL.md'; Reason = '2026-10-18 (fetch-always Part 4): every page fetch goes through fetch_page.py; no curl status call and no MCP page reader remains in the procedure' }
         @{ Path = 'HOME/.claude/setup/powershell/batch-run.ps1'; Reason = '2026-10-18 (batch-and-hygiene Part 1): one fresh headless session per list item, JSONL state with cost and session id, resume, 3-failure stop, never --bare' }
         @{ Path = 'HOME/.claude/setup/tests/test-batch-run.ps1'; Reason = '2026-10-18 (batch-and-hygiene Part 1): fake claude covers success, failure and invalid JSON; resume, the 3-failure stop, cost parsing, dry run, the >20 confirm and the exact argument contract' }
+        @{ Path = 'HOME/.claude/hooks/skill-usage.ps1'; Reason = '2026-10-18 (batch-and-hygiene Part 3): PostToolUse logger for the Skill tool; date, skill name and session id only, fail-open, no prompt text' }
+        @{ Path = 'HOME/.claude/setup/tests/test-skill-usage.ps1'; Reason = '2026-10-18 (batch-and-hygiene Part 3): 11 cases - valid call, append, missing skill, invalid JSON, CSV quoting, and no argument text in the log' }
+        @{ Path = 'HOME/.claude/settings.json'; Reason = '2026-10-18 (batch-and-hygiene Part 3): one PostToolUse entry, matcher Skill, async, without onFailure - logging must never block' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-18 (batch-and-hygiene Parts 1-3): batch-run line, the red-status-line session rule, and the Gotchas rule' }
+        @{ Path = 'HOME/.claude/skills/research/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas section from recorded failures only (compose comments, bare reference numbers, Crawl4AI UTF-8, dedupe, subagent language ask)' }
+        @{ Path = 'HOME/.claude/skills/quick-research/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas section from recorded failures only (one fetch vs Jina fallback, measured runtime, the old two-search design)' }
+        @{ Path = 'HOME/.claude/skills/docs-import/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas section from recorded failures only (one-project filing, the Netlify path assumption, the vault-lint path that did not resolve)' }
+        @{ Path = 'HOME/.claude/skills/life-os-morning/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas section - none recorded yet' }
+        @{ Path = 'HOME/.claude/skills/reuse-first/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas section - none recorded yet' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/docs-import-portable/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main docs-import skill' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/quick-research-portable/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main quick-research skill' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main research skill' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

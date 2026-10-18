@@ -96,3 +96,7 @@ Say so in one line and write your own. "I looked and found nothing" is a result;
   step 2 with a sharper sentence in step 1.
 - A one-line edit of an existing function is not this skill's business.
 - Anything taken from a source stays recognisable: no silent renames, no "while I am here".
+
+## Gotchas
+
+- none recorded yet

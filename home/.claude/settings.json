@@ -217,6 +217,25 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/skill-usage.ps1"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [

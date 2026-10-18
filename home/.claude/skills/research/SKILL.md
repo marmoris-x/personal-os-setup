@@ -172,6 +172,14 @@ the number of repair rounds; both go into the report. Warnings (style patterns, 
 number) are shown to the writer once; a warning that remains is mentioned in the report, not an
 error. Never edit the text yourself: you would break the checked fragments.
 
+## Gotchas
+
+- The writer detached every compose comment from its paragraph with a blank line, and the checks read comment and paragraph as one broken block (90, 133 and 144 false problems) -> write the compose comment directly under its paragraph, no blank line; the writer file says so and no check can attach it for you.
+- The store step let `[1](url) [1]` on 73 links into the vault -> `store_results.py` refuses bare reference numbers outside quotes, comments and the reference list; if it refuses, fix the text, never bypass it.
+- Crawl4AI died with `'charmap' codec can't encode characters` and save_pages fell back to Exa -> run the crawl through `crawl4ai_fetch.py`, which sets `PYTHONUTF8`/`PYTHONIOENCODING` and writes a file, never a pipe.
+- `save_pages.py` deduplicated five subpages of one doc to a single file because navigation and intro are identical -> `fetch_page.py` passes `dedupe=False`; when subpages of one doc share a header, check `pages/index.json` for collapsed pages.
+- A subagent cannot ask the user anything; a run once waited for a language choice that never came -> ask the languages in the main session before the first agent starts.
+
 ## 9. Save
 
 `store_results.py <work folder> --article draft\article.md --slug <slug> --date <date>

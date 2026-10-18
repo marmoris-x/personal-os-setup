@@ -137,3 +137,7 @@ merged), what could not be done, and the file paths you changed. No JSON, no cod
 - You are about to move a file "just this once" -> never. The trash list is the only exit.
 - You are about to explore the vault for more context -> no. The input table is complete;
   every extra file read costs money and adds nothing.
+
+## Gotchas
+
+- none recorded yet

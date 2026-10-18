@@ -234,6 +234,7 @@ home/.claude/hooks/notification-events.ps1
 home/.claude/hooks/notification-idle.ps1
 home/.claude/hooks/onedrive-guard.ps1
 home/.claude/hooks/session-check.ps1
+home/.claude/hooks/skill-usage.ps1
 home/.claude/hooks/stop-notify.ps1
 home/.claude/hooks/trifecta-guard.ps1
 home/.claude/kopiaignore
@@ -288,6 +289,7 @@ home/.claude/setup/tests/test-fetch-guard.ps1
 home/.claude/setup/tests/test-no-license-files.ps1
 home/.claude/setup/tests/test-onedrive-guard.ps1
 home/.claude/setup/tests/test-session-check.ps1
+home/.claude/setup/tests/test-skill-usage.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
 home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md

@@ -89,3 +89,9 @@ written report, say so in one line and offer `research`. Never stretch this skil
 At most 8 searches, at most 15 candidates and 15 saved pages, at most 20 evidence items. The
 Exa searches draw on the same `EXA_API_KEY` account as a research run, so the shortcut and this
 budget are what keeps a quick run cheap (arithmetic: `~/.claude/docs/agent-tooling.md`).
+
+## Gotchas
+
+- The skill promised "one fetch" but its Jina fallback was a second call -> say "one page"; a fallback of the same page is not a second fetch.
+- Measured runs took 2 to 7 minutes, not the 3 to 6 the skill stated -> do not promise a tighter range than the measurement; the budget is the limit, not a stopwatch.
+- The old version was a two-search, one-page lookup and missed multi-source answers -> one search pass, 10 to 15 saved pages, one evidence extractor; never answer from memory.

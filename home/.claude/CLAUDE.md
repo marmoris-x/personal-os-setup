@@ -142,6 +142,7 @@ is more specific and wins where the two differ. My explicit request in the chat 
   (replaces printed-vs-live). `check.ps1` renders from the repo and cannot see leftover drift.
 - If I correct you, or the same mistake happens a second time: in the same task write a one-line
   rule where it belongs and log it in `claude-config/docs/lessons.md` (date, occasion, rule, file).
+- When a skill fails in a way that could happen again, add one line to its Gotchas section.
 - A stop condition from me ("do not merge on hits") holds even if the hits look harmless: stop,
   report without values, ask. Never override a decision of mine in a project's rule files silently.
 - Tasks over several sessions: keep `PROGRESS.md` in the project, read it first (see "Context").
