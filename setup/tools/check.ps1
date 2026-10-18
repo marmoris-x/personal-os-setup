@@ -206,6 +206,7 @@ if (-not $SkipHooks) {
         [pscustomobject]@{ Name = 'test-session-check.ps1';      Os = @('windows', 'macos', 'linux'); Why = '' }
         [pscustomobject]@{ Name = 'test-no-license-files.ps1';   Os = @('windows', 'macos', 'linux'); Why = '' }
         [pscustomobject]@{ Name = 'test-fetch-guard.ps1';        Os = @('windows'); Why = 'it starts powershell.exe (Windows PowerShell 5.1), the host the live hook registration uses' }
+        [pscustomobject]@{ Name = 'test-batch-run.ps1';          Os = @('windows', 'macos', 'linux'); Why = '' }
     )
     foreach ($suite in $suites) {
         if ($suite.Os -notcontains $checkOs) {

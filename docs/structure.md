@@ -262,6 +262,7 @@ home/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md
 home/.claude/setup/other-harnesses/codex/config-mcp.toml
 home/.claude/setup/other-harnesses/opencode/opencode.json
 home/.claude/setup/powershell/add-to-archive.ps1
+home/.claude/setup/powershell/batch-run.ps1
 home/.claude/setup/powershell/claude-profile-functions.ps1
 home/.claude/setup/powershell/set-research-keys.ps1
 home/.claude/setup/repair-claude-code.ps1
@@ -279,6 +280,7 @@ home/.claude/setup/tests/research/test_verify_evidence.py
 home/.claude/setup/tests/research/testlib.py
 home/.claude/setup/tests/test-add-to-archive.ps1
 home/.claude/setup/tests/test-archive-guard.ps1
+home/.claude/setup/tests/test-batch-run.ps1
 home/.claude/setup/tests/test-block-dangerous-51.ps1
 home/.claude/setup/tests/test-block-dangerous.ps1
 home/.claude/setup/tests/test-downloads-guard.ps1

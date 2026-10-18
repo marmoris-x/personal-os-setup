@@ -293,6 +293,7 @@ real lever is clearing at task boundaries.
 
 - One topic per session. When I start an unrelated task, suggest a fresh session (`/clear`
   costs nothing).
+- Many similar items (more than about 10): use batch-run.ps1 so every item gets a fresh session; never process them all in one long session.
 - Heavy reading, exploring and researching go to a subagent: its reading stays out of my
   conversation. Heavy means more than about 8 files, about 30 KB of text to read, long output,
   or the web. Do not read such a pile yourself, even when the answer is simple. Ask it for a
