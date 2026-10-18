@@ -1,10 +1,14 @@
 """Count, from the harness transcripts, which of the nine search services a research run used.
 
-Usage: check_services.py [--session-id ID] [--projects-dir DIR]
+Usage: check_services.py [--session-id ID] [--projects-dir DIR] [--transcript-dir DIR ...]
 
 The harness writes every tool call into the session transcript
 (~/.claude/projects/<project>/<session-id>.jsonl) and one transcript per subagent
 (<session-id>/subagents/agent-*.jsonl). This script counts the calls per service there.
+A dynamic workflow writes its agents' calls into the run's transcriptDir instead
+(the `transcriptDir` line of the Workflow tool result); pass it with --transcript-dir,
+once per run. The main session sees only the Workflow call, not the agents' calls, so a
+count without that directory is too low. --transcript-dir alone works without a session id.
 That record is independent: never trust an agent's own "services_used" line.
 A keyed service whose key variable is empty is reported as "skipped: no key": it was not
 supposed to be called, so it is not missing. Serper is the reserve and is reported as
@@ -78,13 +82,21 @@ def count_file(path, counts):
                     counts[service] += 1
 
 
-def find_files(projects_dir, session_id):
+def find_files(projects_dir, session_id, transcript_dirs=()):
     files = []
-    for main in Path(projects_dir).glob(f"*/{session_id}.jsonl"):
-        files.append(main)
-    for sub in Path(projects_dir).glob(f"*/{session_id}/subagents/agent-*.jsonl"):
-        files.append(sub)
-    return files
+    if session_id:
+        for main in Path(projects_dir).glob(f"*/{session_id}.jsonl"):
+            files.append(main)
+        for sub in Path(projects_dir).glob(f"*/{session_id}/subagents/agent-*.jsonl"):
+            files.append(sub)
+    for directory in transcript_dirs:
+        path = Path(directory)
+        if path.is_file():
+            files.append(path)
+        elif path.is_dir():
+            files.extend(sorted(path.glob("agent-*.jsonl")))
+    # A file can be reached twice (a transcript dir inside the projects tree); count it once.
+    return list(dict.fromkeys(files))
 
 
 def main(argv=None):
@@ -92,13 +104,16 @@ def main(argv=None):
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
     parser.add_argument("--projects-dir",
                         default=str(Path.home() / ".claude" / "projects"))
+    parser.add_argument("--transcript-dir", action="append", default=[],
+                        help="a Workflow run's transcriptDir (repeatable); its agent-*.jsonl files count too")
     args = parser.parse_args(argv)
-    if not args.session_id:
-        print("ERROR no session id (pass --session-id or set CLAUDE_CODE_SESSION_ID)")
+    if not args.session_id and not args.transcript_dir:
+        print("ERROR no session id (pass --session-id or set CLAUDE_CODE_SESSION_ID, or --transcript-dir)")
         return 2
-    files = find_files(args.projects_dir, args.session_id)
+    files = find_files(args.projects_dir, args.session_id, args.transcript_dir)
     if not files:
-        print(f"ERROR no transcripts for session {args.session_id} under {args.projects_dir}")
+        where = args.projects_dir if args.session_id else ", ".join(args.transcript_dir)
+        print(f"ERROR no transcripts for session {args.session_id or '-'} under {where}")
         return 2
     counts = {service: 0 for service in SERVICES}
     for path in files:

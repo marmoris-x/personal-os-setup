@@ -295,6 +295,7 @@ home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
 home/.claude/skills/quick-research/SKILL.md
 home/.claude/skills/research/references/style-rules.md
+home/.claude/skills/research/research.workflow.js
 home/.claude/skills/research/scripts/ai_patterns.py
 home/.claude/skills/research/scripts/build_references.py
 home/.claude/skills/research/scripts/check_article.py

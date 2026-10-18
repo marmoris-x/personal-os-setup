@@ -131,6 +131,56 @@ class CheckServices(unittest.TestCase):
         self.assertEqual(code, 2, out)
         self.assertIn("ERROR no transcripts", out)
 
+    def test_workflow_transcript_dir_is_counted(self):
+        # The main session sees the Workflow tool call, not the agents' calls; the run's
+        # transcriptDir holds those. Both must be counted or the caps read wrong.
+        first = [
+            tool_line("mcp__exa__web_search_exa"),
+            tool_line("mcp__parallel__web_search"),
+            tool_line("mcp__exa-key__web_search_exa"),
+            tool_line("mcp__tavily__tavily_search"),
+            tool_line("mcp__you-free__you-search"),
+        ]
+        second = [
+            tool_line("mcp__firecrawl__firecrawl_search"),
+            tool_line("mcp__you__you-search"),
+            tool_line("PowerShell", "https://api.search.tinyfish.ai?query=x"),
+            tool_line("Bash", "curl -X POST https://google.serper.dev/search"),
+        ]
+        self.main.write_text("\n".join(first) + "\n", encoding="utf-8")
+        workflow = Path(self._tmp.name) / "workflow-run"
+        workflow.mkdir()
+        (workflow / "agent-1.jsonl").write_text("\n".join(second) + "\n", encoding="utf-8")
+        env = dict(self.env)
+        env.update(ALL_KEYS)
+        code, out = run_script("check_services.py", "--session-id", self.session,
+                               "--projects-dir", str(self.projects),
+                               "--transcript-dir", str(workflow), env=env)
+        self.assertEqual(code, 0, out)
+        self.assertIn("all nine services used", out)
+
+    def test_workflow_dir_alone_needs_no_session(self):
+        workflow = Path(self._tmp.name) / "workflow-only"
+        workflow.mkdir()
+        lines = [
+            tool_line("mcp__exa__web_search_exa"),
+            tool_line("mcp__parallel__web_search"),
+            tool_line("mcp__exa-key__web_search_exa"),
+            tool_line("mcp__tavily__tavily_search"),
+            tool_line("mcp__you-free__you-search"),
+            tool_line("mcp__firecrawl__firecrawl_search"),
+            tool_line("mcp__you__you-search"),
+            tool_line("Bash", "https://api.search.tinyfish.ai?query=x"),
+            tool_line("Bash", "https://google.serper.dev/search"),
+        ]
+        (workflow / "agent-2.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        env = dict(self.env)
+        env.update(ALL_KEYS)
+        env.pop("CLAUDE_CODE_SESSION_ID", None)
+        code, out = run_script("check_services.py", "--transcript-dir", str(workflow), env=env)
+        self.assertEqual(code, 0, out)
+        self.assertIn("all nine services used", out)
+
 
 if __name__ == "__main__":
     unittest.main()

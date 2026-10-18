@@ -294,6 +294,7 @@ real lever is clearing at task boundaries.
 
 - New task = new session (/clear). When the status line turns red, finish the current step, write PROGRESS.md and continue in a fresh session.
 - Many similar items (more than about 10): use batch-run.ps1 so every item gets a fresh session; never process them all in one long session.
+- Dynamic workflows only through a skill that ships one or when I ask; never turn on ultracode.
 - Heavy reading, exploring and researching go to a subagent: its reading stays out of my
   conversation. Heavy means more than about 8 files, about 30 KB of text to read, long output,
   or the web. Do not read such a pile yourself, even when the answer is simple. Ask it for a

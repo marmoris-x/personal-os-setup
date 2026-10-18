@@ -316,6 +316,8 @@
   "worktree": {
     "bgIsolation": "none"
   },
+  "enableWorkflows": true,
+  "workflowSizeGuideline": "medium",
   "defaultShell": "powershell",
   "statusLine": {
     "type": "command",
