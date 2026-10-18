@@ -338,6 +338,19 @@ class SavePages(unittest.TestCase):
         self.assertEqual(statuses, ["duplicate", "saved"])
         self.assertEqual(len(list((self.work.path / "pages").glob("*.md"))), 1)
 
+    def test_dedupe_false_keeps_pages_with_a_shared_intro(self):
+        # fetch_page.py names several pages of ONE site. Their first 3,000 characters (nav,
+        # shared intro) can be identical; the content hash then collapses them. dedupe=False
+        # must keep every named page as its own file.
+        shared = "Gemeinsamer Anfang der Seite. " * 150
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/b"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", shared + "Seite A"),
+                              ("https://example.org/b", "B", shared + "Seite B"))
+        index, _ = save_pages.run(str(self.work.path), "candidates", 10, 24,
+                                  ask_wayback=False, dedupe=False)
+        self.assertEqual(sorted(i["status"] for i in index), ["saved", "saved"])
+        self.assertEqual(len(list((self.work.path / "pages").glob("*.md"))), 2)
+
     def test_reddit_is_read_only_through_the_content_services(self):
         self.candidates({"url": "https://www.reddit.com/r/wien/comments/abc/thread/", "type": "experience"})
         code, out = self.run_script()

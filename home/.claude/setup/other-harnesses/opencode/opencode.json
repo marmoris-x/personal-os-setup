@@ -76,6 +76,7 @@
     }
   },
   "permission": {
+    "webfetch": "deny",
     "edit": "allow",
     "external_directory": {
       "*": "allow"

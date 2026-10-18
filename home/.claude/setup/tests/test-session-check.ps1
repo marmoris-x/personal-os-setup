@@ -14,7 +14,7 @@ $engine = (Get-Process -Id $PID).Path
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('session-check-test-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $scratch | Out-Null
 
-function New-FakeClaude([string]$name, [string]$guardBody, [bool]$register, [bool]$makeGuard) {
+function New-FakeClaude([string]$name, [string]$guardBody, [bool]$register, [bool]$makeGuard, [switch]$Wrapper) {
     $dir = Join-Path $scratch $name
     New-Item -ItemType Directory -Path (Join-Path $dir 'hooks') -Force | Out-Null
     $guard = (Join-Path $dir 'hooks\block-dangerous.ps1')
@@ -22,7 +22,16 @@ function New-FakeClaude([string]$name, [string]$guardBody, [bool]$register, [boo
     $other = (Join-Path $dir 'hooks\stop-notify.ps1')
     [IO.File]::WriteAllText($other, "exit 0`n", (New-Object Text.UTF8Encoding($false)))
     $pre = @()
-    if ($register) { $pre = @(@{ matcher = 'Bash|PowerShell'; hooks = @(@{ type = 'command'; command = '{{PWSH_HOST}}'; args = @('-NoProfile', '-File', $guard) }) }) }
+    if ($register) {
+        $hookArgs = @('-NoProfile', '-File', $guard)
+        if ($Wrapper) {
+            # The live form: the script path sits inside a -Command string, not as a bare argument.
+            $p = $guard.Replace('\', '/')
+            $hookArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+                "if (-not (Test-Path -LiteralPath '$p')) { exit 1 }; & '$p'; exit `$LASTEXITCODE")
+        }
+        $pre = @(@{ matcher = 'Bash|PowerShell'; hooks = @(@{ type = 'command'; command = '{{PWSH_HOST}}'; args = $hookArgs }) })
+    }
     $settings = @{ hooks = @{
         PreToolUse = $pre
         Stop = @(@{ hooks = @(@{ type = 'command'; command = '{{PWSH_HOST}}'; args = @('-NoProfile', '-File', $other) }) })
@@ -45,6 +54,8 @@ $good = New-FakeClaude 'good' "exit 0`n" $true $true
 $missing = New-FakeClaude 'missing' '' $true $false
 $broken = New-FakeClaude 'broken' "if ( {{{`n" $true $true
 $unregistered = New-FakeClaude 'unregistered' "exit 0`n" $false $true
+$wrapped = New-FakeClaude 'wrapped' "exit 0`n" $true $true -Wrapper
+$wrappedMissing = New-FakeClaude 'wrapped-missing' '' $true $false -Wrapper
 $nosettings = Join-Path $scratch 'nosettings'
 New-Item -ItemType Directory -Path $nosettings | Out-Null
 
@@ -54,6 +65,8 @@ $cases = @(
     @('missing hook file is reported',            $missing,      'MISSING'),
     @('hook file that does not parse is reported', $broken,      'does not parse'),
     @('guard not registered is reported',         $unregistered, 'not registered'),
+    @('wrapper form counts as registered',        $wrapped,      ''),
+    @('wrapper form reports a missing guard',     $wrappedMissing, 'MISSING'),
     @('unreadable settings.json is reported',     $nosettings,   'settings.json cannot be read')
 )
 
@@ -67,7 +80,7 @@ foreach ($c in $cases) {
 
 # The real folder must be healthy, and gitleaks must be found (the same check the hook makes).
 $real = Invoke-Check (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$okReal = ($real.Exit -eq 0)
+$okReal = ($real.Exit -eq 0) -and ($real.Out -eq '')
 if (-not $okReal) { $errors++ }
 Write-Output ("{0} real folder: {1}" -f $(if ($okReal) { 'OK   ' } else { 'FAIL ' }), $(if ($real.Out -eq '') { 'no warning' } else { $real.Out }))
 

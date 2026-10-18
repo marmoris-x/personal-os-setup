@@ -16,6 +16,9 @@ Never bend:
 - Never put a key, a personal number or private data into a query. Never print a key.
 - No questions to the user. Answer in German, with German and English sources unless the
   request names others.
+- Whenever the full text of a web page is needed, run `fetch_page.py` and read the saved file
+  selectively: Grep for the terms you need, then read only those line ranges; a page over
+  20,000 characters goes to a reading subagent, never into the main context in one piece.
 - Say before you start, in one line: about 3 to 6 minutes.
 
 ## 0. The one-search shortcut
@@ -59,8 +62,10 @@ python -I -X utf8 "{{HOME}}/.claude/skills/research/scripts/save_pages.py" "<wor
 ```
 
 Crawl4AI reads first; the services catch what it cannot. Then read `pages/index.json` to see
-which pages were saved. If fewer than 3 pages were saved, say so in one line and offer the
-`web-research` skill.
+which pages were saved. A single page outside this batch goes through
+`{{HOME}}\.claude\skills\research\scripts\fetch_page.py`, never WebFetch or an MCP page
+reader; the fetch guard denies them. If fewer than 3 pages were saved, say so in one line and
+offer the `web-research` skill.
 
 ## 4. Extract evidence inline (at most 20 items)
 

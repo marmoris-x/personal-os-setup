@@ -615,6 +615,18 @@ if (Test-Selected '10') { try {
                             }
                         }
                         if ($execPaths.Count -eq 0) {
+                            # The fail-closed wrapper: the script is invoked inside a -Command
+                            # string, not passed as -File, because a missing -File exits with
+                            # 0xFFFD0000 and the harness records that as exit 0 (measured
+                            # 2026-10-18). Only the exact wrapper counts - Test-Path, &, and
+                            # the script's own exit code - so a mere mention is still no wiring.
+                            $wrapPattern = '^if \(-not \(Test-Path -LiteralPath ''([^'']+\.ps1)''\)\) \{ exit 1 \}; & ''\1''; exit \$LASTEXITCODE$'
+                            foreach ($part in $parts) {
+                                $mw = [regex]::Match($part, $wrapPattern)
+                                if ($mw.Success) { $execPaths.Add($mw.Groups[1].Value) }
+                            }
+                        }
+                        if ($execPaths.Count -eq 0) {
                             # no -File: then the script must be named inside command itself
                             $mAll = [regex]::Matches(($parts[0]), '[A-Za-z]:[\\/][^"''\s]*\.ps1')
                             if ($mAll.Count -gt 0) { $execPaths.Add($mAll[$mAll.Count - 1].Value) }
@@ -1283,6 +1295,13 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/tests/research/testlib.py'; Reason = '2026-10-18: run_script takes an explicit environment, so a test never inherits the machine''s real keys' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-17: the portable twin now names exa and exa-key as one EXA_API_KEY account, matching the installed servers' }
         @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-10-17: on macOS/Linux the keys persist in a 0600 env file sourced from the profiles; Windows keeps its user environment variables' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/fetch_page.py'; Reason = '2026-10-18 (fetch-always Part 1): the one entry point for every page fetch - Crawl4AI first through save_pages.py, direct download for non-HTML files, 24 h cache, output without page text. It reuses save_pages.py instead of duplicating fetch logic' }
+        @{ Path = 'HOME/.claude/hooks/fetch-guard.ps1'; Reason = '2026-10-18 (fetch-always Part 3): PreToolUse guard - WebFetch, the MCP page readers by pattern and shell fetches that print a page are denied; search tools, file downloads, API calls and gh stay allowed; the user-only override is honoured and setting it persistently is denied; fail closed. The review of the same day measured six bypasses (URL in a variable, line continuation, path-qualified command, uv run, node require, server-prefixed MCP name) and one false block (override words in a commit message); all fixed and covered by 19 new cases' }
+        @{ Path = 'HOME/.claude/setup/tests/test-fetch-guard.ps1'; Reason = '2026-10-18 (fetch-always Part 3): 93 cases - red-proved against a copy that allows everything (52 errors) and, for the 19 bypass cases the review found, against the pre-fix guard (19 errors); green against the guard; checks the onFailure wiring of every security guard' }
+        @{ Path = 'HOME/.claude/statusline.ps1'; Reason = '2026-10-18 (fetch-always Part 3b.2): the context fill is labelled "ctx NN%"; the percentage field itself was already read from context_window.used_percentage' }
+        @{ Path = 'HOME/.claude/hooks/session-check.ps1'; Reason = '2026-10-18 (fetch-always Part 3b): it reads a -File argument or a script path inside the fail-closed -Command wrapper; without that it warned falsely at every session start although block-dangerous was registered, and it reported no missing guard file in the wrapper form. Red-proved: the real folder warned and the wrapper case failed; green after, under pwsh and 5.1' }
+        @{ Path = 'HOME/.claude/setup/tests/test-session-check.ps1'; Reason = '2026-10-18 (fetch-always Part 3b): two wrapper cases (registered, missing) and the real-folder case now fails on any warning instead of only on the exit code - the old assertion printed the warning and still called it a pass' }
+        @{ Path = 'HOME/.claude/skills/docs-import/SKILL.md'; Reason = '2026-10-18 (fetch-always Part 4): every page fetch goes through fetch_page.py; no curl status call and no MCP page reader remains in the procedure' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -1368,16 +1387,32 @@ if (Test-Selected 'K') { try {
                     for ($i = 0; $i -lt $hookArgs.Count; $i++) {
                         if (($hookArgs[$i] -match '^-{1,2}file$') -and (($i + 1) -lt $hookArgs.Count)) { $fileArgs += $hookArgs[$i + 1] }
                     }
-                    if ($fileArgs.Count -ne 1) { $bad.Add($where + ': needs exactly one -File argument, found ' + $fileArgs.Count); continue }
-                    if ($fileArgs[0] -notmatch '\.ps1$') { $bad.Add($where + ': -File does not name a .ps1 (' + $fileArgs[0] + ')'); continue }
-                    if ($fileArgs[0] -match '\{\{') { $bad.Add($where + ': an unrendered placeholder survived in the path') }
+                    if ($fileArgs.Count -gt 1) { $bad.Add($where + ': needs at most one -File argument, found ' + $fileArgs.Count); continue }
+                    $scriptPath = ''
+                    if ($fileArgs.Count -eq 1) {
+                        $scriptPath = [string]$fileArgs[0]
+                    }
+                    else {
+                        # No -File: the entry is allowed only as the exact fail-closed wrapper. A
+                        # missing -File exits with 0xFFFD0000 under Windows PowerShell 5.1, whose
+                        # low byte is 0, so the harness records exit 0 and onFailure never fires
+                        # (measured 2026-10-18). The wrapper tests the file first and exits 1 when
+                        # it is gone. It is still exec form: the PowerShell host starts directly,
+                        # no sh/bash/cmd decides, and the script's own exit code is passed on.
+                        $wrapPattern = '^if \(-not \(Test-Path -LiteralPath ''([^'']+\.ps1)''\)\) \{ exit 1 \}; & ''\1''; exit \$LASTEXITCODE$'
+                        $wraps = @($hookArgs | Where-Object { $_ -match $wrapPattern })
+                        if ($wraps.Count -ne 1) { $bad.Add($where + ': needs exactly one -File argument or the exact fail-closed wrapper, found neither'); continue }
+                        $scriptPath = [regex]::Match([string]$wraps[0], $wrapPattern).Groups[1].Value
+                    }
+                    if ($scriptPath -notmatch '\.ps1$') { $bad.Add($where + ': the script argument does not name a .ps1 (' + $scriptPath + ')'); continue }
+                    if ($scriptPath -match '\{\{') { $bad.Add($where + ': an unrendered placeholder survived in the path') }
                 }
             }
         }
         $summary.Add($os + ': ' + $count + ' hook(s), command ' + $(if ($os -eq 'windows') { 'powershell.exe' } else { 'pwsh' }))
     }
     $ok = ($bad.Count -eq 0)
-    $detail = ($summary -join '; ') + '; every entry carries command + args, names a PowerShell host and exactly one -File ending in .ps1' +
+    $detail = ($summary -join '; ') + '; every entry carries command + args, names a PowerShell host and either exactly one -File ending in .ps1 or the exact fail-closed wrapper (Test-Path, &, exit $LASTEXITCODE)' +
               $(if ($bad.Count -gt 0) { '; PROBLEMS: ' + (($bad | Select-Object -First 5) -join ' | ') } else { '; no shell (sh, bash, cmd) decides anything' }) +
               '; Windows keeps powershell.exe on purpose - a live change is forbidden and the export round trip could not reproduce another value'
     Add-Result 'K' 'every hook in exec form, no shell decides' 'home/.claude/settings.json rendered for windows, macos and linux, then every hooks entry parsed as JSON' $detail '0' $ok

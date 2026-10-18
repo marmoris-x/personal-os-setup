@@ -67,14 +67,15 @@ is more specific and wins where the two differ. My explicit request in the chat 
 - Your training data is outdated. For anything that can change or that you are not sure
   about (versions, APIs, commands, products, prices, the best tool for a job), check
   current sources before you answer or build: official docs first, then the project's
-  repository, then package registries. Name your sources. Use web search, web fetch and
-  GitHub freely; if a documentation tool such as Context7 is available, use it.
+  repository, then package registries. Name your sources. Use web search and GitHub freely;
+  if a documentation tool such as Context7 is available, use it.
 - Researched, sourced or saved research runs through the skill `research`, by the rules in
   `docs/research-standard.md` (nine search services, verified word-for-word evidence).
 - Quick single facts: Parallel first (free, no monthly cap), Exa only when Parallel has nothing. A question that needs several sources goes to quick-research; a thorough one to research.
-  The harness's own built-in web search and fetch are always the last resort:
-  they score below the measured services and exist in only one harness. They are not the
-  cross-check either - a cross-check is two of the measured services agreeing.
+  The harness's own built-in web search is always the last resort: it scores below the measured
+  services and exists in only one harness. It is not the cross-check either - a cross-check is
+  two of the measured services agreeing.
+- Whenever the full text of a web page is needed, run fetch_page.py and read the saved file selectively: Grep for the terms you need, then Read only those line ranges; a page over 20,000 characters goes to an evidence-extractor or a reading subagent, never into the main context in one piece.
 - Start the web-researcher as a plain subagent, never with a name: as a named teammate it
   silently loses its MCP servers and its `disallowedTools`. Researchers never write files; the
   skill `research` saves the result in `400-knowledge/research/`.

@@ -21,10 +21,10 @@ supersedes: DonSeTch decision of 2026-09-07
 
 | Layer | Tool | Cost |
 |---|---|---|
-| 1a. Search + read pages (primary, every harness) | **Exa**, hosted MCP server `https://mcp.exa.ai/mcp` | Free. Without an account: 150 calls a day. With a free account (no payment method): $10 a month, see "Free limits" |
+| 1a. Search (primary, every harness) + page fallback **inside `save_pages.py`** | **Exa**, hosted MCP server `https://mcp.exa.ai/mcp` | Free. Without an account: 150 calls a day. With a free account (no payment method): $10 a month, see "Free limits" |
 | 1b. Second index in the **main conversation** (since 2026-09-28) | **Parallel**, hosted MCP server `https://search.parallel.ai/mcp` | Free, no account. Adds about 5,300 characters (~1,300–1,500 tokens) to every request on a profile without tool search — see "What the two servers cost" |
-| 2. Built-in tools — **last resort, always behind layer 1** | Claude Code `WebSearch` / `WebFetch`, OpenCode `websearch` / `webfetch`, Codex web search | Included |
-| 3. Fallback for a page nothing else can read | Jina Reader: fetch `https://r.jina.ai/<full-url>` with any fetch tool | Free, no key; an API key only raises the rate limit |
+| 2. Built-in search — **last resort, always behind layer 1**. The built-in page fetch is **denied** | Claude Code `WebSearch`, OpenCode `websearch`, Codex web search | Included |
+| 3. Page reading — **one entry point only**: `fetch_page.py` (Crawl4AI first, saved as a file) | `~/.claude/skills/research/scripts/fetch_page.py`; the guard `hooks/fetch-guard.ps1` denies WebFetch and every MCP page reader | Local Crawl4AI is free; the services inside `save_pages.py` draw on the same allowances |
 
 **Replaces:** DonSeTch (decision of 2026-09-07).
 **Not part of research:** browser automation (Chrome DevTools MCP, Playwright MCP). Those
@@ -253,19 +253,20 @@ Signed-in calls use the account balance instead of the anonymous allowance.
 ## How the agent should use it
 
 1. Search with `web_search_exa` (keep the default of 10 results; more results cost extra on an
-   account). Read pages with `web_fetch_exa`, several URLs in **one** call. It returns only the
-   first 3,000 characters per page unless `maxCharacters` is set; ask for more (for example
-   20000) when the full page matters. The price per page is the same.
-2. If a page does not load with Exa: `https://r.jina.ai/<full-url>`.
+   account).
+2. Read a page only through `fetch_page.py` (Crawl4AI first, the page saved as a file; the
+   content services are its fallback). Then Grep the saved file and read only the lines you
+   need. WebFetch and every MCP page reader (`web_fetch_exa`, Parallel `web_fetch`,
+   `firecrawl_scrape`/`_crawl`/`_extract`, `tavily_extract`/`_crawl`, `you-contents`, Jina) are
+   denied by `hooks/fetch-guard.ps1`, and the same names stand in `permissions.deny`.
 3. Captcha walls (hCaptcha, reCAPTCHA, Turnstile checkbox) are a dead end. Report it; never
    guess the page's content.
-4. **The harness's own web search and web fetch come last — always, behind every service with a
-   key.** They score worse than the measured services (see the benchmark table) and they exist
-   only inside one harness, so a rule that depends on them does not survive a change of tool.
-   Reach for them when every allowance is spent or a service is down. They are **not** the
-   cross-check either: for a cross-check, search with two of the services above — different
-   indexes agreeing is the evidence, and both sides of that comparison have to be services you
-   would trust on their own.
+4. **The harness's own web search comes last — always, behind every service with a key.** It
+   scores worse than the measured services (see the benchmark table) and exists only inside one
+   harness, so a rule that depends on it does not survive a change of tool. Reach for it when
+   every allowance is spent or a service is down. It is **not** the cross-check either: for a
+   cross-check, search with two of the services above — different indexes agreeing is the
+   evidence, and both sides of that comparison have to be services you would trust on their own.
 
 ## Known limits — accept these
 

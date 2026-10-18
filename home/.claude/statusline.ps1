@@ -174,7 +174,8 @@ $tokVal  = if ($j.context_window.total_input_tokens) { $j.context_window.total_i
 $tokStr  = if ($tokVal -ge 1000) { ([math]::Round($tokVal/1000, 1).ToString("F1", [CultureInfo]::InvariantCulture)) + "k" } else { "$tokVal" }
 
 $pctVal  = if ($null -ne $j.context_window.used_percentage) { $j.context_window.used_percentage } else { 0 }
-$pctStr  = ([math]::Round($pctVal, 1).ToString("F1", [CultureInfo]::InvariantCulture)) + "%"
+# A short field, as the owner asked: "ctx 42%", not a decimal.
+$pctStr  = ([math]::Round($pctVal, 0).ToString("F0", [CultureInfo]::InvariantCulture)) + "%"
 
 # Skill: was tracked by a PreToolUse hook that wrote skill-log.jsonl (keyed by
 # session_id). That hook no longer exists, so this field stays empty.
@@ -223,7 +224,7 @@ if ($cwdStr.Length -gt $maxLen) {
 $s = " $cGray$PL$R "
 
 $row1 = "$cModel$model$R$s$effCol$eff$R$s$cBranch$branch$R ($cGreen+$added$R,$cRed-$removed$R)"
-$row2 = " $cCost`$$costStr$R$s$tokStr  $pctStr$s$D Skill: $skill$R"
+$row2 = " $cCost`$$costStr$R$s$tokStr  ctx $pctStr$s$D Skill: $skill$R"
 $row3 = " Session: $durStr$s$D Reset: $resetStr  $resetPct$R"
 $row4 = " $cCwd$cwdStr$R"
 

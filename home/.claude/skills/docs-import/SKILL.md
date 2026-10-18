@@ -54,19 +54,22 @@ folder is the next day or gets the suffix `-2`. A new version always gets a new 
 
 1. The vendor's own agent files: `<base>/llms-full.txt`, then `<base>/llms-full.txt/1`, `/2`, ...
    until the answer is 404, and `<base>/llms.txt` for the page index. Many docs also serve every
-   page as `<page-address>.md`. Count the pages in `llms.txt` and compare with the pages you
-   got. A fetch that stops short of the index is not complete. Check the HTTP status
-   (`curl.exe -L -o <file> -w "%{http_code}"`): a site may answer a missing part with a 404 and an
-   HTML error page. Discard that file.
+   page as `<page-address>.md`. Fetch every one of them with `fetch_page.py` (Crawl4AI first for
+   HTML, direct download for the `.txt`/`.md` files), never with WebFetch, an MCP page reader or
+   a printing `curl`. It reports a failed HTTP status as a `FAILED` line: stop at the first 404.
+   Count the pages in `llms.txt` and compare with the pages you got. A fetch that stops short of
+   the index is not complete.
 2. The docs' GitHub repository (`gh repo view`, then `git clone --depth 1` into
    `{{DEV}}\Temp\docs-import-<name>\`; copy only the docs folder).
-3. A crawl4ai deep crawl with `max_pages` set to the known page count plus a small margin, never
-   without a limit.
+3. When the index lists the pages, write their URLs into a file and run
+   `fetch_page.py --file <urls.txt>`; it batches the HTML pages through Crawl4AI. Only when there
+   is no usable index: a crawl4ai deep crawl with `max_pages` set to the known page count plus a
+   small margin, never without a limit, and it must write its files instead of printing text.
 4. Single pages only: the Obsidian Web Clipper. It is a browser extension that the user runs,
    so use it only for pages that cannot be fetched as text (they need a login or a browser
    session) and say plainly that this step is the user's.
 
-Any of these fetches may use `curl.exe -L` or the search tools' page readers. Record the method.
+Every page fetch goes through `fetch_page.py` or the deep crawl of step 3. Record the method.
 If the address is a folder such as `https://example.com/docs`, `<base>` is that address without a
 trailing slash.
 

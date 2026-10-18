@@ -55,7 +55,9 @@ once more with fewer queries; if it fails again, say so and offer `research`.
 
 Run `python -I -X utf8 "${CLAUDE_SKILL_DIR}/../research/scripts/save_pages.py" "<work folder>"
 --max-pages 15 --no-wayback`. Crawl4AI reads first; the services catch what it cannot. Never
-read a page yourself. If fewer than 3 pages were saved, say so in one line and offer `research`.
+read a page yourself. A single page outside this batch goes through
+`fetch_page.py` (same scripts folder), never WebFetch or an MCP page reader; the fetch guard
+denies them. If fewer than 3 pages were saved, say so in one line and offer `research`.
 
 ## 4. Extract evidence
 

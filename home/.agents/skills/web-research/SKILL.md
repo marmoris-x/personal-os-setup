@@ -29,8 +29,11 @@ services of this tool and how to work without the scripts of the Claude Code ski
    Write the queries natively in each source language, short (2-6 words), several in parallel in
    one turn. Never repeat the same query twice. Stop when every part of the answer is backed by
    evidence you read on the page.
-3. **Read the page, not the snippet.** Fetch every page before you rely on it. Reddit only
-   through the services below, never `.json` or scraping.
+3. **Read the page, not the snippet.** Fetch every page before you rely on it, through
+   `fetch_page.py` only. Read the saved file selectively: Grep for the terms you need, then read
+   only those line ranges; a page over 20,000 characters goes to a reading subagent, never into
+   the main context in one piece. Reddit only through the services below, never `.json` or
+   scraping.
 4. **Take evidence word for word and check it yourself.** There is no script here: before you
    use a passage, find it again in the fetched page and compare it character for character. A
    passage you cannot find is dropped. When sources disagree, find out why (version, date, region).
@@ -89,29 +92,19 @@ Serper returns links and short snippets only: always read the pages before relyi
 For important questions, search with two different services and compare: they use
 different indexes, and agreement between them is evidence.
 
-**Read a page** (in this order):
-1. `web_fetch_exa` from `exa`, then `exa-key`: several URLs in one call; set `maxCharacters`
-   (for example 20000) when you need more than the first 3,000 characters.
-2. `web_fetch` from `parallel`: also handles JavaScript pages and PDFs.
-3. TinyFish fetch (free, 150 URLs per minute, real browser rendering): see docs.tinyfish.ai.
-4. `firecrawl_scrape`: JavaScript-heavy pages. `firecrawl_interact` only when a click is needed.
-5. `you-contents` from `you`, then `tavily_extract` (up to 5 URLs per credit).
-6. `https://r.jina.ai/<full-url>` (free, 20 pages per minute).
-7. If `crwl` exists in the shell (crawl4ai, local and unlimited), force UTF-8 when you call
-   it: `$env:PYTHONUTF8='1'; $env:PYTHONIOENCODING='utf-8'; crwl <url> -o markdown` in
-   PowerShell, `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 crwl <url> -o markdown` in bash. Without
-   it, Windows encodes the output in the console code page and crashes on a page with
-   characters outside it (measured 2026-10-18: `'charmap' codec can't encode character`).
-8. Scripts in the shell:
-   - GitHub files: `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/<path>`
-   - Many docs sites also serve `.md` pages or an `llms.txt`.
-   - PowerShell: `curl.exe -sL "<url>"` (not the `curl` alias), then strip the HTML.
-9. **The harness's own web fetch comes last**, for the same reason as its web search: it exists
-   inside a single harness, and it is the weakest reader above. Use it when everything else has
-   failed.
+**Read a page**: only through `fetch_page.py`
+(`~/.claude/skills/research/scripts/fetch_page.py`). It reads Crawl4AI first, downloads a
+non-HTML file directly and saves everything under `{{DEV_JSON}}\\Temp\\fetch\\`; then Grep the saved
+file for the term you need and read only those lines. WebFetch and every MCP page reader
+(`web_fetch_exa`, Parallel `web_fetch`, `firecrawl_scrape`, `firecrawl_crawl`,
+`firecrawl_extract`, `tavily_extract`, `tavily_crawl`, `you-contents`, the Jina reader) are
+denied by the fetch guard. If every method of `fetch_page.py` fails for a URL, say so; never
+fall back to a raw page reader. GitHub files and docs that serve `.md` or `llms.txt` are direct
+downloads in the same command.
 
-**Whole websites** (many pages of one site): `firecrawl_map` to list the URLs, then read only
-the pages you need. Use `firecrawl_crawl` or `tavily_crawl` only if many pages are really needed.
+**Whole websites** (many pages of one site): collect the page URLs (the site's `llms.txt` index,
+or `firecrawl_map`, which stays allowed), write them to a file and run
+`fetch_page.py --file <urls.txt>`. `firecrawl_crawl` and `tavily_crawl` are denied by the guard.
 
 Never pay for anything: do not use research or agent tools that bill per run (`you-research`,
 Exa `agent_run`, TinyFish Agent or Browser) unless the user asks.

@@ -109,6 +109,10 @@ report.
 
 ## 4. Save the pages
 
+A single page outside the batch of this step goes through `fetch_page.py` (same scripts folder,
+Crawl4AI first, saved as a file); never WebFetch or an MCP page reader, the fetch guard denies
+them.
+
 `save_pages.py <work folder>` reads all `candidates\p*.jsonl`, cleans and de-duplicates the URLs
 (tracking parameters, mirrors by content), keeps at most 40 (primary sources first, passes
 interleaved), downloads each page as Markdown into `pages\NNN-<domain>.md` with a header, and

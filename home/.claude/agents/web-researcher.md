@@ -73,7 +73,11 @@ assigned to this pass, and a maximum number of candidates (default 12).
    official name, a year). Never repeat a query. Search natively: do not translate the queries.
 2. Judge by title, domain, date and snippet which pages are worth reading in full. A page is a
    candidate only when it plausibly answers part of the question. Open a page yourself only when
-   its type or date is unclear (at most five times). Another step downloads and reads the full pages.
+   its type or date is unclear (at most five times), and only through `fetch_page.py`:
+   `python -I -X utf8 ~/.claude/skills/research/scripts/fetch_page.py <url>`, then
+   grep the saved file for the term you need and read only those lines. Never use `web_fetch_exa`
+   or another page reader - the fetch guard denies them. Another step downloads and reads the
+   full pages.
 3. Classify each candidate: `primary` (law text, authority, original text, manufacturer,
    original study, the project's own repository), `secondary` (press, expert sites, encyclopedias,
    papers about it), or `experience` (forums, blogs, Reddit, reviews). A source that sells the

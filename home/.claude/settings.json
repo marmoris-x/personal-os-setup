@@ -46,6 +46,17 @@
       "mcp__parallel__*"
     ],
     "deny": [
+      "WebFetch",
+      "mcp__exa__web_fetch_exa",
+      "mcp__exa-key__web_fetch_exa",
+      "mcp__parallel__web_fetch",
+      "mcp__firecrawl__firecrawl_scrape",
+      "mcp__firecrawl__firecrawl_crawl",
+      "mcp__firecrawl__firecrawl_extract",
+      "mcp__tavily__tavily_extract",
+      "mcp__tavily__tavily_crawl",
+      "mcp__you__you-contents",
+      "mcp__you-free__you-contents",
       "Read(//c/**/.env)",
       "Read(//c/**/*.pem)",
       "Read(/{{DEV_BASH}}/Projects/**/Server Keys/**)",
@@ -89,10 +100,11 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/block-dangerous.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/block-dangerous.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/block-dangerous.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       },
@@ -106,10 +118,11 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/downloads-guard.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/downloads-guard.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/downloads-guard.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       },
@@ -123,10 +136,11 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/archive-guard.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/archive-guard.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/archive-guard.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       },
@@ -140,10 +154,11 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/onedrive-guard.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/onedrive-guard.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/onedrive-guard.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       },
@@ -157,10 +172,11 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/trifecta-guard.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/trifecta-guard.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/trifecta-guard.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       },
@@ -174,10 +190,29 @@
               "-NoProfile",
               "-ExecutionPolicy",
               "Bypass",
-              "-File",
-              "{{HOME_FWD}}/.claude/hooks/no-license-files.ps1"
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/no-license-files.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/no-license-files.ps1'; exit $LASTEXITCODE"
             ],
-            "timeout": 10
+            "timeout": 15,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|mcp__.*__(?:.*(?:fetch|scrape|extract|crawl|contents|read[_-]?url).*)|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-Command",
+              "if (-not (Test-Path -LiteralPath '{{HOME_FWD}}/.claude/hooks/fetch-guard.ps1')) { exit 1 }; & '{{HOME_FWD}}/.claude/hooks/fetch-guard.ps1'; exit $LASTEXITCODE"
+            ],
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       }

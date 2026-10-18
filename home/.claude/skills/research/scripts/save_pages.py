@@ -385,7 +385,10 @@ def content_hash(text):
     return hashlib.sha256(normalize(text)[:3000].casefold().encode("utf-8")).hexdigest()
 
 
-def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True):
+def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, dedupe=True):
+    """Fetch and save the candidates. dedupe=False is for fetch_page.py: a user who names
+    several pages of one site wants every one of them as its own file, even when the first
+    3,000 characters (navigation, shared intro) are identical."""
     work = Path(workdir)
     pages = work / "pages"
     pages.mkdir(exist_ok=True)
@@ -444,7 +447,7 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True):
             continue
         res = results[url]
         digest = content_hash(res["text"])
-        if digest in hashes:
+        if dedupe and digest in hashes:
             index.append({**entry, "status": "duplicate", "duplicate_of": hashes[digest]})
             continue
         number += 1

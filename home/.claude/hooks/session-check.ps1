@@ -34,8 +34,15 @@ if ($settings -and $settings.hooks) {
         foreach ($group in @($event.Value)) {
             foreach ($h in @($group.hooks)) {
                 $scripts = @()
-                foreach ($a in @($h.args)) { if ("$a" -match '\.ps1$') { $scripts += "$a" } }
-                if ("$($h.command)" -match '\.ps1(\s|"|$)') { $scripts += ("$($h.command)" -replace '^.*?([A-Za-z]:[^"]*?\.ps1).*$', '$1') }
+                # A hook may be a bare argument (-File <path>) or a script path inside a
+                # -Command string (the fail-closed wrapper). Both forms must be seen, or a
+                # missing guard goes unreported.
+                $pathPattern = '[A-Za-z]:[/\\][^''"\s]*?\.ps1'
+                foreach ($a in @($h.args)) {
+                    if ("$a" -match '\.ps1$') { $scripts += "$a" }
+                    else { foreach ($m in [regex]::Matches("$a", $pathPattern)) { $scripts += $m.Value } }
+                }
+                foreach ($m in [regex]::Matches("$($h.command)", $pathPattern)) { $scripts += $m.Value }
                 foreach ($script in $scripts) {
                     if ($event.Name -eq 'PreToolUse' -and $script -match 'block-dangerous\.ps1$') { $guardRegistered = $true }
                     if (-not (Test-Path -LiteralPath $script)) {
