@@ -201,6 +201,7 @@ docs/decisions/0014-final-layout.md
 docs/decisions/0015-portable-engine-instead-of-chezmoi.md
 docs/decisions/0016-public-repository.md
 docs/decisions/0017-unique-skill-names.md
+docs/decisions/0018-research-as-a-workflow.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
