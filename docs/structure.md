@@ -390,9 +390,11 @@ vault/.claude/skills/obsidian-markdown/references/EMBEDS.md
 vault/.claude/skills/obsidian-markdown/references/PROPERTIES.md
 vault/.claude/skills/obsidian-markdown/SKILL.md
 vault/.claude/skills/vault-lint/conflicts.py
+vault/.claude/skills/vault-lint/expiry.py
 vault/.claude/skills/vault-lint/graph_health.py
 vault/.claude/skills/vault-lint/project_sync.py
 vault/.claude/skills/vault-lint/SKILL.md
+vault/.claude/skills/vault-lint/test_expiry.py
 vault/.obsidian/app.json
 vault/.obsidian/appearance.json
 vault/.obsidian/community-plugins.json

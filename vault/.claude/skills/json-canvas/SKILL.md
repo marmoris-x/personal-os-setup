@@ -242,3 +242,7 @@ See [references/EXAMPLES.md](references/EXAMPLES.md) for full canvas examples in
 
 - [JSON Canvas Spec 1.0](https://jsoncanvas.org/spec/1.0/)
 - [JSON Canvas GitHub](https://github.com/obsidianmd/jsoncanvas)
+
+## Gotchas
+
+- none recorded yet

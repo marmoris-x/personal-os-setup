@@ -14,6 +14,7 @@ param(
     [int]$TimeoutMinutes = 30,
     [string]$ClaudeExe = "{{HOME_ENV}}\.local\bin\claude.exe",
     [string]$SettingsPath = "{{HOME_ENV}}\.claude\profiles\deepseek.json",
+    [string]$PythonExe = "{{LIFEOS_PYTHON}}",
     [string]$LockPath = "{{LIFEOS_LOCK}}",
     [string]$Prompt = '/life-os-morning',
     [string]$AllowedTools = '',
@@ -57,6 +58,37 @@ try {
     $ErrorActionPreference = $prevEA
     Write-RunLog ('transcribe exit ' + $transcribeExit)
     foreach ($line in $transcribeOut) { Write-RunLog ('  transcribe: ' + [string]$line) }
+
+    # 1b. expiry (vault-lint): notes whose valid_until is past or within 7 days. The morning
+    # skill has no shell on purpose, so the wrapper runs the read-only check and hands the
+    # agent one JSON file. It never edits a note; the single line in the Morgenbericht is all.
+    $expiryScript = Join-Path $VaultPath '.claude\skills\vault-lint\expiry.py'
+    $expiryJson = Join-Path $VaultPath '000-meta\life-os-expiry.json'
+    $expiring = 0
+    if ((Test-Path -LiteralPath $PythonExe) -and (Test-Path -LiteralPath $expiryScript)) {
+        $prevEA = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $expiryOut = & $PythonExe -I -X utf8 $expiryScript --vault $VaultPath --days 7 --json $expiryJson 2>&1
+        $expiryExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEA
+        Write-RunLog ('expiry exit ' + $expiryExit)
+        foreach ($line in $expiryOut) { Write-RunLog ('  expiry: ' + [string]$line) }
+        try {
+            $parsed = @()
+            if (Test-Path -LiteralPath $expiryJson) {
+                $parsed = @(Get-Content -LiteralPath $expiryJson -Raw -Encoding UTF8 | ConvertFrom-Json)
+            }
+            # an empty JSON array parses to $null, and @($null).Count is 1 - the same trap
+            # rules/powershell-batch.md names. Treat that one null element as zero findings.
+            if ($parsed.Count -eq 1 -and $null -eq $parsed[0]) { $parsed = @() }
+            $expiring = $parsed.Count
+        } catch {
+            Write-RunLog ('expiry JSON unreadable: ' + $_.Exception.Message)
+            $expiring = 0
+        }
+    } else {
+        Write-RunLog ('expiry skipped: python or expiry.py missing')
+    }
 
     # 2. pre-check (owner's request 2026-10-08): when there is nothing to do, the agent must
     # not start - an empty run would cost money for nothing. Nothing to do means, all at once:
@@ -107,9 +139,9 @@ try {
         } catch {
             Write-RunLog ('pre-check unreadable, the agent runs: ' + $_.Exception.Message)
         }
-        if ($transcribeClean -and $waiting -eq 0 -and $conflicts -eq 0 -and (-not $dailyChanged)) {
+        if ($transcribeClean -and $waiting -eq 0 -and $conflicts -eq 0 -and (-not $dailyChanged) -and $expiring -eq 0) {
             $skipAgent = $true
-            $skipReason = 'nothing to do (no waiting transcripts, no conflicts, no 100-daily change since ' + $lastRun + ')'
+            $skipReason = 'nothing to do (no waiting transcripts, no conflicts, no 100-daily change since ' + $lastRun + ', no note expiring within 7 days)'
         }
     }
     if ($skipAgent) {

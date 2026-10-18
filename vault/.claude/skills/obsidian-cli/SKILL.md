@@ -104,3 +104,7 @@ obsidian dev:mobile on
 ```
 
 Run `obsidian help` to see additional developer commands including CDP and debugger controls.
+
+## Gotchas
+
+- A note move waited a day because the agent asked the owner to start Obsidian -> start Obsidian yourself (`Start-Process`) and retry until the CLI answers; never fall back to `Move-Item`.

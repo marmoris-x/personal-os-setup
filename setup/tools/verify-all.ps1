@@ -1316,6 +1316,16 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/docs-import-portable/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main docs-import skill' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/quick-research-portable/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main quick-research skill' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): the same Gotchas as the main research skill' }
+        @{ Path = 'HOME/.claude/life-os/morning.ps1'; Reason = '2026-10-18 (batch-and-hygiene Part 4): runs expiry.py with --days 7 before the agent and writes 000-meta/life-os-expiry.json; a note expiring soon now keeps the agent run from being skipped' }
+        @{ Path = 'VAULT/.claude/skills/json-canvas/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas - none recorded yet' }
+        @{ Path = 'VAULT/.claude/skills/obsidian-bases/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas - none recorded yet' }
+        @{ Path = 'VAULT/.claude/skills/obsidian-cli/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotcha - start Obsidian yourself instead of asking the owner' }
+        @{ Path = 'VAULT/.claude/skills/obsidian-markdown/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Part 3): Gotchas - none recorded yet' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/SKILL.md'; Reason = '2026-10-18 (batch-and-hygiene Parts 3-4): Gotchas from recorded failures and the expiry.py check in sections 2 and 3' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/expiry.py'; Reason = '2026-10-18 (batch-and-hygiene Part 4): read-only valid_until report, exit 1 on findings, names file and date' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/test_expiry.py'; Reason = '2026-10-18 (batch-and-hygiene Part 4): 13 fixture cases (past, soon, far, missing, malformed, quoted, out-of-scope, days limit, frontmatter position, CLI exit codes and JSON)' }
+        @{ Path = 'VAULT/000-meta/templates/person.md'; Reason = '2026-10-18 (batch-and-hygiene Part 4): the optional valid_until field as a YAML comment' }
+        @{ Path = 'VAULT/000-meta/templates/project.md'; Reason = '2026-10-18 (batch-and-hygiene Part 4): the optional valid_until field as a YAML comment' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

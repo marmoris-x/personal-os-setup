@@ -52,6 +52,9 @@ Follow the vault's AGENTS.md. This is Karpathy's "lint" step: keep the wiki true
 - `python -I -X utf8 .claude/skills/vault-lint/conflicts.py` — files that a sync conflict left
   behind (`*.sync-conflict-*`, from Syncthing). Report them; do not merge them here — the
   Life OS morning run merges conflicts (phase-1 order part 2.4). Exit 1 means findings.
+- `python -I -X utf8 .claude/skills/vault-lint/expiry.py` — notes in `200-projects`,
+  `300-areas` and `400-knowledge` whose optional `valid_until` is in the past or within
+  14 days, plus a malformed date. Names file and date; read-only. Exit 1 means findings.
 
 ## 3. Truth (never change facts without asking)
 
@@ -59,6 +62,8 @@ Follow the vault's AGENTS.md. This is Karpathy's "lint" step: keep the wiki true
   `000-meta/log.md`), pick its three most important claims and check each against the
   cited source in `500-sources` or on the web. Report: claim | source says | verdict.
 - "Current truth" sections older than 90 days: ask whether they are still true.
+- Notes that `expiry.py` lists (past or within 14 days): show file and date, ask whether the
+  fact still holds. Never edit the fact yourself; a new date or a removal is the user's call.
 - Two notes that say different things about the same fact: show both, ask which is right.
 - Show proposed fact changes as a diff and wait for a yes before writing them.
 
@@ -87,3 +92,9 @@ Follow the vault's AGENTS.md. This is Karpathy's "lint" step: keep the wiki true
 - Append one line to `000-meta/log.md`:
   `## [YYYY-MM-DD] lint | fixed N, questions M`
 - Report in German: what was fixed, what needs a decision, what looks wrong.
+
+## Gotchas
+
+- `graph_health.py` counted 20 findings inside moved foreign pages in `500-sources` whose links point to their origin sites -> `500-sources` is exempt; check links there only when the user asks.
+- `graph_health.py` reported links inside inline code and fences as broken -> the check exempts code now; a finding inside a code block is a false positive, not a link to repair.
+- Sync-conflict files parked in `trash/` were re-reported every day -> `trash/` is out of scope; a conflict file waits for the morning run, which merges it.

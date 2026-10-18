@@ -22,13 +22,15 @@ unfiltered memory. What you write here he will read for years.
 |---|---|
 | `000-meta/life-os-inbox.json` | every transcript waiting in `inbox/audio`: `txt`, `audio`, `recorded` (ISO), `chars` |
 | `000-meta/life-os-conflicts.json` | sync conflict files found by the vault-lint check: `file`, `original`, `modified`, `bytes` |
+| `000-meta/life-os-expiry.json` | notes whose `valid_until` is past or within 7 days: `file`, `valid_until`, `days`, `status` (written by the runner; may not exist) |
 | `000-meta/life-os-runs.log` | one line per script run: `<iso> \| transcribe\|morning \| ok\|warn\|fail \| detail` |
 | `000-meta/life-os-state.json` | what was already processed (may not exist yet) |
 | `000-meta/trash-queue.txt` | list of vault-relative paths to remove (may not exist yet) |
 | `100-daily/<YYYY-MM-DD>.md` | the daily notes |
 | `000-meta/templates/daily.md` | the template for a missing daily note |
 
-If `life-os-inbox.json` or `life-os-conflicts.json` does not exist, treat it as empty.
+If `life-os-inbox.json`, `life-os-conflicts.json` or `life-os-expiry.json` does not exist,
+treat it as empty.
 Today's date and the optional date argument after `/life-os-morning` both count: the argument
 wins, otherwise use today. (The runner passes no argument; tests may.)
 
@@ -107,6 +109,8 @@ Ensure today's note exists (same rule as step 1), then replace the content of it
 - one line per thing this run did (transcripts taken in, notes ordered, tasks added, conflicts
   merged) - only what really happened;
 - a line "Heute:" with the open tasks of today's `## Aufgaben` whose `📅` is today or earlier;
+- when `life-os-expiry.json` names notes, ONE line `Ablaufend: <file> am <valid_until>` (join
+  several with `; `) - only what that file says, and do not check or change the fact;
 - one sentence for each `fail` or `warn` line in `life-os-runs.log` from today or yesterday
   (a failed earlier run must be visible here);
 - if nothing happened at all: one line saying so.

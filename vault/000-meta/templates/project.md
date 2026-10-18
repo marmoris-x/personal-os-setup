@@ -3,6 +3,7 @@ type: project
 status: active
 date: '{{date}}'
 repo:
+# valid_until: YYYY-MM-DD  # optional: when the content stops being true
 ---
 # <Project>
 
