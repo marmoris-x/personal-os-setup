@@ -20,6 +20,8 @@ unchanged. The steps stay the fallback for OpenCode, Codex and every session wit
   main session: a subagent cannot ask, and the workflow reads the plan.
 - Args: `question`, `answer_lang`, `source_langs`, `work_folder`, `date`, `slug`, `skill_dir`,
   `research_standard`, `style_rules`, `vault_root`, `serper_allowed`, `gap_pass` (absolute paths).
+  The two language args may be language names (`Deutsch`, `English`) or ISO codes (`de`, `en`);
+  the script maps names to the code the check scripts need.
 - After the run, pass the `transcriptDir` from the Workflow result to
   `python -I -X utf8 "${CLAUDE_SKILL_DIR}/scripts/check_services.py" --transcript-dir <dir>`;
   that record decides the service counts, never an agent's own line.

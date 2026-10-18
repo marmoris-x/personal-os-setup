@@ -38,6 +38,12 @@ function need(name) {
 }
 const QUESTION = need('question')
 const ANSWER_LANG = need('answer_lang')
+// The check scripts take ISO codes; the prompts take whatever name the caller passed.
+const LANG_CODES = {
+  de: 'de', deutsch: 'de', german: 'de', en: 'en', english: 'en', englisch: 'en',
+  ar: 'ar', arabic: 'ar', arabisch: 'ar',
+}
+const ANSWER_CODE = LANG_CODES[String(ANSWER_LANG).toLowerCase()] || String(ANSWER_LANG)
 const SOURCE_LANGS = Array.isArray(A.source_langs) ? A.source_langs.join(', ') : need('source_langs')
 const WORK = need('work_folder')
 const DATE = need('date')
@@ -378,8 +384,8 @@ async function checkArticle(round) {
   const checkPrompt = [
     'In the work folder ' + WORK + ' run these three commands in this order, stopping only if one fails to start:',
     '1. python -I -X utf8 "' + SKILL + '\\scripts\\verify_evidence.py" "' + WORK + '" --check-draft "' + WORK + '\\draft\\draft.md"',
-    '2. python -I -X utf8 "' + SKILL + '\\scripts\\build_references.py" "' + WORK + '" --draft "' + WORK + '\\draft\\draft.md" --out "' + WORK + '\\draft\\article.md" --lang ' + ANSWER_LANG + ' --pages-prefix "../../500-sources/research/' + DATE + '-' + SLUG + '/pages/"',
-    '3. python -I -X utf8 "' + SKILL + '\\scripts\\check_article.py" "' + WORK + '\\draft\\article.md" --workdir "' + WORK + '" --lang ' + ANSWER_LANG,
+    '2. python -I -X utf8 "' + SKILL + '\\scripts\\build_references.py" "' + WORK + '" --draft "' + WORK + '\\draft\\draft.md" --out "' + WORK + '\\draft\\article.md" --lang ' + ANSWER_CODE + ' --pages-prefix "../../500-sources/research/' + DATE + '-' + SLUG + '/pages/"',
+    '3. python -I -X utf8 "' + SKILL + '\\scripts\\check_article.py" "' + WORK + '\\draft\\article.md" --workdir "' + WORK + '" --lang ' + ANSWER_CODE,
     'Return problems (the error count of check 3), warnings (its warning count), at most 20 error lines, the article path, and the last 40 lines of output. ' +
       'Never edit the article or the draft yourself. If check 3 has a "how this text was made" section and the language is not English, German or Arabic, add --skip-sections with that heading.',
   ].join('\n')
