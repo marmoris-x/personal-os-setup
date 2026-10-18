@@ -252,7 +252,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         Test-Path -LiteralPath (Join-Path $t3 'VAULT\README.md') | Should -BeFalse
         $files = @(Get-ChildItem -LiteralPath $t3 -Recurse -File -Force | Where-Object { $_.FullName -notmatch '[\\/]\.install-state[\\/]' })
         $files.Count | Should -BeGreaterThan 90
-        $files.Count | Should -BeLessThan 131
+        # 135 measured 2026-10-18: the batch runner, its test, the skill-usage hook, its test and
+        # the research workflow add five core files. The bound still catches a whole extra stage.
+        $files.Count | Should -BeLessThan 136 -Because 'five intended core files were added on 2026-10-18'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {
