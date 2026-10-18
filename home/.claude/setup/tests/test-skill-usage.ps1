@@ -26,7 +26,9 @@ function Judge([string]$Name, [bool]$Ok, [string]$Detail = '') {
     $script:total++
     if (-not $Ok) { $script:errors++ }
     $tag = if ($Ok) { 'OK   ' } else { 'FAIL ' }
-    if ($Detail) { $Detail = '  ' + $Detail }
+    # Detail only on a failure: check.ps1 scans every line for "N failed/errors" and a passing
+    # line carrying such a number would turn a green suite red (measured in CI).
+    if ($Detail -and -not $Ok) { $Detail = '  ' + $Detail } else { $Detail = '' }
     Write-Output ((("{0} {1}" -f $tag, $Name)) + $Detail)
 }
 
