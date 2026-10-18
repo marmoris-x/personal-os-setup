@@ -161,7 +161,9 @@ elseif($eff -eq "high")   { $effCol = $cEffHi }
 elseif($eff -eq "medium") { $effCol = $cEffMed }
 elseif($eff -eq "low")    { $effCol = $cEffLow }
 
-$branch = try { git -C $j.cwd branch --show-current 2>$null } catch { $null }
+# --no-optional-locks: a read command skips git's optional index lock, so the status line
+# cannot collide with Obsidian Git's auto-commit (git docs, GIT_OPTIONAL_LOCKS).
+$branch = try { git --no-optional-locks -C $j.cwd branch --show-current 2>$null } catch { $null }
 if (-not $branch) { $branch = "?" }
 
 $added   = if ($null -ne $j.cost.total_lines_added)   { $j.cost.total_lines_added }   else { 0 }
@@ -176,6 +178,16 @@ $tokStr  = if ($tokVal -ge 1000) { ([math]::Round($tokVal/1000, 1).ToString("F1"
 $pctVal  = if ($null -ne $j.context_window.used_percentage) { $j.context_window.used_percentage } else { 0 }
 # A short field, as the owner asked: "ctx 42%", not a decimal.
 $pctStr  = ([math]::Round($pctVal, 0).ToString("F0", [CultureInfo]::InvariantCulture)) + "%"
+# Colour it: normal below 40%, yellow from 40%, red from 60%. The 40/60 guideline is a rule
+# of thumb quoted by Dex Horthy in the best-practice repo, not a measured limit; the real
+# lever is clearing at task boundaries. Early in a session the field is null: show nothing.
+$ctxCol  = $R
+if ($null -ne $j.context_window.used_percentage) {
+    if ($pctVal -ge 60) { $ctxCol = $cRed }
+    elseif ($pctVal -ge 40) { $ctxCol = $cEffHi }
+}
+$ctxPart = ""
+if ($null -ne $j.context_window.used_percentage) { $ctxPart = "  $ctxCol" + "ctx $pctStr" + $R }
 
 # Skill: was tracked by a PreToolUse hook that wrote skill-log.jsonl (keyed by
 # session_id). That hook no longer exists, so this field stays empty.
@@ -224,7 +236,7 @@ if ($cwdStr.Length -gt $maxLen) {
 $s = " $cGray$PL$R "
 
 $row1 = "$cModel$model$R$s$effCol$eff$R$s$cBranch$branch$R ($cGreen+$added$R,$cRed-$removed$R)"
-$row2 = " $cCost`$$costStr$R$s$tokStr  ctx $pctStr$s$D Skill: $skill$R"
+$row2 = " $cCost`$$costStr$R$s$tokStr$ctxPart$s$D Skill: $skill$R"
 $row3 = " Session: $durStr$s$D Reset: $resetStr  $resetPct$R"
 $row4 = " $cCwd$cwdStr$R"
 

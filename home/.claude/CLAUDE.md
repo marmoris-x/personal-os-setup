@@ -291,8 +291,7 @@ Why: performance degrades unevenly as context grows (Chroma, Context Rot, 2025-0
 Anthropic describes a gradient, not a cliff). The 400K auto-compact window is a safety cap; the
 real lever is clearing at task boundaries.
 
-- One topic per session. When I start an unrelated task, suggest a fresh session (`/clear`
-  costs nothing).
+- New task = new session (/clear). When the status line turns red, finish the current step, write PROGRESS.md and continue in a fresh session.
 - Many similar items (more than about 10): use batch-run.ps1 so every item gets a fresh session; never process them all in one long session.
 - Heavy reading, exploring and researching go to a subagent: its reading stays out of my
   conversation. Heavy means more than about 8 files, about 30 KB of text to read, long output,
