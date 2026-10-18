@@ -6,12 +6,15 @@ The harness writes every tool call into the session transcript
 (~/.claude/projects/<project>/<session-id>.jsonl) and one transcript per subagent
 (<session-id>/subagents/agent-*.jsonl). This script counts the calls per service there.
 That record is independent: never trust an agent's own "services_used" line.
-Exit 0 when each of the nine services was called at least once, 1 when one is missing
-(the caller starts a small extra pass for it), 2 on input trouble.
+A keyed service whose key variable is empty is reported as "skipped: no key": it was not
+supposed to be called, so it is not missing. Serper is the reserve and is reported as
+"reserve": a run that does not need it is correct. Exit 0 when no callable service is
+missing, 1 when one is (the caller starts a small extra pass for it), 2 on input trouble.
 
 Tool call patterns: mcp__<server>__* for exa, exa-key, parallel, tavily, firecrawl,
 you-free and you; shell commands hitting api.search.tinyfish.ai or google.serper.dev
-for tinyfish and serper. A '-balance' tool call counts as no use.
+for tinyfish and serper. A '-balance' tool call counts as no use. exa needs no key
+(anonymous fallback), and parallel and you-free never need one.
 Standard: ~/.claude/docs/research-standard.md section 2.
 """
 
@@ -33,6 +36,9 @@ PREFIX = {
     "mcp__you__": "you",
 }
 SHELL_HINTS = {"tinyfish": "api.search.tinyfish.ai", "serper": "google.serper.dev"}
+KEY_VAR = {"exa-key": "EXA_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY",
+           "you": "YDC_API_KEY", "tinyfish": "TINYFISH_API_KEY"}
+RESERVE = "serper"
 
 
 def service_of(name, command):
@@ -97,13 +103,27 @@ def main(argv=None):
     counts = {service: 0 for service in SERVICES}
     for path in files:
         count_file(path, counts)
+    status = {}
     for service in SERVICES:
-        print(f"{service} {counts[service]}")
-    missing = [service for service in SERVICES if counts[service] == 0]
+        if counts[service]:
+            status[service] = "used"
+        elif service == RESERVE:
+            status[service] = "reserve"
+        elif service in KEY_VAR and not os.environ.get(KEY_VAR[service]):
+            status[service] = "skipped: no key"
+        else:
+            status[service] = "missing"
+    for service in SERVICES:
+        label = "" if status[service] == "missing" else f" ({status[service]})"
+        print(f"{service} {counts[service]}{label}")
+    missing = [service for service in SERVICES if status[service] == "missing"]
     if missing:
         print("missing: " + " ".join(missing))
         return 1
-    print("all nine services used")
+    if all(status[service] == "used" for service in SERVICES):
+        print("all nine services used")
+    else:
+        print("no service missing (used, skipped or reserve)")
     return 0
 
 

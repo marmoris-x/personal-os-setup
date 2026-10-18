@@ -71,7 +71,7 @@ is more specific and wins where the two differ. My explicit request in the chat 
   GitHub freely; if a documentation tool such as Context7 is available, use it.
 - Researched, sourced or saved research runs through the skill `research`, by the rules in
   `docs/research-standard.md` (nine search services, verified word-for-word evidence).
-- Quick web lookups: the skill `quick-research` (Exa first, then Parallel). Anything bigger goes to `research`.
+- Quick single facts: Parallel first (free, no monthly cap), Exa only when Parallel has nothing. A question that needs several sources goes to quick-research; a thorough one to research.
   The harness's own built-in web search and fetch are always the last resort:
   they score below the measured services and exist in only one harness. They are not the
   cross-check either - a cross-check is two of the measured services agreeing.

@@ -1,6 +1,6 @@
 ---
 name: research
-description: Thorough web research with verified, word-for-word evidence and a structured, referenced answer composed from the sources' own wording. Use this for multi-source research, comparisons, and any answer that needs several sources checked against each other or a written, referenced report: when the user says "recherchiere", "Recherche", "deep research", "find sources", or asks for a verified answer that one source cannot carry. Do not use it for a single quick fact; the `quick-research` skill answers that.
+description: Thorough web research with verified, word-for-word evidence and a structured, referenced answer composed from the sources' own wording. Use only when the user says "gründlich recherchieren", "ausführliche Recherche", "deep research", "research thoroughly", or calls /research explicitly, or when the request clearly asks for a full written, referenced report. A brief look at a few current sources is the `quick-research` skill, never this one.
 ---
 
 # research
@@ -47,10 +47,10 @@ the language of the question for both and say so in the report.
 
 | Pass | Focus | Default services (calls for this pass) |
 |---|---|---|
-| P1 | primary and official sources | exa (3), parallel (2), Serper (1, reserve) |
-| P2 | secondary and expert sources | exa-key (4), tavily (2), you-free (3) |
+| P1 | primary and official sources | exa (3), parallel (3), Serper (up to 3, reserve) |
+| P2 | secondary and expert sources | exa-key (4), tavily (3), you-free (3) |
 | P3 | user experiences (forums, blogs, Reddit through the services) | firecrawl (2), TinyFish (4), you (3) |
-| P4 | counter-check: criticism, opposing views, corrections, recent changes | exa (3), parallel (2), tavily (1) |
+| P4 | counter-check: criticism, opposing views, corrections, recent changes | exa (3), parallel (5), tavily (2) |
 
 The numbers are a run budget, not a suggestion: they sum to the caps below, and 90 such runs a
 month stay inside every free tier (arithmetic: `~/.claude/docs/agent-tooling.md`, section
@@ -61,19 +61,19 @@ month stay inside every free tier (arithmetic: `~/.claude/docs/agent-tooling.md`
 | Service | Calls per run | Free tier and why the cap fits |
 |---|---|---|
 | exa | 6 | `EXA_API_KEY` account, shared with exa-key; 90 runs = 540 searches |
-| parallel | 4 | free account 5,000 requests a month; 360 |
+| parallel | 8 | free account 5,000 requests a month; 720 |
 | exa-key | 4 | same key and account as exa; together 900 searches + at most 900 fallback pages = $7.20 of the $10 |
 | you-free | 3 | 100 searches a day; 270 a month |
 | you | 3 | $100 one-time credit; 270 searches |
-| tavily | 3 | 1,000 credits a month; 270 |
-| firecrawl | 2 | 1,000 credits; each search costs 2 and the feedback refunds 1 -> 180 net |
+| tavily | 5 | 1,000 credits a month; 450 searches plus 90 extract credits = 540 |
+| firecrawl | 2 | 1,000 credits; each search costs 2 and the feedback refunds 1 -> 180 net, plus 450 scrape credits = 630 |
 | TinyFish | 4 | 500 searches an hour and 1,000 a day; 360 a month |
-| Serper | 1, reserved | 2,500 one-time queries; 90 a month covers 27 months |
+| Serper | up to 3, reserved | 2,500 one-time queries; 90 runs at the reserve one cover 27 months, at the full three 9 months |
 
-- **Serper is the reserve.** Spend its one call only when the question is local (Austria), in
-  German, about a price, a shop, an authority or something from the last few days. A general
-  question never gets it; the call stays for a run that needs it. A run without such a question
-  leaves Serper unused, and that is correct.
+- **Serper is the reserve for Austria.** Spend it only on a question about Austria, with
+  `gl=at` and `hl=de`: at most three queries per run, and one in P1 is the default. A general
+  question never gets it; the calls stay for a run that needs them. A run without an Austrian
+  question leaves Serper unused, and that is correct.
 - **No key, no call.** When the key variable of an assigned keyed service is empty, skip that
   service and name it in the report; never send an empty header. `parallel` and `you-free` need
   no key and always run; `exa` runs without `EXA_API_KEY` only on the anonymous
@@ -98,7 +98,9 @@ fewer queries; if it fails again, go on with the others and say so in the report
 `services_used` line: a service that failed everywhere goes into the report. Then run
 `python -I -X utf8 "${CLAUDE_SKILL_DIR}/scripts/check_services.py"`. It counts the calls per
 service in the harness transcripts of this session; that record decides, never an agent's own
-line. For every service it reports missing, start one small extra pass: a plain `web-researcher`
+line. A keyed service whose key is empty is reported as `skipped: no key` and Serper as
+`reserve`; neither is missing, and neither gets an extra pass. For every service it reports
+missing, start one small extra pass: a plain `web-researcher`
 in the background, only that service, one or two queries from `plan.md`, at most five candidates,
 its lines into `candidates\p5-<service>.jsonl` - but only when the service may be called at all:
 no key means no extra pass, and Serper stays unused unless the reserve rule above allows it. Run

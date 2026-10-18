@@ -200,6 +200,7 @@ docs/decisions/0013-install-stages.md
 docs/decisions/0014-final-layout.md
 docs/decisions/0015-portable-engine-instead-of-chezmoi.md
 docs/decisions/0016-public-repository.md
+docs/decisions/0017-unique-skill-names.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
@@ -209,7 +210,8 @@ docs/platforms.md
 docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
-home/.agents/skills/docs-import/SKILL.md
+home/.agents/skills/docs-import-portable/SKILL.md
+home/.agents/skills/quick-research-portable/SKILL.md
 home/.agents/skills/web-research/SKILL.md
 home/.claude/agents/evidence-extractor.md
 home/.claude/agents/research-writer.md
@@ -253,7 +255,8 @@ home/.claude/rules/python.md
 home/.claude/settings.json
 home/.claude/setup/external/CLAUDE.md
 home/.claude/setup/external/README.md
-home/.claude/setup/other-harnesses/agents-skills/docs-import/SKILL.md
+home/.claude/setup/other-harnesses/agents-skills/docs-import-portable/SKILL.md
+home/.claude/setup/other-harnesses/agents-skills/quick-research-portable/SKILL.md
 home/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md
 home/.claude/setup/other-harnesses/codex/config-mcp.toml
 home/.claude/setup/other-harnesses/opencode/opencode.json
@@ -292,6 +295,7 @@ home/.claude/skills/research/scripts/check_article.py
 home/.claude/skills/research/scripts/check_note.py
 home/.claude/skills/research/scripts/check_services.py
 home/.claude/skills/research/scripts/common.py
+home/.claude/skills/research/scripts/crawl4ai_fetch.py
 home/.claude/skills/research/scripts/save_pages.py
 home/.claude/skills/research/scripts/store_results.py
 home/.claude/skills/research/scripts/verify_evidence.py

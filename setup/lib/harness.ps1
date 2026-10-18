@@ -165,6 +165,21 @@ function Get-CodexMergedText {
     return (($out -join $newline).TrimEnd() + $newline)
 }
 
+function Get-CodexAgentsUpdate {
+    # Codex reads its global rules from ~/.codex/AGENTS.md; OpenCode already falls back to
+    # ~/.claude/CLAUDE.md. Only a MISSING AGENTS.md is created from the installed global
+    # rules: an existing file belongs to the person and is never touched.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$HomeDir)
+    $target = Join-Path $HomeDir '.codex/AGENTS.md'
+    if (Test-Path -LiteralPath $target -PathType Leaf) { return $null }
+    $rules = Join-Path $HomeDir '.claude/CLAUDE.md'
+    if (-not (Test-Path -LiteralPath $rules -PathType Leaf)) { return $null }
+    $text = [IO.File]::ReadAllText($rules)
+    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+    return [pscustomobject]@{ Name = 'codex-agents'; Target = $target; TemplatePath = $rules; Text = $text; Changed = $true }
+}
+
 function Get-HarnessConfigUpdates {
     # One object per harness whose folder exists under $HomeDir:
     #   Name, Target, TemplatePath, Text (the merged content), Changed
@@ -194,6 +209,10 @@ function Get-HarnessConfigUpdates {
         }
         $changed = -not ((Test-Path -LiteralPath $t.Target -PathType Leaf) -and ($existingText -ceq $text))
         $updates.Add([pscustomobject]@{ Name = $t.Name; Target = $t.Target; TemplatePath = $t.Template; Text = $text; Changed = $changed })
+    }
+    if (Test-Path -LiteralPath (Join-Path $HomeDir '.codex') -PathType Container) {
+        $agents = Get-CodexAgentsUpdate -HomeDir $HomeDir
+        if ($null -ne $agents) { $updates.Add($agents) }
     }
     return $updates
 }

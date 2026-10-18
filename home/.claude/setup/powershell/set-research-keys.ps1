@@ -70,6 +70,18 @@ function Write-ResearchKeyEnvFile {
     }
 }
 
+function Test-ResearchKeyEnvFile {
+    # The names whose value did NOT come back from the file unchanged. "saved" is reported
+    # only when this returns none: a write that silently dropped a key must not look like one.
+    param([string]$Path, [hashtable]$Values)
+    $read = Read-ResearchKeyEnvFile -Path $Path
+    $missing = New-Object System.Collections.Generic.List[string]
+    foreach ($name in $Values.Keys) {
+        if ($read[$name] -ne $Values[$name]) { $missing.Add($name) }
+    }
+    return $missing
+}
+
 function Add-ResearchKeyProfileSource {
     # Adds the guarded source block to a profile once. Returns $true when it wrote.
     param([string]$ProfilePath)
@@ -131,7 +143,12 @@ if (-not $onWindows) {
     foreach ($name in $entered.Keys) { $values[$name] = $entered[$name] }
     if ($values.Count -gt 0) {
         Write-ResearchKeyEnvFile -Path $envFile -Values $values
-        Write-Host ('  written: ' + $envFile + ' (' + $values.Count + ' key(s), mode 600)')
+        $bad = @(Test-ResearchKeyEnvFile -Path $envFile -Values $entered)
+        if ($bad.Count -gt 0) {
+            Write-Host ('  ERROR: the read-back did not match for ' + ($bad -join ', ') + ' - the keys are NOT confirmed') -ForegroundColor Red
+            exit 1
+        }
+        Write-Host ('  saved: ' + $envFile + ' (' + $values.Count + ' key(s), mode 600, read back)')
     }
     else { Write-Host '  no key entered and no key on disk - nothing written' }
     foreach ($profile in (Get-ResearchKeyProfilePaths -HomeDir $homeDir -Shell ([string]$env:SHELL))) {

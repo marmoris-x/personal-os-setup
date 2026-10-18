@@ -200,6 +200,46 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         $files[0].Name | Should -Be 'CLAUDE.md'
     }
 
+    It 'accepts -Components as one comma-separated string, the way -File passes it' {
+        # Measured 2026-10-18: `pwsh -File install.ps1 -Components a,b` binds "a,b" as ONE
+        # string and the old code selected nothing, silently. Both forms must select the same.
+        $t2b = Join-Path $tmpRoot 'target-components-string'
+        New-Item -ItemType Directory -Force -Path $t2b | Out-Null
+        $r = Invoke-Install -Dir $t2b -Extra @('-Components', 'claude-md,vault-readme')
+        $r.code | Should -Be 0 -Because $r.out
+        $r.out | Should -Match 'INSTALL-OK'
+        $r.out | Should -Match 'components: claude-md, vault-readme'
+        $files = @(Get-ChildItem -LiteralPath $t2b -Recurse -File -Force |
+            Where-Object { $_.FullName -notmatch '[\\/]\.install-state[\\/]' })
+        @($files.Name | Sort-Object) -join ',' | Should -Be 'CLAUDE.md,README.md'
+    }
+
+    It 'accepts -Components as a real array through -Command' {
+        # The other binding of the same parameter: `-Command` parses the comma as the array
+        # operator, so [string[]]$Components receives two elements. Both forms must select
+        # the same files, or a regression in only one of them stays invisible.
+        $t2d = Join-Path $tmpRoot 'target-components-array'
+        New-Item -ItemType Directory -Force -Path $t2d | Out-Null
+        $command = "& '" + (Join-Path $repoRoot 'install.ps1') + "' -TargetRoot '" + $t2d +
+            "' -ConfigPath '" + $fixture + "' -NonInteractive -Components claude-md,vault-readme"
+        $out = & pwsh -NoProfile -Command $command 2>&1 | Out-String
+        $LASTEXITCODE | Should -Be 0 -Because $out
+        $out | Should -Match 'INSTALL-OK'
+        $out | Should -Match 'components: claude-md, vault-readme'
+        $files = @(Get-ChildItem -LiteralPath $t2d -Recurse -File -Force |
+            Where-Object { $_.FullName -notmatch '[\\/]\.install-state[\\/]' })
+        @($files.Name | Sort-Object) -join ',' | Should -Be 'CLAUDE.md,README.md'
+    }
+
+    It 'fails with a clear message on an unknown component name' {
+        $t2c = Join-Path $tmpRoot 'target-components-bad'
+        New-Item -ItemType Directory -Force -Path $t2c | Out-Null
+        $r = Invoke-Install -Dir $t2c -Extra @('-Components', 'claude-md,does-not-exist')
+        $r.code | Should -Not -Be 0
+        $r.out | Should -Match 'unknown component'
+        $r.out | Should -Match 'does-not-exist'
+    }
+
     It 'installs only core components with -Profile minimal' {
         $t3 = Join-Path $tmpRoot 'target-minimal'
         New-Item -ItemType Directory -Force -Path $t3 | Out-Null

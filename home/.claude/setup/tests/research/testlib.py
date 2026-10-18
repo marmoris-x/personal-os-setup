@@ -75,10 +75,10 @@ class Work:
                    "\n".join(json.dumps(i, ensure_ascii=False) for i in items) + "\n")
 
 
-def run_script(name, *args):
+def run_script(name, *args, env=None):
     """Run a script in isolated mode. Return (exit code, stdout)."""
     proc = subprocess.run([sys.executable, "-I", "-X", "utf8", str(SCRIPTS / name), *map(str, args)],
-                          capture_output=True, text=True, encoding="utf-8", timeout=120)
+                          capture_output=True, text=True, encoding="utf-8", timeout=120, env=env)
     return proc.returncode, proc.stdout + proc.stderr
 
 

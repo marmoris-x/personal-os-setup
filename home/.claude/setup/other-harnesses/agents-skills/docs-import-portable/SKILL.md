@@ -1,5 +1,5 @@
 ---
-name: docs-import
+name: docs-import-portable
 description: >
   Import a documentation (a docs website, a manual, an API reference, a set of pages) so that
   the agent can read it offline, and file it where it is used. Use when the user says "import

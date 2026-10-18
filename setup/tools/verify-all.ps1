@@ -1271,7 +1271,16 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/other-harnesses/opencode/opencode.json'; Reason = '2026-10-17: the exa server carries the x-api-key env template and the tools URL; exa-key gets the same URL' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/codex/config-mcp.toml'; Reason = '2026-10-17: the exa server carries env_http_headers (x-api-key) and the tools URL; exa-key gets the same URL' }
         @{ Path = 'HOME/.agents/skills/web-research/SKILL.md'; Reason = '2026-10-17: new manifest component agents-skills deploys the portable skills to ~/.agents/skills; this is the web-research twin' }
-        @{ Path = 'HOME/.agents/skills/docs-import/SKILL.md'; Reason = '2026-10-17: the same component, the docs-import twin' }
+        @{ Path = 'HOME/.agents/skills/docs-import/SKILL.md'; Reason = '2026-10-17: the same component, the docs-import twin; renamed on 2026-10-18 to docs-import-portable so OpenCode never sees two skills with one name' }
+        @{ Path = 'HOME/.agents/skills/docs-import-portable/SKILL.md'; Reason = '2026-10-18: the neutral twin renamed to docs-import-portable (OpenCode docs require unique skill names across ~/.claude/skills and ~/.agents/skills)' }
+        @{ Path = 'HOME/.agents/skills/quick-research-portable/SKILL.md'; Reason = '2026-10-18: the harness-neutral quick-research (inline steps, same scripts), named -portable so it cannot clash with the Claude Code skill' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/docs-import/SKILL.md'; Reason = '2026-10-17: the template twin of docs-import; renamed on 2026-10-18 to docs-import-portable with its ~/.agents twin' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/docs-import-portable/SKILL.md'; Reason = '2026-10-18: the template twin renamed to the non-clashing name' }
+        @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/quick-research-portable/SKILL.md'; Reason = '2026-10-18: the template twin of the harness-neutral quick-research' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/crawl4ai_fetch.py'; Reason = '2026-10-18: one browser session for all URLs through arun_many and MemoryAdaptiveDispatcher, stealth on, UTF-8 JSON lines out; the per-URL crwl call died on the Windows charmap (measured)' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/check_services.py'; Reason = '2026-10-18: a keyed service without a key is reported as skipped and Serper as the reserve, not as missing' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_check_services.py'; Reason = '2026-10-18: tests for skipped-without-key and the Serper reserve; the key environment is fixed per test' }
+        @{ Path = 'HOME/.claude/setup/tests/research/testlib.py'; Reason = '2026-10-18: run_script takes an explicit environment, so a test never inherits the machine''s real keys' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-17: the portable twin now names exa and exa-key as one EXA_API_KEY account, matching the installed servers' }
         @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-10-17: on macOS/Linux the keys persist in a 0600 env file sourced from the profiles; Windows keeps its user environment variables' }
     )

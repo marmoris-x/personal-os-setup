@@ -193,6 +193,21 @@ $manifest = Get-Manifest -Path (Join-Path $RepoRoot 'setup/manifest.yaml')
 $schemaErrors = @(Test-ManifestSchema -Manifest $manifest -RepoRoot $RepoRoot)
 if ($schemaErrors.Count -gt 0) { throw ('manifest.yaml invalid: ' + ($schemaErrors -join '; ')) }
 
+# --- component selection -----------------------------------------------------
+# With -File, PowerShell passes `a,b` as ONE string; with -Command it binds an array. Split
+# every element, so both forms select the same components (measured 2026-10-18: the -File form
+# silently selected nothing), and refuse a name the manifest does not know.
+if ($Components) {
+    $Components = @($Components | ForEach-Object { ([string]$_).Split(',') } |
+        ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $knownIds = @($manifest.components | ForEach-Object { [string](Get-ManifestField $_ 'id') })
+    $unknownIds = @($Components | Where-Object { $knownIds -notcontains $_ })
+    if ($unknownIds.Count -gt 0) {
+        throw ('unknown component(s): ' + ($unknownIds -join ', ') + '; known ids: ' + ($knownIds -join ', '))
+    }
+    Write-Host ('Selected components: ' + ($Components -join ', '))
+}
+
 # --- roots -------------------------------------------------------------------
 if ($TestMode) {
     $tr = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($TargetRoot)

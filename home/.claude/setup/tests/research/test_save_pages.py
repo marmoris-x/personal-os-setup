@@ -7,6 +7,7 @@ import sys
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -74,10 +75,10 @@ class SavePages(unittest.TestCase):
         for old in (self.work.path / "pages").glob("*.md"):
             old.unlink()
         self.net = FakeNet()
+        self.real_find_crawl4ai_python = save_pages.find_crawl4ai_python
         patches = [mock.patch.object(save_pages, "http", self.net),
                    mock.patch.dict(os.environ, KEYS),
-                   mock.patch.object(save_pages.shutil, "which", return_value=None),
-                   mock.patch.object(save_pages, "LOCAL_BIN", self.work.path / "empty-bin"),
+                   mock.patch.object(save_pages, "find_crawl4ai_python", return_value=None),
                    mock.patch.object(save_pages.time, "sleep")]
         for p in patches:
             p.start()
@@ -124,33 +125,113 @@ class SavePages(unittest.TestCase):
 
     # --- fetching and saving
 
-    def test_crawl4ai_is_the_first_fetcher_and_the_services_are_the_fallback(self):
-        # The order is the point: local first (no quota, no third party), the services only
-        # for what the browser cannot read. A crwl that fails for one URL must not stop the
-        # other URL nor the fallback chain.
-        self.candidates({"url": "https://example.org/local"}, {"url": "https://example.org/blocked"})
-        calls = []
-        http_calls_seen = []
-
+    def helper(self, records=None, returncode=0, stderr="", exc=None, raw=None):
+        """A fake crawl4ai_fetch.py run: writes the given JSON lines to the output path."""
         def fake_run(argv, **kwargs):
-            calls.append(argv)
-            http_calls_seen.append(len(self.net.calls))
-            if argv[1].endswith("/blocked"):
-                return type("P", (), {"returncode": 1, "stdout": "", "stderr": "blocked"})()
-            return type("P", (), {"returncode": 0, "stdout": LONG, "stderr": ""})()
+            fake_run.argv, fake_run.kwargs = argv, kwargs
+            if exc is not None:
+                raise exc
+            data = raw if raw is not None else "".join(
+                json.dumps(record, ensure_ascii=False) + "\n" for record in records or [])
+            Path(argv[3]).write_bytes(data if isinstance(data, bytes) else data.encode("utf-8"))
+            return SimpleNamespace(returncode=returncode, stdout="", stderr=stderr)
+        return fake_run
 
+    def test_crawl4ai_helper_runs_first_in_one_session_and_the_services_are_the_fallback(self):
+        # The order is the point: local first (no quota, no third party), the services only
+        # for what the browser cannot read. One helper call carries every URL: one browser
+        # session, not one crwl start per page.
+        self.candidates({"url": "https://example.org/local"}, {"url": "https://example.org/blocked"})
+        fake = self.helper([
+            {"url": "https://example.org/local", "ok": True, "status": 200, "markdown": LONG},
+            {"url": "https://example.org/blocked", "ok": False, "status": 403, "error": "HTTP 403"}])
         self.net.exa = exa_ok(("https://example.org/blocked", "B", LONG + " via exa"))
-        with mock.patch.object(save_pages.shutil, "which", return_value="crwl"), \
-                mock.patch.object(save_pages.subprocess, "run", fake_run):
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="venv-python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
             code, out = self.run_script()
         self.assertEqual(code, 0, out)
         methods = {i["url"]: i["method"] for i in self.index()}
         self.assertEqual(methods, {"https://example.org/local": "crawl4ai",
                                    "https://example.org/blocked": "exa"})
-        self.assertEqual(calls[0][1:], ["https://example.org/local", "-o", "markdown"])
-        # the first crwl call happens before any HTTP service call: that is the order
-        self.assertEqual(http_calls_seen[0], 0)
-        self.assertNotIn("crawl4ai: crwl not on PATH", out)
+        self.assertEqual(fake.argv[0], "venv-python")
+        self.assertTrue(fake.argv[1].endswith("crawl4ai_fetch.py"))
+        self.assertEqual(fake.kwargs["env"]["PYTHONUTF8"], "1")
+        self.assertEqual(fake.kwargs["env"]["PYTHONIOENCODING"], "utf-8")
+        self.assertIn("NOTE crawl4ai: https://example.org/blocked -> HTTP 403", out)
+        entry = next(i for i in self.index() if i["url"].endswith("/blocked"))
+        self.assertIn("crawl4ai: HTTP 403", entry["attempts"])
+
+    def test_a_crawl4ai_block_page_is_a_failure_with_its_reason(self):
+        self.candidates({"url": "https://example.org/captcha"})
+        blocked = ("Access denied. Are you a robot? Please enable JavaScript. "
+                   "Bitte aktivieren Sie JavaScript, um fortzufahren. ") * 2
+        fake = self.helper([{"url": "https://example.org/captcha", "ok": True, "status": 200,
+                             "markdown": blocked}])
+        self.net.exa = exa_ok(("https://example.org/captcha", "C", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("NOTE crawl4ai: https://example.org/captcha -> looks like an error page", out)
+        self.assertEqual(self.index()[0]["method"], "exa")
+
+    def test_a_crawl4ai_page_shorter_than_the_minimum_is_a_failure(self):
+        self.candidates({"url": "https://example.org/short"})
+        fake = self.helper([{"url": "https://example.org/short", "ok": True, "status": 200,
+                             "markdown": "Nur ein Satz."}])
+        self.net.exa = exa_ok(("https://example.org/short", "S", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"NOTE crawl4ai: https://example.org/short -> text shorter than {save_pages.MIN_CHARS}", out)
+
+    def test_a_crawl4ai_timeout_is_noted_for_each_url_and_the_services_take_over(self):
+        import subprocess as sp
+        self.candidates({"url": "https://example.org/slow"})
+        fake = self.helper(exc=sp.TimeoutExpired(cmd="crawl4ai_fetch.py", timeout=90))
+        self.net.exa = exa_ok(("https://example.org/slow", "S", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("NOTE crawl4ai: https://example.org/slow -> timeout", out)
+        self.assertEqual(self.index()[0]["method"], "exa")
+
+    def test_a_crawl4ai_encoding_error_is_noted_word_for_word(self):
+        # The measured Windows failure: the CLI died on a page character outside cp1252.
+        self.candidates({"url": "https://de.wikipedia.org/wiki/Wien"})
+        reason = "UnicodeEncodeError: 'charmap' codec can't encode character"
+        fake = self.helper([{"url": "https://de.wikipedia.org/wiki/Wien", "ok": False,
+                             "status": None, "error": reason}])
+        self.net.exa = exa_ok(("https://de.wikipedia.org/wiki/Wien", "W", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"NOTE crawl4ai: https://de.wikipedia.org/wiki/Wien -> {reason}", out)
+
+    def test_helper_output_that_is_not_utf8_is_a_named_failure_not_a_crash(self):
+        self.candidates({"url": "https://example.org/a"})
+        fake = self.helper(raw=b'{"url": "https://example.org/a", "ok": true, "markdown": "\xff"}\n')
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("NOTE crawl4ai: https://example.org/a -> output is not UTF-8", out)
+        self.assertEqual(self.index()[0]["method"], "exa")
+
+    def test_a_failing_helper_is_one_note_and_the_services_take_over(self):
+        self.candidates({"url": "https://example.org/a"})
+        fake = self.helper([], returncode=1, stderr="Traceback: boom")
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("NOTE crawl4ai: https://example.org/a -> the helper failed (exit 1)", out)
+        self.assertEqual(self.index()[0]["method"], "exa")
 
     def test_fallback_pages_are_capped_per_service(self):
         # The cap is what keeps 90 runs a month inside tavily's 1,000 credits: five pages a
@@ -168,34 +249,24 @@ class SavePages(unittest.TestCase):
         self.assertTrue(seen)
         self.assertLessEqual(len(seen[0]), save_pages.PAGE_CAP["tavily"])
 
-    def test_crwl_in_the_uv_bin_dir_is_found_without_path(self):
-        # macOS does not put ~/.local/bin on a non-login PATH. The installer finds crwl there;
-        # save_pages must find the same file, or it silently falls back to the metered services.
-        bin_dir = self.work.path / "local-bin"
-        bin_dir.mkdir()
-        exe = bin_dir / ("crwl.exe" if os.name == "nt" else "crwl")
-        exe.write_text("", encoding="utf-8")
-        self.candidates({"url": "https://example.org/local"})
-        calls = []
-
-        def fake_run(argv, **kwargs):
-            calls.append(argv)
-            return type("P", (), {"returncode": 0, "stdout": LONG, "stderr": ""})()
-
-        with mock.patch.object(save_pages, "LOCAL_BIN", bin_dir), \
-                mock.patch.object(save_pages.subprocess, "run", fake_run):
-            code, out = self.run_script()
-        self.assertEqual(code, 0, out)
-        self.assertTrue(calls)
-        self.assertEqual(calls[0][0], str(exe))
-        self.assertEqual(self.index()[0]["method"], "crawl4ai")
+    def test_the_crawl4ai_venv_python_is_found_through_uv_tool_dir(self):
+        # macOS does not put ~/.local/bin on a non-login PATH, and the venv can sit under a
+        # custom UV_TOOL_DIR. save_pages must find the same venv the installer created, or it
+        # silently falls back to the metered services.
+        tool_dir = self.work.path / "uv-tools"
+        rel = Path("crawl4ai/Scripts/python.exe") if os.name == "nt" else Path("crawl4ai/bin/python")
+        py = tool_dir / rel
+        py.parent.mkdir(parents=True)
+        py.write_text("", encoding="utf-8")
+        with mock.patch.dict(os.environ, {"UV_TOOL_DIR": str(tool_dir)}):
+            self.assertEqual(self.real_find_crawl4ai_python(), str(py))
 
     def test_a_missing_crawl4ai_is_noted_not_silent(self):
         self.candidates({"url": "https://example.org/a"})
         self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
         code, out = self.run_script()
         self.assertEqual(code, 0, out)
-        self.assertIn("crawl4ai: crwl not on PATH, skipped", out)
+        self.assertIn("crawl4ai: the Crawl4AI venv python was not found, skipped", out)
 
     def test_exa_page_is_saved_with_header_and_index(self):
         self.candidates({"url": "https://example.org/wien", "title": "Wien"})

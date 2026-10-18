@@ -1,6 +1,7 @@
 """Tests for check_services.py: counts the calls in the transcripts, never a self-report."""
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -9,6 +10,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from testlib import run_script  # noqa: E402
+
+KEY_NAMES = ("EXA_API_KEY", "YDC_API_KEY", "TAVILY_API_KEY", "FIRECRAWL_API_KEY",
+             "TINYFISH_API_KEY", "SERPER_API_KEY")
+ALL_KEYS = {name: "placeholder" for name in KEY_NAMES}
 
 
 def tool_line(name, command=None):
@@ -37,10 +42,13 @@ class CheckServices(unittest.TestCase):
         self.sub = proj / self.session / "subagents" / "agent-a.jsonl"
         self.main.write_text("", encoding="utf-8")
         self.sub.write_text("", encoding="utf-8")
+        self.env = {key: value for key, value in os.environ.items() if key not in KEY_NAMES}
 
-    def run_check(self):
+    def run_check(self, keys=None):
+        env = dict(self.env)
+        env.update(ALL_KEYS if keys is None else keys)
         return run_script("check_services.py", "--session-id", self.session,
-                          "--projects-dir", str(self.projects))
+                          "--projects-dir", str(self.projects), env=env)
 
     def test_all_nine_from_calls_pass(self):
         first = [
@@ -66,7 +74,33 @@ class CheckServices(unittest.TestCase):
         self.main.write_text(tool_line("mcp__exa__web_search_exa") + "\n", encoding="utf-8")
         code, out = self.run_check()
         self.assertEqual(code, 1, out)
-        self.assertIn("missing: parallel serper exa-key tavily you-free firecrawl tinyfish you", out)
+        self.assertIn("missing: parallel exa-key tavily you-free firecrawl tinyfish you", out)
+        self.assertNotIn("serper", out.split("missing:", 1)[1])
+
+    def test_a_service_without_a_key_is_skipped_not_missing(self):
+        # No key means no call; that is a correct run, not a missing service.
+        lines = [tool_line("mcp__exa__web_search_exa"), tool_line("mcp__parallel__web_search"),
+                 tool_line("mcp__exa-key__web_search_exa"), tool_line("mcp__you-free__you-search"),
+                 tool_line("mcp__firecrawl__firecrawl_search"), tool_line("mcp__you__you-search"),
+                 tool_line("PowerShell", "https://api.search.tinyfish.ai?query=x"),
+                 tool_line("Bash", "https://google.serper.dev/search")]
+        self.main.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        code, out = self.run_check(keys={"TAVILY_API_KEY": ""})
+        self.assertEqual(code, 0, out)
+        self.assertIn("tavily 0 (skipped: no key)", out)
+        self.assertNotIn("missing:", out)
+
+    def test_serper_is_the_reserve_not_a_missing_service(self):
+        lines = [tool_line("mcp__exa__web_search_exa"), tool_line("mcp__parallel__web_search"),
+                 tool_line("mcp__exa-key__web_search_exa"), tool_line("mcp__tavily__tavily_search"),
+                 tool_line("mcp__you-free__you-search"), tool_line("mcp__firecrawl__firecrawl_search"),
+                 tool_line("mcp__you__you-search"),
+                 tool_line("PowerShell", "https://api.search.tinyfish.ai?query=x")]
+        self.main.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        code, out = self.run_check()
+        self.assertEqual(code, 0, out)
+        self.assertIn("serper 0 (reserve)", out)
+        self.assertNotIn("missing:", out)
 
     def test_self_report_is_not_a_call(self):
         # the agent result text names services; it must not count as use
@@ -93,7 +127,7 @@ class CheckServices(unittest.TestCase):
 
     def test_unknown_session_is_an_error(self):
         code, out = run_script("check_services.py", "--session-id", "does-not-exist",
-                               "--projects-dir", str(self.projects))
+                               "--projects-dir", str(self.projects), env=self.env)
         self.assertEqual(code, 2, out)
         self.assertIn("ERROR no transcripts", out)
 

@@ -79,9 +79,10 @@ authentication error, switch to the next one and do not retry it in this run.
    service is down — never before them. It is **not** a cross-check: for one, search with two of
    the services above and compare those.
 
-**Google results** (Serper, free account, 2,500 queries once). Google's ranking is strong for
-local, German-language and very recent topics (Austria, Vienna, authorities, shops, prices),
-and for plain facts. Use it for those, alongside the list above, not instead of it:
+**Google results** (Serper, free account, 2,500 queries once). Serper is the reserve for
+questions about Austria only (Vienna, authorities, shops, prices there), with `gl=at` and
+`hl=de`, at most three queries per run. Use it when the services above are spent for such a
+question, not instead of them:
 `Invoke-RestMethod -Method Post "https://google.serper.dev/search" -Headers @{ "X-API-KEY" = $env:SERPER_API_KEY } -ContentType "application/json" -Body (@{ q = "<query>"; gl = "at"; hl = "de" } | ConvertTo-Json)`
 Serper returns links and short snippets only: always read the pages before relying on them.
 
@@ -96,7 +97,11 @@ different indexes, and agreement between them is evidence.
 4. `firecrawl_scrape`: JavaScript-heavy pages. `firecrawl_interact` only when a click is needed.
 5. `you-contents` from `you`, then `tavily_extract` (up to 5 URLs per credit).
 6. `https://r.jina.ai/<full-url>` (free, 20 pages per minute).
-7. If `crwl` exists in the shell (crawl4ai, local and unlimited): `crwl <url> -o markdown`.
+7. If `crwl` exists in the shell (crawl4ai, local and unlimited), force UTF-8 when you call
+   it: `$env:PYTHONUTF8='1'; $env:PYTHONIOENCODING='utf-8'; crwl <url> -o markdown` in
+   PowerShell, `PYTHONUTF8=1 PYTHONIOENCODING=utf-8 crwl <url> -o markdown` in bash. Without
+   it, Windows encodes the output in the console code page and crashes on a page with
+   characters outside it (measured 2026-10-18: `'charmap' codec can't encode character`).
 8. Scripts in the shell:
    - GitHub files: `https://raw.githubusercontent.com/<owner>/<repo>/HEAD/<path>`
    - Many docs sites also serve `.md` pages or an `llms.txt`.

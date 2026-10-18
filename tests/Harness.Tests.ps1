@@ -114,4 +114,31 @@ Describe 'which harnesses are present' {
         @($u).Count | Should -Be 2
         @($u | ForEach-Object { $_.Name } | Sort-Object) -join ',' | Should -Be 'codex,opencode'
     }
+
+    It 'writes ~/.codex/AGENTS.md from the global rules when Codex is present and it is missing' {
+        # Codex reads its global rules from ~/.codex/AGENTS.md; without the file it would run
+        # without the person's rules. OpenCode already falls back to ~/.claude/CLAUDE.md.
+        $home2 = Join-Path $script:tmp 'home2'
+        New-Item -ItemType Directory -Force -Path (Join-Path $home2 '.codex') | Out-Null
+        New-Item -ItemType Directory -Force -Path (Join-Path $home2 '.claude') | Out-Null
+        [IO.File]::WriteAllText((Join-Path $home2 '.claude/CLAUDE.md'), "# my rules`n",
+            (New-Object Text.UTF8Encoding($false)))
+        $u = @(Get-HarnessConfigUpdates -HomeDir $home2 -RepoRoot $script:repo)
+        $agents = $u | Where-Object { $_.Name -eq 'codex-agents' }
+        $agents.Target | Should -Be (Join-Path $home2 '.codex/AGENTS.md')
+        $agents.Text | Should -Match '# my rules'
+        $agents.Changed | Should -BeTrue
+    }
+
+    It 'never touches an existing ~/.codex/AGENTS.md' {
+        $home3 = Join-Path $script:tmp 'home3'
+        New-Item -ItemType Directory -Force -Path (Join-Path $home3 '.codex') | Out-Null
+        New-Item -ItemType Directory -Force -Path (Join-Path $home3 '.claude') | Out-Null
+        [IO.File]::WriteAllText((Join-Path $home3 '.claude/CLAUDE.md'), "# mine`n",
+            (New-Object Text.UTF8Encoding($false)))
+        [IO.File]::WriteAllText((Join-Path $home3 '.codex/AGENTS.md'), "# the person's own`n",
+            (New-Object Text.UTF8Encoding($false)))
+        $u = @(Get-HarnessConfigUpdates -HomeDir $home3 -RepoRoot $script:repo)
+        @($u | Where-Object { $_.Name -eq 'codex-agents' }).Count | Should -Be 0
+    }
 }

@@ -1,11 +1,11 @@
 ---
 name: web-researcher
 description: >
-  Runs ONE search pass of a research run for the research skill: finds candidate source URLs
-  with the assigned search services, in the given source languages, and returns them as JSON
-  lines. No page text in the result. Started by the research skill, which names the pass, the
-  languages, the queries and the services. For a quick single fact the main session asks Exa
-  or Parallel directly, not this agent.
+  Runs ONE search pass of a research run for the research or quick-research skill: finds
+  candidate source URLs with the assigned search services, in the given source languages, and
+  returns them as JSON lines. No page text in the result. Started by the skill, which names the
+  pass, the languages, the queries and the services. For a quick single fact the main session
+  asks Parallel or Exa directly, not this agent.
   ALWAYS spawn as a plain subagent, never as a named teammate: an in-process named teammate
   ignores this file's mcpServers, so the agent would run without its search services.
 disallowedTools: Edit, Write, NotebookEdit
@@ -95,9 +95,9 @@ the caps that make 90 runs a month fit the free tiers (the caller's `SKILL.md` a
 `docs/agent-tooling.md` carry the arithmetic). A keyed service whose environment variable is
 empty is skipped, never called with an empty header: name it in `services_failed` with
 `"why": "no key"`. `parallel` and `you-free` need no key; `exa` falls back to the anonymous
-150-calls-a-day limit when `EXA_API_KEY` is empty. Serper's one call is the reserve: use it only
-for local (Austria), German-language, price, shop, authority or very recent questions; a general
-question leaves it unused.
+150-calls-a-day limit when `EXA_API_KEY` is empty. Serper is the reserve for questions about
+Austria: at most three queries per run, with `gl=at` and `hl=de`; a general question leaves it
+unused.
 
 1. `exa` (`EXA_API_KEY` account, shared with `exa-key`; anonymous 150 calls a day only without
    the key): `web_search_exa`, default 10 results.
@@ -110,10 +110,10 @@ question leaves it unused.
    `firecrawl_search_feedback` with the search id (refunds 1 credit).
 6. `tavily` (1,000 credits a month): `tavily_search`, basic depth. `you-free` (100 a day), then
    `you` (one-time $100 credit): `you-search`.
-7. Serper (Google results, free account, 2,500 queries once), for local, German-language and
-   very recent topics (Austria, authorities, shops, prices):
+7. Serper (Google results, free account, 2,500 queries once), the reserve for questions about
+   Austria only, at most three queries per run:
    `Invoke-RestMethod -Method Post "https://google.serper.dev/search" -Headers @{ "X-API-KEY" = $env:SERPER_API_KEY } -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes((@{ q = "<query>"; gl = "at"; hl = "de" } | ConvertTo-Json)))`
-   Set `gl` and `hl` to the country and language of the query.
+   `gl` is always `at` and `hl` always `de`.
 8. The harness's own web search comes last, behind every service above, only when they are all
    spent or down. It is not a cross-check.
 

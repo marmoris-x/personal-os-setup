@@ -39,6 +39,23 @@ Describe 'the Unix key file' {
         ($mode -band [IO.UnixFileMode]::OtherRead) | Should -Be 0
     }
 
+    It 'confirms a key only after the value came back from the file unchanged' {
+        # "saved" must mean the file really holds the value: the main body reads it back and
+        # reports saved only when this returns no name.
+        $path = Join-Path $script:tmp 'confirm.env'
+        Write-ResearchKeyEnvFile -Path $path -Values @{ EXA_API_KEY = 'dummy-exa' }
+        $bad = @(Test-ResearchKeyEnvFile -Path $path -Values @{ EXA_API_KEY = 'dummy-exa' })
+        $bad.Count | Should -Be 0
+    }
+
+    It 'names a key whose value did not come back' {
+        $path = Join-Path $script:tmp 'confirm-broken.env'
+        Write-ResearchKeyEnvFile -Path $path -Values @{ EXA_API_KEY = 'dummy-exa' }
+        [IO.File]::WriteAllText($path, "# truncated`n", (New-Object Text.UTF8Encoding($false)))
+        $bad = @(Test-ResearchKeyEnvFile -Path $path -Values @{ EXA_API_KEY = 'dummy-exa' })
+        ($bad -join ',') | Should -Be 'EXA_API_KEY'
+    }
+
     It 'does not write a key that does not belong to the service list' {
         $path = Join-Path $script:tmp 'unknown.env'
         Write-ResearchKeyEnvFile -Path $path -Values @{ NOT_A_SERVICE = 'x'; EXA_API_KEY = 'y' }

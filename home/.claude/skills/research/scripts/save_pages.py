@@ -7,8 +7,9 @@ Reads every *.jsonl in the candidates folder (lines from the web-researcher pass
 {"url", "title", "lang", "pass", "type", "date", "why"}), cleans and de-duplicates the URLs,
 fetches them and writes pages/NNN-<domain>.md (header + Markdown) and pages/index.json.
 Fetch methods in order, each only for the URLs the earlier ones could not read:
-crawl4ai (local, first: no quota and no third party sees the URL), Exa Contents, You.com
-Contents, Tavily Extract, Firecrawl Scrape, TinyFish Fetch, Jina Reader (public pages only).
+crawl4ai (local, first: no quota and no third party sees the URL; one browser session through
+crawl4ai_fetch.py in the Crawl4AI venv), Exa Contents, You.com Contents, Tavily Extract,
+Firecrawl Scrape, TinyFish Fetch, Jina Reader (public pages only).
 Reddit goes through the content services only.
 Keys come from the environment (EXA_API_KEY, YDC_API_KEY, TAVILY_API_KEY, FIRECRAWL_API_KEY,
 TINYFISH_API_KEY, optional JINA_API_KEY) and are never printed. Prints counts, never page text.
@@ -22,9 +23,9 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,9 @@ TYPE_RANK = {"primary": 0, "secondary": 1, "experience": 2}
 # cap beyond --max-pages. The caps are what makes 90 runs a month fit the free tiers: with them
 # the worst case stays under every monthly allowance (arithmetic in docs/agent-tooling.md).
 PAGE_CAP = {"exa": 10, "you": 10, "tavily": 5, "firecrawl": 5, "tinyfish": 10, "jina": 10}
+CRAWL4AI_TIMEOUT = 60      # seconds per page
+CRAWL4AI_CONCURRENCY = 5   # browser tabs at once; the helper caps it at 5 as well
+CRAWL4AI_SCRIPT = Path(__file__).resolve().parent / "crawl4ai_fetch.py"
 WAYBACK_PAUSE = 2.5      # seconds between asks; the availability API rate-limits bursts
 WAYBACK_RETRY_WAIT = 30  # seconds after a failed ask; three failures end the asking for the run
 SECRET_QUERY = re.compile(r"token|key|session|auth|passw|secret|sig|code", re.I)
@@ -110,18 +114,26 @@ def domain_slug(url):
     return re.sub(r"[^a-z0-9.-]", "-", host)
 
 
-# Where `uv tool install` puts its entry points. A login shell normally adds this to PATH, a
-# non-login process (and macOS's default PATH) does not: resolve it explicitly, like install.ps1.
-LOCAL_BIN = Path.home() / ".local" / "bin"
+def find_crawl4ai_python():
+    """The Python of the uv tool venv that carries Crawl4AI, or None.
 
-
-def find_crwl():
-    """The crawl4ai CLI, from PATH or from the uv tool bin directory."""
-    exe = shutil.which("crwl")
-    if exe:
-        return exe
-    candidate = LOCAL_BIN / ("crwl.exe" if os.name == "nt" else "crwl")
-    return str(candidate) if candidate.is_file() else None
+    The setup installs Crawl4AI with `uv tool install crawl4ai`, so the venv lives under the
+    uv tool root. UV_TOOL_DIR wins; the defaults cover Windows (APPDATA), the XDG layout
+    (including XDG_DATA_HOME) and uv's plain home fallback."""
+    roots = []
+    if os.environ.get("UV_TOOL_DIR"):
+        roots.append(Path(os.environ["UV_TOOL_DIR"]))
+    if os.environ.get("XDG_DATA_HOME"):
+        roots.append(Path(os.environ["XDG_DATA_HOME"]) / "uv" / "tools")
+    roots.append(Path.home() / ".local" / "share" / "uv" / "tools")
+    if os.environ.get("APPDATA"):
+        roots.append(Path(os.environ["APPDATA"]) / "uv" / "tools")
+    for root in roots:
+        for rel in ("crawl4ai/Scripts/python.exe", "crawl4ai/bin/python"):
+            candidate = root / rel
+            if candidate.is_file():
+                return str(candidate)
+    return None
 
 
 def load_candidates(folder, max_pages):
@@ -274,21 +286,53 @@ def fetch_jina(urls, max_age_hours):
 
 
 def fetch_crawl4ai(urls, max_age_hours):
-    exe = find_crwl()
-    out = {}
-    if not exe:
-        return out
-    for url in urls:
+    """One helper run for every URL: one browser session, UTF-8 output file, no page text on
+    stdout. A helper failure is reported per URL; the caller turns it into a NOTE line."""
+    python = find_crawl4ai_python()
+    if not python:
+        return {url: "crawl4ai: the Crawl4AI venv python was not found" for url in urls}
+    env = dict(os.environ, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
+    # the helper stops itself after the same per-page budget plus its own 60 s grace; the parent
+    # waits 60 s longer, so the helper's missing-line records reach the file before we read it
+    budget = CRAWL4AI_TIMEOUT * max(1, (len(urls) + CRAWL4AI_CONCURRENCY - 1) // CRAWL4AI_CONCURRENCY) + 120
+    with tempfile.TemporaryDirectory(prefix="crawl4ai-") as tmp:
+        urls_file, out_file = Path(tmp) / "urls.json", Path(tmp) / "pages.jsonl"
+        urls_file.write_text(json.dumps(urls, ensure_ascii=False), encoding="utf-8")
         try:
-            proc = subprocess.run([exe, url, "-o", "markdown"], capture_output=True, text=True,
-                                  encoding="utf-8", timeout=180)
-        except (subprocess.TimeoutExpired, OSError):
-            out[url] = "crawl4ai: timeout or not startable"
+            proc = subprocess.run(
+                [python, str(CRAWL4AI_SCRIPT), str(urls_file), str(out_file),
+                 "--timeout", str(CRAWL4AI_TIMEOUT), "--concurrency", str(CRAWL4AI_CONCURRENCY)],
+                capture_output=True, text=True, encoding="utf-8", errors="replace",
+                timeout=budget, env=env)
+        except subprocess.TimeoutExpired:
+            return {url: f"crawl4ai: timeout after {budget} s" for url in urls}
+        except OSError as exc:
+            return {url: f"crawl4ai: not startable ({type(exc).__name__})" for url in urls}
+        lines = []
+        if out_file.is_file():
+            try:
+                lines = [line for line in out_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+            except UnicodeDecodeError:
+                return {url: "crawl4ai: output is not UTF-8" for url in urls}
+    if proc.returncode != 0 and not lines:
+        return {url: f"crawl4ai: the helper failed (exit {proc.returncode})" for url in urls}
+    records = {}
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except ValueError:
             continue
-        if proc.returncode == 0 and proc.stdout.strip():
-            out[url] = {"text": proc.stdout}
+        if isinstance(record, dict) and isinstance(record.get("url"), str):
+            records[record["url"]] = record
+    out = {}
+    for url in urls:
+        record = records.get(url)
+        if record is None:
+            out[url] = "crawl4ai: no line for this URL"
+        elif record.get("ok") and isinstance(record.get("markdown"), str):
+            out[url] = {"text": record["markdown"], "status": record.get("status")}
         else:
-            out[url] = "crawl4ai: no output"
+            out[url] = f"crawl4ai: {record.get('error') or 'HTTP ' + str(record.get('status'))}"
     return out
 
 
@@ -357,8 +401,8 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True):
         if name in KEYS and not _key(name):
             notes.append(f"{name}: no key in the environment, skipped")
             continue
-        if name == "crawl4ai" and not find_crwl():
-            notes.append("crawl4ai: crwl not on PATH, skipped - install it with the setup")
+        if name == "crawl4ai" and not find_crawl4ai_python():
+            notes.append("crawl4ai: the Crawl4AI venv python was not found, skipped - install it with the setup")
             continue
         todo = [u for u in info if u not in results
                 and not (name not in PROVIDERS and is_reddit(u))]
@@ -373,18 +417,25 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True):
             notes.append(f"{name}: stopped for this run ({exc})")
             continue
         for url, value in got.items():
+            reason = None
             if isinstance(value, str):
                 errors[url].append(value)
+                reason = value.removeprefix("crawl4ai: ") if name == "crawl4ai" else None
             elif len(normalize(value["text"])) < MIN_CHARS:
-                errors[url].append(f"{name}: text shorter than {MIN_CHARS} characters")
+                reason = f"text shorter than {MIN_CHARS} characters"
+                errors[url].append(f"{name}: {reason}")
             elif looks_like_error_page(value["text"]):
-                errors[url].append(f"{name}: looks like an error page, not the page")
+                reason = "looks like an error page, not the page"
+                errors[url].append(f"{name}: {reason}")
             else:
                 results[url], used[url] = value, name
+            if name == "crawl4ai" and reason is not None:
+                notes.append(f"crawl4ai: {url} -> {reason}")
     index, hashes, number = [], {}, 0
     wayback_failures = 0
     for url, cand in info.items():
-        entry = {"url": url, "type": cand.get("type"), "pass": cand.get("pass"), "lang": cand.get("lang")}
+        entry = {"url": url, "type": cand.get("type"), "pass": cand.get("pass"), "lang": cand.get("lang"),
+                 "attempts": errors[url]}
         if url not in results:
             reason = "; ".join(errors[url]) or "no method returned text"
             if is_reddit(url):

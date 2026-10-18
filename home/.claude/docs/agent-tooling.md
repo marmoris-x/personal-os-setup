@@ -68,30 +68,37 @@ a service when the local crawler cannot read a page:
 | Service | Calls per run | 90 runs = | Free allowance | Headroom |
 |---|---|---|---|---|
 | exa + exa-key (one `EXA_API_KEY`) | 10 | 900 searches | $10 a month at $7/1k = about 1,400 searches, plus $1/1k pages | about 1.4x with the page fallback (see below) |
-| parallel | 4 | 360 | 5,000 requests a month | 13x |
+| parallel | 8 | 720 | 5,000 requests a month | 6.9x |
 | you-free | 3 | 270 | 100 searches a day | 11x |
 | you | 3 | 270 searches | $100 one-time at $5/1k = 20,000 searches | 74x |
-| tavily | 3 | 270 credits | 1,000 credits a month | 3.7x |
+| tavily | 5 | 450 searches + 90 extract credits | 1,000 credits a month | 1.85x |
 | firecrawl | 2 | 180 net credits | 1,000 credits a month (search 2, feedback refunds 1) | 5.5x |
 | TinyFish | 4 | 360 | 500 searches an hour, 1,000 a day | 83x (daily) |
-| Serper (reserve) | 1 | 90 | 2,500 queries once (renewal not stated) | 27 months |
+| Serper (reserve, Austria only) | up to 3 | 270 worst case | 2,500 queries once (renewal not stated) | 9 months at three per run, 27 at the default one |
 
 Page fallback (`PAGE_CAP` in `save_pages.py`): at most 10 pages per run for exa, you, TinyFish
 and Jina, 5 for tavily and firecrawl; crawl4ai is local and unlimited. Worst case per month:
-exa/exa-key 900 searches ($6.30) + 900 pages ($0.90) = $7.20 of the $10 account; tavily 270
-search + 90 page credits (extract costs 1 credit per 5 URLs) = 360 of 1,000; firecrawl 180 +
-450 = 630 of 1,000; you 270 searches ($1.35) + 900 pages ($0.90) = $2.25 of the $100 (450
-search-equivalents at $5/1k); TinyFish 360 + 900 = 1,260 of 30,000. Every row stays inside its
-allowance.
+exa/exa-key 900 searches ($6.30) + 900 pages ($0.90) = $7.20 of the $10 account; tavily 450
+searches + 90 extract credits (1 credit per 5 URLs) = 540 of 1,000; firecrawl 180 net search
+credits + 450 scrape pages = 630 of 1,000; you 270 searches ($1.35) + 900 pages ($0.90) = $2.25
+of the $100 (450 search-equivalents at $5/1k); TinyFish 360 searches + 900 pages = 1,260 of
+30,000. Every row stays inside its allowance.
 The anonymous 150-calls-a-day Exa limit applies only when `EXA_API_KEY` is empty; with the key
 both Exa servers draw on the same $10 account.
 
-**Serper is the reserve.** Its single call per run is spent only when the question is local
-(Austria), German-language, about a price, a shop, an authority or something from the last few
-days. A general question never gets it. **No key means no call:** a keyed service whose
-variable is empty is skipped and reported, never called with an empty header; `parallel` and
-`you-free` need no key, and `exa` runs anonymously when its key is absent. The same rules stand in `skills/research/SKILL.md` and
+**Serper is the reserve for Austria.** Its calls per run, at most three, are spent only on a
+question about Austria with `gl=at` and `hl=de`; one in P1 is the default. A general question
+never gets it. **No key means no call:** a keyed service whose variable is empty is skipped and
+reported as `skipped: no key`, never called with an empty header; Serper is reported as
+`reserve`, not as missing. `parallel` and `you-free` need no key, and `exa` runs anonymously
+when its key is absent. The same rules stand in `skills/research/SKILL.md` and
 `agents/web-researcher.md`.
+
+**Measured 2026-10-18** from the transcripts of 18 earlier research runs: per run on average
+Exa 9.0 + exa-key 3.3 searches, parallel 6.1, tavily 4.3, firecrawl 3.1, you-free 3.3, you 2.4,
+TinyFish 2.3, Serper 5.7 (before the reserve rule). The Exa average (12.3 searches) was above
+the 10 cap; the run budget moves that work to parallel (8) and TinyFish (4), and the total
+search budget per run stays above the measured 33 calls. Serper drops from 5.7 to at most 3.
 
 **Accounts worth creating** (all free, no card): You.com (the $100 is the biggest
 allowance), Tavily, Firecrawl, Exa. Keys go through
@@ -128,7 +135,8 @@ readable page content, which the AI search services deliver directly.
 
 **Google access in 2026:** Google's own Custom Search JSON API is closed to new customers and
 ends on 2027-01-01. **Serper** returns real Google results: 2,500 free queries, no card (both on serper.dev, read 2026-09-29; whether the 2,500 renew is not stated).
-Used through the shell for local and German topics, next to the other services.
+The reserve for questions about Austria only (`gl=at`, `hl=de`), at most three queries per run;
+the 2,500 are a one-time allowance, so they do not renew.
 
 **Added to the stack:** Parallel (hosted MCP, no account, free rate limits; a free account adds
 $5 a month) and TinyFish (search and fetch free with a free key: 30 searches and 150 fetched URLs
