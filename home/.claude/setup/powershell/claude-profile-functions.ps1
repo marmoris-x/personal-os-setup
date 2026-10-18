@@ -25,6 +25,12 @@ $env:CLAUDE_CODE_GOAL_CHECKIN_MINUTES = '0'
 # never replaces it, so those profiles inherit the value either way.
 $env:CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR = '1'
 
+# Git read commands (status, branch, diff) take no optional index lock then, so they cannot
+# collide with Obsidian Git's auto-commit in the vault. Commits and writes still lock normally
+# (git docs, GIT_OPTIONAL_LOCKS). It stands here, beside the other environment values, so every
+# launcher below and every shell started from this profile has it.
+$env:GIT_OPTIONAL_LOCKS = '0'
+
 function claude-ds { claude --settings "{{HOME_ENV}}\.claude\profiles\deepseek.json" @args }
 function claude-or { claude --settings "{{HOME_ENV}}\.claude\profiles\openrouter.json" @args }
 # ---- End Claude Code ----

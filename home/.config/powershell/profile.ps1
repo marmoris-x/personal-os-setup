@@ -8,11 +8,16 @@
 # `unsupported` (setup/platforms.yaml). On a macOS or Linux machine setup/export.ps1 takes the
 # live file, exactly as it does for every other mirror file.
 
-# ---- Claude Code: provider profiles (version 11, 2026-09-26) ----
+# ---- Claude Code: provider profiles (version 12, 2026-10-18) ----
 #   claude      = Pro plan (Anthropic), uses only ~/.claude/settings.json
 #   claude-ds   = DeepSeek
 #   claude-or   = OpenRouter
 # All three start the same everywhere, also in {{VAULT}}.
+
+# Git read commands (status, branch, diff) take no optional index lock then, so they cannot
+# collide with Obsidian Git's auto-commit in the vault. Commits and writes still lock normally
+# (git docs, GIT_OPTIONAL_LOCKS).
+$env:GIT_OPTIONAL_LOCKS = '0'
 
 function claude-ds { claude --settings "{{HOME_ENV}}/.claude/profiles/deepseek.json" @args }
 function claude-or { claude --settings "{{HOME_ENV}}/.claude/profiles/openrouter.json" @args }
