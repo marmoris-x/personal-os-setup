@@ -276,6 +276,7 @@ home/.claude/setup/tests/research/test_build_references.py
 home/.claude/setup/tests/research/test_check_article.py
 home/.claude/setup/tests/research/test_check_note.py
 home/.claude/setup/tests/research/test_check_services.py
+home/.claude/setup/tests/research/test_fix_quotes.py
 home/.claude/setup/tests/research/test_save_pages.py
 home/.claude/setup/tests/research/test_store_results.py
 home/.claude/setup/tests/research/test_verify_evidence.py
@@ -305,6 +306,7 @@ home/.claude/skills/research/scripts/check_services.py
 home/.claude/skills/research/scripts/common.py
 home/.claude/skills/research/scripts/crawl4ai_fetch.py
 home/.claude/skills/research/scripts/fetch_page.py
+home/.claude/skills/research/scripts/fix_quotes.py
 home/.claude/skills/research/scripts/save_pages.py
 home/.claude/skills/research/scripts/store_results.py
 home/.claude/skills/research/scripts/verify_evidence.py
