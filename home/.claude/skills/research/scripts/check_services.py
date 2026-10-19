@@ -1,6 +1,10 @@
 """Count, from the harness transcripts, which of the nine search services a research run used.
 
-Usage: check_services.py [--session-id ID] [--projects-dir DIR] [--transcript-dir DIR ...]
+Usage: check_services.py [--keys] [--session-id ID] [--projects-dir DIR] [--transcript-dir DIR ...]
+
+With --keys it lists each key the skill needs as "set" or "MISSING" and exits 0 only when
+all six are set. The research skill runs that at the start: a key that was added to the user
+environment after the session started is not visible to the running process.
 
 The harness writes every tool call into the session transcript
 (~/.claude/projects/<project>/<session-id>.jsonl) and one transcript per subagent
@@ -42,6 +46,8 @@ PREFIX = {
 SHELL_HINTS = {"tinyfish": "api.search.tinyfish.ai", "serper": "google.serper.dev"}
 KEY_VAR = {"exa-key": "EXA_API_KEY", "tavily": "TAVILY_API_KEY", "firecrawl": "FIRECRAWL_API_KEY",
            "you": "YDC_API_KEY", "tinyfish": "TINYFISH_API_KEY"}
+KEY_NAMES = ("EXA_API_KEY", "YDC_API_KEY", "TAVILY_API_KEY", "FIRECRAWL_API_KEY",
+             "TINYFISH_API_KEY", "SERPER_API_KEY")
 RESERVE = "serper"
 
 
@@ -106,7 +112,18 @@ def main(argv=None):
                         default=str(Path.home() / ".claude" / "projects"))
     parser.add_argument("--transcript-dir", action="append", default=[],
                         help="a Workflow run's transcriptDir (repeatable); its agent-*.jsonl files count too")
+    parser.add_argument("--keys", action="store_true",
+                        help="list each research key as set or MISSING and exit")
     args = parser.parse_args(argv)
+    if args.keys:
+        missing = []
+        for name in KEY_NAMES:
+            if os.environ.get(name):
+                print(f"{name} set")
+            else:
+                print(f"{name} MISSING")
+                missing.append(name)
+        return 0 if not missing else 1
     if not args.session_id and not args.transcript_dir:
         print("ERROR no session id (pass --session-id or set CLAUDE_CODE_SESSION_ID, or --transcript-dir)")
         return 2

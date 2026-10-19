@@ -146,6 +146,7 @@ $unmanagedExclusions = @(
     @{ root = 'VAULT/000-meta';               pattern = '^auftraege/';                 reason = 'personal' }
     @{ root = 'VAULT/000-meta';               pattern = '^todo-archive/';              reason = 'archive' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-(state|inbox|conflicts)\.json$'; reason = 'runtime' }
+    @{ root = 'VAULT/000-meta';               pattern = '^life-os-expiry\.json$';      reason = 'runtime' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-runs\.log$';         reason = 'runtime' }
     @{ root = 'VAULT/000-meta';               pattern = '^scripts/build-sidecars\.py$'; reason = 'personal' }
 )

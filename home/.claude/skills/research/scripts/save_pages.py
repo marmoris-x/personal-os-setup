@@ -395,11 +395,42 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
     candidates, dropped = load_candidates(work / candidates_dir, max_pages)
     if not candidates:
         raise DataError("no usable candidates")
+    notes = [f"dropped (not fetchable): {u}" for u in dropped]
+    # A second call (the gap pass) must not fetch or save a URL the index already saved.
+    # A URL that FAILED before is retried: its old index entry is replaced, never duplicated.
+    previous, saved_urls, listed = [], set(), set()
+    index_file = pages / "index.json"
+    if index_file.is_file():
+        try:
+            loaded = json.loads(index_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            loaded = None
+        if isinstance(loaded, list):
+            for item in loaded:
+                if isinstance(item, dict) and item.get("url"):
+                    previous.append(item)
+                    url = clean_url(str(item["url"])) or str(item["url"])
+                    listed.add(url)
+                    if item.get("status") == "saved":
+                        saved_urls.add(url)
+    fresh, retried = [], set()
+    for cand in candidates:
+        if cand["url"] in saved_urls:
+            notes.append(f"skipped already saved: {cand['url']}")
+            continue
+        fresh.append(cand)
+        if cand["url"] in listed:
+            retried.add(cand["url"])
+    if not fresh:
+        return previous, notes
+    if retried:
+        previous = [item for item in previous
+                    if (clean_url(str(item["url"])) or str(item["url"])) not in retried]
+    candidates = fresh
     info = {c["url"]: c for c in candidates}
     errors = {u: [] for u in info}
     results, used = {}, {}
     dead = set()
-    notes = [f"dropped (not fetchable): {u}" for u in dropped]
     for name in ORDER:
         if name in KEYS and not _key(name):
             notes.append(f"{name}: no key in the environment, skipped")
@@ -434,7 +465,29 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
                 results[url], used[url] = value, name
             if name == "crawl4ai" and reason is not None:
                 notes.append(f"crawl4ai: {url} -> {reason}")
-    index, hashes, number = [], {}, 0
+    existing = []
+    for page in pages.glob("*.md"):
+        match = re.match(r"(\d+)-", page.name)
+        if match:
+            existing.append(int(match.group(1)))
+    number = max(existing, default=0)
+    index, hashes = list(previous), {}
+    # A second call must also recognise a new URL whose text is already saved under another
+    # URL. Rebuild the content hashes from the saved page bodies (the header is not content).
+    for item in previous:
+        if item.get("status") != "saved" or not item.get("file"):
+            continue
+        try:
+            saved_text = (pages / str(item["file"])).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        body = saved_text
+        if body.startswith("---"):
+            parts = body.split("\n---\n", 1)
+            if len(parts) == 2:
+                body = parts[1]
+        if body.strip():
+            hashes[content_hash(body)] = str(item["file"])
     wayback_failures = 0
     for url, cand in info.items():
         entry = {"url": url, "type": cand.get("type"), "pass": cand.get("pass"), "lang": cand.get("lang"),

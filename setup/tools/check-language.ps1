@@ -69,6 +69,7 @@ $exemptRules = @(
     @{ pattern = '^home/\.claude/skills/research/references/style-rules\.md$'; reason = 'style rules for the owner German research texts' },
     @{ pattern = '^home/\.claude/skills/research/scripts/.*\.py$';          reason = 'research tooling with German pattern data' },
     @{ pattern = '^home/\.claude/(skills/[^/]+/SKILL|agents/[^/]+)\.md$';   reason = 'quoted phrases the owner speaks - they trigger the skill' },
+    @{ pattern = '^home/\.claude/CLAUDE\.md$';                              reason = 'quoted trigger phrases the owner speaks (sehr gruendlich, ausfuehrlich)' },
     @{ pattern = '^home/\.claude/setup/other-harnesses/.*SKILL\.md$';       reason = 'quoted phrases the owner speaks (portable skill copies)' },
     @{ pattern = '^vault/\.claude/skills/[^/]+/SKILL\.md$';                 reason = 'quoted phrases the owner speaks' },
     @{ pattern = '^vault/(AGENTS|CLAUDE)\.md$';                             reason = 'the owner vault: names his own notes and note types' },

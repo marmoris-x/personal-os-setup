@@ -38,6 +38,16 @@ $ErrorActionPreference = 'Stop'
 $OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 
+# The research keys live in the Windows user environment. A shell started before
+# set-research-keys.ps1 keeps the old values; read the current ones once for this run, or a
+# claude-ds item starts without TINYFISH_API_KEY and silently skips that service.
+if ($env:OS -eq 'Windows_NT') {
+    foreach ($name in @('EXA_API_KEY', 'YDC_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'TINYFISH_API_KEY', 'SERPER_API_KEY')) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'User')
+        if ($value) { Set-Item -Path ('Env:' + $name) -Value $value }
+    }
+}
+
 function Fail([string]$Message) {
     [Console]::Error.WriteLine('batch-run: ' + $Message)
     exit 2

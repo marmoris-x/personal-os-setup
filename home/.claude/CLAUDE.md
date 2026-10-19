@@ -76,6 +76,8 @@ is more specific and wins where the two differ. My explicit request in the chat 
   services and exists in only one harness. It is not the cross-check either - a cross-check is
   two of the measured services agreeing.
 - Whenever the full text of a web page is needed, run fetch_page.py and read the saved file selectively: Grep for the terms you need, then Read only those line ranges; a page over 20,000 characters goes to an evidence-extractor or a reading subagent, never into the main context in one piece.
+- Research levels: quick-research for a few sources; research (standard) by default for a referenced answer; research deep only when I say "sehr gründlich", "deep" or "ausführlich", or for tax, benefit, law or money questions. State the level and its measured cost in one line before starting.
+- fetch_page.py lives at ~/.claude/skills/research/scripts/fetch_page.py; never search the disk for it.
 - Start the web-researcher as a plain subagent, never with a name: as a named teammate it
   silently loses its MCP servers and its `disallowedTools`. Researchers never write files; the
   skill `research` saves the result in `400-knowledge/research/`.

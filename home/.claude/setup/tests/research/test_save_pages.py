@@ -469,6 +469,49 @@ class SavePages(unittest.TestCase):
         self.assertEqual(len(calls), 2)
         self.assertNotIn("stopped for this run", out)
 
+    def test_a_second_call_skips_urls_that_index_json_already_lists(self):
+        # The gap pass calls save_pages.py a second time. A URL already in pages/index.json
+        # must not be fetched or saved again, and the index must list it exactly once.
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/b"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG + " A"),
+                              ("https://example.org/b", "B", LONG + " B"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(len(self.index()), 2)
+        (self.work.path / "candidates" / "p1.jsonl").unlink()
+        self.candidates({"url": "https://example.org/b"}, {"url": "https://example.org/c"})
+        self.net.exa = exa_ok(("https://example.org/b", "B", LONG + " B"),
+                              ("https://example.org/c", "C", LONG + " C"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertIn("NOTE skipped already saved: https://example.org/b", out)
+        urls = [i["url"] for i in self.index()]
+        self.assertEqual(sorted(urls), ["https://example.org/a", "https://example.org/b",
+                                        "https://example.org/c"])
+        self.assertEqual(urls.count("https://example.org/b"), 1)
+        # B was not requested again: the last exa call carries only C.
+        exa_bodies = [c[3] for c in self.net.calls if c[1].startswith("https://api.exa.ai")]
+        self.assertEqual(exa_bodies[-1]["urls"], ["https://example.org/c"])
+        self.assertEqual(len(list((self.work.path / "pages").glob("*.md"))), 3)
+
+    def test_a_second_call_marks_a_new_url_with_the_same_text_as_duplicate(self):
+        # A different URL can serve the same page. The second call must keep the content
+        # hashes of the first call and mark the new URL duplicate, never save it twice.
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG + " same body"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        first_file = self.index()[0]["file"]
+        (self.work.path / "candidates" / "p1.jsonl").unlink()
+        self.candidates({"url": "https://mirror.example.org/a"})
+        self.net.exa = exa_ok(("https://mirror.example.org/a", "A mirror", LONG + " same body"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        entries = {i["url"]: i for i in self.index()}
+        self.assertEqual(entries["https://mirror.example.org/a"]["status"], "duplicate")
+        self.assertEqual(entries["https://mirror.example.org/a"]["duplicate_of"], first_file)
+        self.assertEqual(len(list((self.work.path / "pages").glob("*.md"))), 1)
+
     def test_nothing_usable_is_an_error(self):
         self.candidates({"url": "http://localhost/x"})
         code, out = self.run_script()

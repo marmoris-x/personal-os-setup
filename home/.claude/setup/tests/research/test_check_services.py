@@ -125,6 +125,25 @@ class CheckServices(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("you 0", out)
 
+    def test_keys_mode_lists_each_key_as_set(self):
+        # The research skill calls this at the start: a missing key must be visible there,
+        # not only at the end when a pass silently skipped a service.
+        env = dict(self.env)
+        env.update(ALL_KEYS)
+        code, out = run_script("check_services.py", "--keys", env=env)
+        self.assertEqual(code, 0, out)
+        for name in KEY_NAMES:
+            self.assertIn(f"{name} set", out)
+
+    def test_keys_mode_reports_a_missing_key(self):
+        env = dict(self.env)
+        env.update(ALL_KEYS)
+        env.pop("TINYFISH_API_KEY", None)
+        code, out = run_script("check_services.py", "--keys", env=env)
+        self.assertEqual(code, 1, out)
+        self.assertIn("TINYFISH_API_KEY MISSING", out)
+        self.assertIn("EXA_API_KEY set", out)
+
     def test_unknown_session_is_an_error(self):
         code, out = run_script("check_services.py", "--session-id", "does-not-exist",
                                "--projects-dir", str(self.projects), env=self.env)

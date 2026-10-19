@@ -121,6 +121,41 @@ completed agents (26 started: the killed save-pages agent counts), 0 errors. Tin
 twice in this run; the first main run lacked its key and correctly skipped it, so the session
 environment differed between the two runs while the workflow behaved correctly in both.
 
+### Lean workflow (2026-10-19)
+
+The lean two-level workflow was measured on the same question in the main `claude-ds`
+session, at peak `deepseek-flash` prices. Standard used two search passes, a 15-page cap and
+no gap pass; deep used P1 to P3, stopped after P1 to P3 on the early-finish rule (25 unique
+candidates from 8 domains; P4 skipped) and ran the gap pass. All agents ran on
+`deepseek-flash`.
+
+| Measure | Standard | Deep |
+|---|---|---|
+| Duration | 21.9 min | 19.6 min |
+| Agents | 10 (2 search, 1 save, 2 extract, 1 verify, 1 writer, 1 repair, 2 check) | 15 (P1-P3 + gap, 1 save, 5 extract, 1 verify, 1 writer, 1 repair, 2 check) |
+| Agent tokens | 10,935,945 (input 1,647,921 + cache_read 9,031,552 + output 256,472) | 23,240,395 (input 2,346,609 + cache_read 20,521,216 + output 372,570) |
+| Main-session tokens | 13,411,162 all assistant records; 6,202,712 deduplicated by message id | 1,196,998 |
+| Total tokens | 24,347,107 (17,138,657 deduplicated) | 24,437,393 |
+| Pages | 14 unique, 0 duplicates (15 candidates, 1 failed) | 34 unique, 0 duplicates |
+| Verified evidence | 35 (23 exact, 12 markdown-stripped) | 85 |
+| `check_article.py` | 4 errors, 8 warnings, 1 repair round (11 -> 4) | 0 errors, 0 warnings, 1 repair round (3 -> 0) |
+| Cost at peak `deepseek-flash` | 1.0027 USD (agents 0.8563; deduplicated 0.9248) | 1.2905 USD (agents 1.2742) |
+
+The standard answer and the deep answer both state 0.50 Euro per car kilometre, 0.25 Euro
+for motorcycle and bicycle and 0.15 Euro per passenger.
+
+**Decision: not accepted as it stands.** Deep meets the total-token target (24.4M against
+33.8M), the zero-error target (0 errors, 1 of 2 repairs) and the evidence target (85 against
+60), but costs 1.2905 USD, 0.09 USD over the 1.20 USD target. Standard misses both the
+zero-error target (4 errors after its one repair) and the 0.50 USD cost target (1.0027 USD;
+0.9248 USD even when the main-session records are deduplicated). The criteria were not
+loosened. Standard remains the code default as the task requested, but it is not accepted for
+production use until a new measurement passes; the owner decides whether to keep or revert it.
+The table measures the first candidate. After the review, the gap pass was moved behind
+verification (it now reads `verified.jsonl`) and the extractor groups were balanced (34 pages
+become 7,7,7,7,6 instead of 8,8,8,8,2); the corrected code needs its own measurement, as does
+the cost reduction and the standard repair.
+
 ## Alternatives
 
 - **Leave the skill as it is.** Rejected: the main context carried every intermediate result,
