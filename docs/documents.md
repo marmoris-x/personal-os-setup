@@ -46,8 +46,10 @@ in the repo.
 
 ## Privacy, the hard lines
 
-- No ID, insurance or account numbers in notes, sidecars or frontmatter
-  (vault `AGENTS.md`); such details are read when needed, never copied.
+- Agents never copy ID numbers, social insurance numbers, account numbers or
+  dates of birth into notes or frontmatter; the machine-extracted full text of
+  `600-archive` sidecars is exempt and never hand-edited. Such details are read
+  when needed, never copied into the agent's own text.
 - The archive is never searched, tidied, renamed or deleted (guard + rule 2).
 - The vault `.gitignore` keeps `600-archive/` out of the vault's Git state — sidecars
   stay local, but go into the Kopia backup. That is intended.

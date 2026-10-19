@@ -201,7 +201,9 @@ dialog. The research rules are in `~/.claude/docs/research-standard.md`.
   vendor can read. This vault is plain Markdown and must stay portable.
   (qmd, at about 100 sources, is a proposal to me, not something you set up.)
 - Do NOT restructure folders or rename many files without asking.
-- Do NOT write ID numbers, social insurance numbers or dates of birth
-  into any note, sidecar or frontmatter key. Read them from a document
-  when a task needs them; never copy them into the vault.
+- Do NOT copy ID numbers, social insurance numbers, account numbers or
+  dates of birth into notes or frontmatter keys. Read them from a document
+  when a task needs them; never write them into your own text. The
+  machine-extracted full text of `600-archive` sidecars is exempt: it stays
+  as extracted and is never hand-edited.
 - Do NOT add emojis to notes.
