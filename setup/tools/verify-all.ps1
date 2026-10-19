@@ -1834,15 +1834,18 @@ if (Test-Selected 'V') { try {
         # with a fixture. So the address and the owner are replaced before the scan; everything
         # else in the log is scanned as it stands.
         $masked = 0
+        $before = $logText
         if ($slugHere -match '^[^/]+/[^/]+$') {
             $ownerHere = $slugHere.Split('/')[0]
-            $before = $logText
             if ($ownerHere) {
                 $logText = [regex]::Replace($logText, ('(?<![A-Za-z0-9-])' + [regex]::Escape($ownerHere) + '(?![A-Za-z0-9-])'), 'OWNER')
             }
             $logText = $logText.Replace($slugHere, 'OWNER/REPOSITORY')
-            if ($logText -cne $before) { $masked = 1 }
         }
+        # The runner writes a random _temp folder into the log; its GUID can contain twelve
+        # digits and trips the SVNR rule. It is runner state, not a personal value.
+        $logText = [regex]::Replace($logText, '([\\/]_temp[\\/])[A-Za-z0-9_-]{8,}', '$1TEMP')
+        if ($logText -cne $before) { $masked = 1 }
         $logFile = Join-Path $logDir 'run.log'
         [IO.File]::WriteAllText($logFile, $logText, (New-Object Text.UTF8Encoding($false)))
         # A run that never started has no log: `gh run view --log` then answers with its own error
