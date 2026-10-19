@@ -144,17 +144,17 @@ candidates from 8 domains; P4 skipped) and ran the gap pass. All agents ran on
 The standard answer and the deep answer both state 0.50 Euro per car kilometre, 0.25 Euro
 for motorcycle and bicycle and 0.15 Euro per passenger.
 
-**Decision: not accepted as it stands.** Deep meets the total-token target (24.4M against
-33.8M), the zero-error target (0 errors, 1 of 2 repairs) and the evidence target (85 against
-60), but costs 1.2905 USD, 0.09 USD over the 1.20 USD target. Standard misses both the
-zero-error target (4 errors after its one repair) and the 0.50 USD cost target (1.0027 USD;
-0.9248 USD even when the main-session records are deduplicated). The criteria were not
-loosened. Standard remains the code default as the task requested, but it is not accepted for
-production use until a new measurement passes; the owner decides whether to keep or revert it.
-The table measures the first candidate. After the review, the gap pass was moved behind
-verification (it now reads `verified.jsonl`) and the extractor groups were balanced (34 pages
-become 7,7,7,7,6 instead of 8,8,8,8,2); the corrected code needs its own measurement, as does
-the cost reduction and the standard repair.
+**Decision (owner, 2026-10-19): keep the lean workflow for deep; turn standard off.**
+Deep meets the total-token target (24.4M against 33.8M), the zero-error target (0 errors,
+1 of 2 repairs) and the evidence target (85 against 60). It costs 1.2905 USD against 2.26 USD
+for the accepted workflow, 0.09 USD over the 1.20 USD target; that one miss is recorded, not
+loosened. Standard is off: 4 errors and 1.0027 USD, almost the cost of deep. Research runs
+deep until standard is fixed; the standard branch stays in the code for a later measurement
+but is not selectable. The table measures the first candidate; after the review the gap pass
+moved behind verification (it reads `verified.jsonl`) and the extractor groups were balanced
+(34 pages -> 7,7,7,7,6), so the corrected deep path needs a new measurement; 1.2905 USD is the
+measured first candidate. The deep run used 15 agents (14 without the one repair), one over
+the design target of 14; recorded, not hidden.
 
 ## Alternatives
 

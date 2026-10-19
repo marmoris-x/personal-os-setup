@@ -58,8 +58,11 @@ const SKILL = need('skill_dir')
 const STANDARD = need('research_standard')
 const STYLE = need('style_rules')
 const SERPER_ALLOWED = A.serper_allowed === true
-const LEVEL = String(A.level || 'standard').toLowerCase() === 'deep' ? 'deep' : 'standard'
-const DEEP = LEVEL === 'deep'
+// Standard is off until fixed (owner decision 2026-10-19: 4 errors, 1.00 USD). Every run is
+// deep; the standard branch stays for a later measurement but is never selected.
+if (String(A.level || '').toLowerCase() === 'standard') log('NOTE standard level is off; running deep')
+const LEVEL = 'deep'
+const DEEP = true
 const GAP_PASS = DEEP && A.gap_pass === true
 const MAX_PAGES = DEEP ? 40 : 15
 const MAX_REPAIRS = DEEP ? 2 : 1
