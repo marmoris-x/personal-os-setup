@@ -138,6 +138,8 @@ $unmanagedExclusions = @(
     @{ root = 'HOME/.claude';                 pattern = '^setup/(SETUP-GUIDE\.md|installed-tools\.md|restore-tools\.ps1)$'; reason = 'history' }
     # DOCUMENTS/PowerShell
     @{ root = 'DOCUMENTS/PowerShell';         pattern = '^Modules/';                   reason = 'runtime' }        # reinstalled programs, not the person's profile
+    @{ root = 'DOCUMENTS/PowerShell';         pattern = '^Microsoft\.PowerShell_profile\.ps1\.bak-'; reason = 'runtime' }  # restore-tools backup before it appends the key import
+    @{ root = 'DOCUMENTS/WindowsPowerShell';  pattern = '^Microsoft\.PowerShell_profile\.ps1\.bak-'; reason = 'runtime' }  # the 5.1 twin's backup
     # VAULT/.obsidian
     @{ root = 'VAULT/.obsidian';              pattern = '^workspace.*\.json$';         reason = 'runtime' }        # Obsidian window state
     @{ root = 'VAULT/.obsidian';              pattern = '^plugins/[^/]+/(main\.js|styles\.css|manifest\.json|[^/]+\.sh)$'; reason = 'plugin-code' }

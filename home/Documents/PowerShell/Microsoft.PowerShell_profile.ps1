@@ -98,3 +98,137 @@ function Sync-AgentInstructions {
 }
 Sync-AgentInstructions
 # ---- End ----
+
+# ---- Claude Code: provider profiles (version 13, 2026-10-16) ----
+# Insert into BOTH PowerShell profiles (Windows PowerShell 5.1 and PowerShell 7):
+#   {{PWSH_HOST}} -NoProfile -Command '$PROFILE'   -> path for 5.1
+#   {{PWSH_EXE}}       -NoProfile -Command '$PROFILE'   -> path for 7
+#
+#   claude      = Pro plan (Anthropic), uses only ~/.claude/settings.json
+#   claude-ds   = DeepSeek
+#   claude-or   = OpenRouter
+# All three start the same everywhere, also in {{VAULT}}.
+
+# No idle /goal check-ins: they wake a session that is waiting for nobody and resend the whole
+# context. The official switch is the environment variable below (code.claude.com/docs/en/costs).
+# It is set here, where the profile sets its other environment values, so it holds for `claude`,
+# `claude-ds` and `claude-or` alike.
+$env:CLAUDE_CODE_GOAL_CHECKIN_MINUTES = '0'
+
+# Claude Code returns to the project folder after every Bash and PowerShell command (docs: "Return
+# to the original working directory after each Bash or PowerShell command in the main session").
+# That is what stops a cd in one command from moving the next one - and it is why a test command
+# must name its own folder (measured 2026-10-16: a Set-Location from an earlier call was gone in
+# the next one, and a test commit landed in the real repository). The value also stands in
+# settings.json, where every session reads it; this file is where the setup's environment values
+# live, beside the goal-check-in above. The --settings profiles are not the reason for the line:
+# measured 2026-10-16 against the docs, such a file is applied above settings.json per key and
+# never replaces it, so those profiles inherit the value either way.
+$env:CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR = '1'
+
+# Git read commands (status, branch, diff) take no optional index lock then, so they cannot
+# collide with Obsidian Git's auto-commit in the vault. Commits and writes still lock normally
+# (git docs, GIT_OPTIONAL_LOCKS). It stands here, beside the other environment values, so every
+# launcher below and every shell started from this profile has it.
+$env:GIT_OPTIONAL_LOCKS = '0'
+
+# The six research keys live in the Windows user environment (set-research-keys.ps1). A
+# terminal or session started before the keys were set keeps the old environment, so every
+# claude-ds start copies the current user values into this process. ASCII only (5.1).
+function Import-ResearchKeys {
+    if ($env:OS -ne 'Windows_NT') { return }
+    foreach ($name in @('EXA_API_KEY', 'YDC_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'TINYFISH_API_KEY', 'SERPER_API_KEY')) {
+        $value = [Environment]::GetEnvironmentVariable($name, 'User')
+        if ($value) { Set-Item -Path ('Env:' + $name) -Value $value }
+    }
+}
+function claude-ds { Import-ResearchKeys; claude --settings "{{HOME_ENV}}\.claude\profiles\deepseek.json" @args }
+function claude-or { claude --settings "{{HOME_ENV}}\.claude\profiles\openrouter.json" @args }
+# ---- End Claude Code ----
+
+# ---- The same global instructions for all agent harnesses (version 11, 2026-09-28) ----
+# Source: ~/.claude/CLAUDE.md plus every rule in ~/.claude/rules/. OpenCode reads
+# CLAUDE.md directly; Codex (~/.codex/AGENTS.md), Gemini CLI (~/.gemini/GEMINI.md)
+# and DeepSeek Harness (~/.dsh/AGENTS.md, DSH_HOME = ~/.dsh) get one assembled copy,
+# but only if the program in question is installed (its folder exists).
+#
+# Why the rules are appended here: Claude Code only loads a rule file when Claude
+# reads a file matching its "paths" frontmatter. No other harness understands that
+# field, so for them the patterns have to be written out as text - "Applies to: ..."
+# above each rule - and every rule is always present.
+#
+# Runs every time PowerShell starts and only writes when the source is newer.
+
+function Get-RuleAppliesTo {
+    # Reads the "paths:" value from a rule's YAML frontmatter. Accepts both a
+    # comma-separated string and a YAML list, and returns one readable line.
+    param([string]$Text)
+    $m = [regex]::Match($Text, '(?s)^\s*---\s*\r?\n(.*?)\r?\n---')
+    if (-not $m.Success) { return '' }
+    $out = @()
+    $inPaths = $false
+    foreach ($line in ($m.Groups[1].Value -split '\r?\n')) {
+        if ($line -match '^\s*paths\s*:\s*(.*)$') {
+            $inPaths = $true
+            $v = $Matches[1].Trim().Trim('[', ']')
+            if ($v) { $out += $v }
+            continue
+        }
+        if ($inPaths) {
+            if ($line -match '^\s*-\s*(.+)$') { $out += $Matches[1].Trim() }
+            elseif ($line -match '^\S') { $inPaths = $false }   # next top-level key
+        }
+    }
+    if ($out.Count -eq 0) { return '' }
+    $joined = ($out -join ', ') -replace '["'']', ''
+    return ($joined -replace '\s{2,}', ' ').Trim()
+}
+
+function Sync-AgentInstructions {
+    $src = Join-Path {{HOME_ENV}} '.claude\CLAUDE.md'
+    if (-not (Test-Path $src)) { return }
+    $rulesDir = Join-Path {{HOME_ENV}} '.claude\rules'
+
+    $ruleFiles = @()
+    if (Test-Path $rulesDir) {
+        $ruleFiles = @(Get-ChildItem $rulesDir -Filter '*.md' -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ne 'README.md' } | Sort-Object Name)
+    }
+
+    $newest = (Get-Item $src).LastWriteTime
+    foreach ($r in $ruleFiles) { if ($r.LastWriteTime -gt $newest) { $newest = $r.LastWriteTime } }
+
+    $targets = @(
+        (Join-Path {{HOME_ENV}} '.codex\AGENTS.md'),
+        (Join-Path {{HOME_ENV}} '.gemini\GEMINI.md'),
+        (Join-Path {{HOME_ENV}} '.dsh\AGENTS.md')
+    )
+    $oc = Join-Path {{HOME_ENV}} '.config\opencode\AGENTS.md'
+    if (Test-Path $oc) { $targets += $oc }   # only if OpenCode has a file of its own
+
+    $needsWrite = $false
+    foreach ($dst in $targets) {
+        if (-not (Test-Path (Split-Path $dst))) { continue }    # program not installed
+        if ((-not (Test-Path $dst)) -or ((Get-Item $dst).LastWriteTime -lt $newest)) { $needsWrite = $true }
+    }
+    if (-not $needsWrite) { return }
+
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.Append((Get-Content $src -Raw).TrimEnd())
+    foreach ($r in $ruleFiles) {
+        $body = Get-Content $r.FullName -Raw
+        $applies = Get-RuleAppliesTo $body
+        $body = ($body -replace '(?s)^\s*---\s*\r?\n.*?\r?\n---\s*\r?\n', '').Trim()
+        [void]$sb.Append("`r`n`r`n---`r`n`r`n## Rule: $($r.BaseName)`r`n`r`n")
+        if ($applies) { [void]$sb.Append("Applies to: $applies`r`n`r`n") }
+        [void]$sb.Append($body + "`r`n")
+    }
+    $content = $sb.ToString()
+
+    foreach ($dst in $targets) {
+        if (-not (Test-Path (Split-Path $dst))) { continue }
+        [IO.File]::WriteAllText($dst, $content, (New-Object Text.UTF8Encoding($false)))
+    }
+}
+Sync-AgentInstructions
+# ---- End ----
