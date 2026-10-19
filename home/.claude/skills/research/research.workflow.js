@@ -9,7 +9,7 @@
 //     8 domains ("NOTE early finish"), the gap pass for a tax/benefit/law question, at most
 //     40 pages, at most two repair rounds.
 // The workflow runs: search -> write candidates and save pages (one agent) -> extract ->
-// write evidence and verify_evidence.py (one agent) -> writer -> save the text and run
+// write evidence and verify_evidence.py (one agent) -> writer -> fix_quotes.py, save the text,
 // build_references.py/check_article.py (one agent), with the warning pass shown once.
 //
 // Input (args, all pass-through):
@@ -34,7 +34,7 @@ export const meta = {
     { title: 'Extract', detail: 'one evidence-extractor per 8 pages, at most 5' },
     { title: 'Verify', detail: 'one agent writes the evidence files and runs verify_evidence.py' },
     { title: 'Write', detail: 'research-writer, whole text in one reply' },
-    { title: 'Check', detail: 'one agent saves the text and runs build_references.py and check_article.py' },
+    { title: 'Check', detail: 'one agent repairs near-miss quotes, saves the text and runs build_references.py and check_article.py' },
   ],
 }
 
@@ -496,12 +496,13 @@ async function checkArticle(round, text) {
   const checkPrompt = [
     'Write this text unchanged to ' + WORK + '\\draft\\draft.md (UTF-8, create the folder). Do not edit a word.',
     text,
-    'Then in the work folder ' + WORK + ' run these three commands in this order, stopping only if one fails to start:',
-    '1. python -I -X utf8 "' + SKILL + '\\scripts\\verify_evidence.py" "' + WORK + '" --check-draft "' + WORK + '\\draft\\draft.md"',
-    '2. python -I -X utf8 "' + SKILL + '\\scripts\\build_references.py" "' + WORK + '" --draft "' + WORK + '\\draft\\draft.md" --out "' + WORK + '\\draft\\article.md" --lang ' + ANSWER_CODE + ' --pages-prefix "../../500-sources/research/' + DATE + '-' + SLUG + '/pages/"',
-    '3. python -I -X utf8 "' + SKILL + '\\scripts\\check_article.py" "' + WORK + '\\draft\\article.md" --workdir "' + WORK + '" --lang ' + ANSWER_CODE,
-    'Return problems (the error count of check 3), warnings (its warning count), at most 20 error lines, at most 10 warning lines (warning_lines), the article path, and the last 40 lines of output. ' +
-      'Never edit the article or the draft yourself. If check 3 has a "how this text was made" section and the language is not English, German or Arabic, add --skip-sections with that heading.',
+    'Then in the work folder ' + WORK + ' run these four commands in this order, stopping only if one fails to start:',
+    '1. python -I -X utf8 "' + SKILL + '\\scripts\\fix_quotes.py" "' + WORK + '\\draft\\draft.md" --workdir "' + WORK + '"',
+    '2. python -I -X utf8 "' + SKILL + '\\scripts\\verify_evidence.py" "' + WORK + '" --check-draft "' + WORK + '\\draft\\draft.md"',
+    '3. python -I -X utf8 "' + SKILL + '\\scripts\\build_references.py" "' + WORK + '" --draft "' + WORK + '\\draft\\draft.md" --out "' + WORK + '\\draft\\article.md" --lang ' + ANSWER_CODE + ' --pages-prefix "../../500-sources/research/' + DATE + '-' + SLUG + '/pages/"',
+    '4. python -I -X utf8 "' + SKILL + '\\scripts\\check_article.py" "' + WORK + '\\draft\\article.md" --workdir "' + WORK + '" --lang ' + ANSWER_CODE,
+    'Return problems (the error count of check 4), warnings (its warning count), at most 20 error lines, at most 10 warning lines (warning_lines), the article path, and the last 40 lines of output. ' +
+      'Never edit the article or the draft yourself. If check 4 has a "how this text was made" section and the language is not English, German or Arabic, add --skip-sections with that heading.',
   ].join('\n')
   return agent(checkPrompt, { schema: CHECK_SCHEMA, label: 'check-' + round, phase: 'Check' })
 }

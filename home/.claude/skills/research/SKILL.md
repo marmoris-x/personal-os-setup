@@ -209,24 +209,30 @@ Start `research-writer` (plain, foreground). Prompt: the question, answer langua
 source languages, absolute paths of `research-standard.md`,
 `${CLAUDE_SKILL_DIR}/references/style-rules.md` and `evidence\verified.jsonl`, one hint per
 terminology finding from `term_variants`, and: never write a reference number itself, only the
-`[[E12]]` markers. Add that the whole text must come back in one reply that stays well under the
+`[[E12]]` markers. Say that `fix_quotes.py` replaces a fragment at least 90 % the same with the
+evidence's exact wording as a safety net, but that the rule stays: quotes are copied character
+for character. Add that the whole text must come back in one reply that stays well under the
 output-token limit (64000 in the DeepSeek profile); shorter is better than the error. A writer
 that returns no text (the output-token error, for example) is started once more, at most twice,
 then the run stops with that report. Save its text unchanged as `draft\draft.md`.
 
 ## 8. Build and check (at most two repair rounds)
 
-1. `verify_evidence.py <work folder> --check-draft draft\draft.md` (fragments must be word
+1. `fix_quotes.py draft\draft.md --workdir <work folder>`: every fragment that is not a word
+   sequence of its evidence but is at least 90 % the same is replaced with the evidence's exact
+   wording in the paragraph and the compose comment; prints `NOTE quote fixed` per change. No
+   model is called. A fragment below 90 % is left for the repair round.
+2. `verify_evidence.py <work folder> --check-draft draft\draft.md` (fragments must be word
    sequences of their evidence and stand in their paragraph).
-2. `build_references.py <work folder> --draft draft\draft.md --out draft\article.md --lang <answer
+3. `build_references.py <work folder> --draft draft\draft.md --out draft\article.md --lang <answer
    code> --pages-prefix ../../500-sources/research/<date>-<slug>/pages/` (numbers by first
    appearance, links with text fragments, the reference list).
-3. `check_article.py draft\article.md --workdir <work folder> --lang <answer code>` (add
+4. `check_article.py draft\article.md --workdir <work folder> --lang <answer code>` (add
    `--skip-sections "<heading of the 'how this text was made' section>"` when the answer language
    is not English, German or Arabic).
 
-Errors from 1 or 3 go back to the same writer (SendMessage with the writer's id): quote the
-problem lines, ask for the whole corrected text, save it, run 1 to 3 again. After the level's
+Errors from 2 or 4 go back to the same writer (SendMessage with the writer's id): quote the
+problem lines, ask for the whole corrected text, save it, run 1 to 4 again. After the level's
 repair cap with errors left (two rounds; standard is off), stop and report them. Note
 the number of problems of the first check round and
 the number of repair rounds; both go into the report. Warnings (style patterns, own-word share, claims without a
@@ -241,6 +247,7 @@ error. Never edit the text yourself: you would break the checked fragments.
 - `save_pages.py` deduplicated five subpages of one doc to a single file because navigation and intro are identical -> `fetch_page.py` passes `dedupe=False`; when subpages of one doc share a header, check `pages/index.json` for collapsed pages.
 - A subagent cannot ask the user anything; a run once waited for a language choice that never came -> ask the languages in the main session before the first agent starts.
 - A change that touches more than 20 files was made without asking first (2026-10-19) -> ask the owner before such a change, not after.
+- The writer retyped a quote by one word and `check_article.py` failed the run after two repair rounds (2026-10-19) -> `fix_quotes.py` now replaces a fragment that is at least 90 % the same with the evidence's exact span before the check; the writer's exact-copy rule stays.
 
 ## 9. Save
 

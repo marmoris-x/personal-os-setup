@@ -147,14 +147,48 @@ for motorcycle and bicycle and 0.15 Euro per passenger.
 **Decision (owner, 2026-10-19): keep the lean workflow for deep; turn standard off.**
 Deep meets the total-token target (24.4M against 33.8M), the zero-error target (0 errors,
 1 of 2 repairs) and the evidence target (85 against 60). It costs 1.2905 USD against 2.26 USD
-for the accepted workflow, 0.09 USD over the 1.20 USD target; that one miss is recorded, not
-loosened. Standard is off: 4 errors and 1.0027 USD, almost the cost of deep. Research runs
+for the accepted workflow. The owner later set the deep cost limit to **1.50 USD** at peak
+`deepseek-flash` price: the two corrected runs below differ by 0.12 USD, so the 0.03 USD miss
+against the earlier 1.40 USD estimate is within run-to-run noise; the quality criteria are
+unchanged. Standard is off: 4 errors and 1.0027 USD, almost the cost of deep. Research runs
 deep until standard is fixed; the standard branch stays in the code for a later measurement
 but is not selectable. The table measures the first candidate; after the review the gap pass
 moved behind verification (it reads `verified.jsonl`) and the extractor groups were balanced
 (34 pages -> 7,7,7,7,6), so the corrected deep path needs a new measurement; 1.2905 USD is the
 measured first candidate. The deep run used 15 agents (14 without the one repair), one over
 the design target of 14; recorded, not hidden.
+
+### Repeated deep runs with deterministic quoting (2026-10-19)
+
+`fix_quotes.py` (skill `research`, scripts folder) repairs a fragment that is not a word
+sequence of its evidence when the evidence holds a contiguous span with at least 90 % token
+similarity (matches divided by the longer side, so a truncated span loses the words it
+dropped); the exact span replaces the fragment in the paragraph and the compose comment. No
+model is called. Two fresh deep runs used the same question and plan at peak `deepseek-flash`
+prices.
+
+| Measure | Run 1 | Run 2 |
+|---|---|---|
+| Agents | 17 | 17 |
+| Agent tokens | 27,459,292 (input 2,259,712 + cache_read 24,747,008 + output 452,572) | 27,455,417 (input 2,603,662 + cache_read 24,388,480 + output 463,275) |
+| Main-session tokens | 380,606 | 1,163,812 |
+| Total tokens | 27,839,898 | 28,619,229 |
+| Pages | 38 unique, 0 duplicates | 35 unique, 0 duplicates |
+| Verified evidence | 82 | 81 |
+| `check_article.py` | 0 errors, 5 warnings, 1 repair round | 0 errors, 5 warnings, 1 repair round |
+| Duration | 27.4 min | 28.0 min |
+| Cost at peak `deepseek-flash` | 1.3722 USD (agents 1.3695; main 0.0027) | 1.4917 USD (agents 1.4834; main 0.0083) |
+
+Both runs skipped P4 on the early-finish rule, ran the gap pass, and state 0.50 Euro per car
+kilometre, 0.25 Euro for motorcycle and bicycle and 0.15 Euro per passenger. `fix_quotes.py`
+reported `FIX-QUOTES: 0 fixed` on both final drafts: the writer wrote exact fragments, so the
+new repair path was not needed in these runs; its eight tests cover the repair. The owner
+accepted both runs on 2026-10-19: 0 errors, 1 repair round, 82 and 81 verified, 27.84M and
+28.62M tokens, the same amounts, and an average cost of **1.4320 USD** under the owner's
+**1.50 USD** deep limit (1.4265 USD even without the main-session records). The 0.03 USD
+above the earlier 1.40 USD estimate is within the 0.12 USD spread between the two runs; the
+quality criteria were not changed. The table and the decision are committed, exported and
+pushed with the fix.
 
 ## Alternatives
 

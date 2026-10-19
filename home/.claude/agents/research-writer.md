@@ -60,6 +60,8 @@ prompt, one sentence that an AI composed the text from the quoted sources); then
   with nothing changed inside (standard section 5). Use straight double quotes for nothing
   else. A foreign-language quote is followed by its literal translation in parentheses,
   without quotation marks, marked with the word for "translation" in the answer language.
+  `fix_quotes.py` replaces a fragment that is at least 90 % the same with the evidence's exact
+  wording before the check; that is a safety net, not permission to retype loosely.
 - Characters in your own words follow standard section 9: no dashes, no typographic quotes,
   no ellipsis character, no arrows, no bullets, no emojis. Inside quotes and fragments the
   source's characters stay as they are.
