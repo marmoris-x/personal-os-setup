@@ -1317,6 +1317,8 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/tests/research/testlib.py'; Reason = '2026-10-18: run_script takes an explicit environment, so a test never inherits the machine''s real keys' }
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/web-research/SKILL.md'; Reason = '2026-10-17: the portable twin now names exa and exa-key as one EXA_API_KEY account, matching the installed servers' }
         @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-10-17: on macOS/Linux the keys persist in a 0600 env file sourced from the profiles; Windows keeps its user environment variables' }
+        @{ Path = 'DOCUMENTS/PowerShell/Microsoft.PowerShell_profile.ps1'; Reason = '2026-10-19: restore-tools appends the key import to an existing profile; the owner ran it' }
+        @{ Path = 'DOCUMENTS/WindowsPowerShell/Microsoft.PowerShell_profile.ps1'; Reason = '2026-10-19: the same key import in the 5.1 profile' }
         @{ Path = 'HOME/.claude/agents/research-writer.md'; Reason = '2026-10-19: the writer is told that fix_quotes.py repairs near-miss quotes as a safety net; the exact-copy rule stays' }
         @{ Path = 'HOME/.claude/skills/research/scripts/fix_quotes.py'; Reason = '2026-10-19: deterministic quoting - a fragment at least 90 % similar to its evidence is replaced with the evidence''s exact span before check_article.py; no model call' }
         @{ Path = 'HOME/.claude/setup/tests/research/test_fix_quotes.py'; Reason = '2026-10-19: tests for the deterministic quote repair, red before the implementation' }
