@@ -176,12 +176,13 @@ function Test-KopiaIgnored([string]$projectRoot, [string]$relativePath) {
             if (-not $line -or $line.StartsWith('#')) { continue }
             $negate = $false
             if ($line.StartsWith('!')) { $negate = $true; $line = $line.Substring(1).Trim() }
-            $directory = $line.EndsWith('/')
             $anchored = $line.StartsWith('/')
             $line = $line.Trim('/')
             if (-not $line) { continue }
+            # Convert-KopiaPattern already ends every pattern in (/|$), so a directory
+            # pattern such as media/work/ needs no second rewrite (the first version rewrote
+            # it into an invalid regex: "^media/work(/|$)|$)").
             $rx = Convert-KopiaPattern $line $anchored
-            if ($directory) { $rx = $rx -replace '\(/|$\)$', '(/|$)' }
             if ($rel -match $rx) { $ignored = -not $negate }
         }
     }
