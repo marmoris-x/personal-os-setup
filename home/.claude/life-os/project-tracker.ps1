@@ -272,9 +272,11 @@ foreach ($dir in $projectDirs) {
 
     $subjects = @()
     if ($changed -and $head) {
-        $logArgs = @('log', '--format=%s', '-n', '20')
+        # New, returned and rewritten repositories carry no trustworthy range, so the newest
+        # three subjects are the honest summary. A normal day lists its new commits, capped.
+        $logArgs = @('log', '--format=%s', '-n', '3')
         if (-not $rewritten -and -not $isNew -and -not $returned -and $oldHead) {
-            $logArgs = @('log', '--format=%s', ($oldHead + '..' + $head))
+            $logArgs = @('log', '--format=%s', '-n', '10', ($oldHead + '..' + $head))
         }
         $logOut = Get-Git $dir.FullName $logArgs
         if ($logOut.Code -eq 0) { $subjects = @($logOut.Lines | Where-Object { [string]$_ -ne '' }) }
@@ -292,7 +294,12 @@ foreach ($dir in $projectDirs) {
         if ($rewritten) { $parts += 'Historie umgeschrieben' }
         if ($subjects.Count -gt 0) {
             $joined = ($subjects -join '; ')
-            if ($joined.Length -gt 300) { $joined = $joined.Substring(0, 300) }
+            if ($joined.Length -gt 300) {
+                $cut = $joined.Substring(0, 300)
+                $space = $cut.LastIndexOf(' ')
+                if ($space -gt 200) { $cut = $cut.Substring(0, $space) }
+                $joined = $cut + '...'
+            }
             $parts += ('Commits: ' + $joined)
         }
         if ($dirtyEvent) { $parts += ('nicht committet: ' + $(if ($dirty) { 'ja' } else { 'nein' })) }
