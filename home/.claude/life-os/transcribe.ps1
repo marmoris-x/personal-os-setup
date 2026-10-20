@@ -23,7 +23,9 @@
 #
 # Groq quota: the free limits are shared with OpenWhispr dictation. groq_worker.py keeps its
 # own daily log of the audio seconds it sent (default %LOCALAPPDATA%\life-os\groq-audio.jsonl)
-# and stops at 21600 s per day (6 of the 8 free hours); above that the file goes local.
+# and stops at 21600 s per day (6 of the 8 free hours) and 7200 s per hour; above either cap
+# the file goes local. All files of one run go through ONE worker process, so the 20-requests-
+# per-minute limit is shared across files and not reset per file.
 #
 # Lock: takes morning.lock itself unless -CalledByRunner says the runner already holds it.
 
@@ -40,6 +42,7 @@ param(
     [string]$GroqBaseUrl = 'https://api.groq.com/openai/v1/audio/transcriptions',
     [string]$GroqDailyLog = "{{LIFEOS_STATE}}\groq-audio.jsonl",
     [int]$DailyCapSeconds = 21600,
+    [int]$HourCapSeconds = 7200,
     [int]$GroqRequestsPerMinute = 20,
     [string]$LockPath = "{{LIFEOS_LOCK}}",
     [switch]$CalledByRunner,
@@ -96,7 +99,10 @@ function Get-FallbackReasonGerman([string]$code) {
         'network'          { return 'Groq nicht erreichbar' }
         'api_error'        { return 'Fehler der Groq-API' }
         'preprocess_error' { return 'Audiodatei konnte nicht vorbereitet werden' }
-        'worker_missing'   { return 'lokaler Whisper-Worker fehlt' }
+        'hourly_cap'       { return 'Stundenlimit fuer die Transkription erreicht' }
+        'groq_worker_failed' { return 'Groq-Worker ohne Ergebnis' }
+        'worker_missing'   { return 'Groq-Worker fehlt, lokal transkribiert' }
+        'unknown'          { return 'unbekannter Fehler' }
         default            { return $code }
     }
 }
@@ -170,34 +176,51 @@ try {
             if ($Engine -eq 'groq' -and (Test-Path -LiteralPath $GroqWorker)) {
                 $fallbackFiles = @()
                 $fallbackMap = @{}
-                foreach ($c in $candidates) {
-                    $prevEA = $ErrorActionPreference
-                    $ErrorActionPreference = 'Continue'
-                    $stdout = & $PythonExe -I -X utf8 $GroqWorker $c.FullName --model $GroqModel `
-                        --language $Language --base-url $GroqBaseUrl --daily-log $GroqDailyLog `
-                        --cap-seconds $DailyCapSeconds --requests-per-minute $GroqRequestsPerMinute 2>&1
-                    $groqExit = $LASTEXITCODE
-                    $ErrorActionPreference = $prevEA
-                    $parsed = ConvertFrom-WorkerLines @($stdout)
-                    $fileResult = $null
-                    foreach ($p in $parsed) {
-                        if ($p.type -eq 'file' -and -not $fileResult) { $fileResult = $p }
-                        elseif ($p.type -eq 'summary') { $groqSummary = $p }
-                    }
-                    if ($fileResult -and $fileResult.ok) {
-                        $results += $fileResult
+                $candidateByName = @{}
+                $handled = @{}
+                foreach ($c in $candidates) { $candidateByName[$c.Name] = $c }
+                # ONE worker process for the whole run: its request list is shared, so the
+                # 20-requests-per-minute limit and both audio caps hold across files. A per-file
+                # process reset the list and sent far more than 20 requests a minute.
+                $paths = @($candidates | ForEach-Object { $_.FullName })
+                $prevEA = $ErrorActionPreference
+                $ErrorActionPreference = 'Continue'
+                $stdout = & $PythonExe -I -X utf8 $GroqWorker @paths --model $GroqModel `
+                    --language $Language --base-url $GroqBaseUrl --daily-log $GroqDailyLog `
+                    --cap-seconds $DailyCapSeconds --hour-cap-seconds $HourCapSeconds `
+                    --requests-per-minute $GroqRequestsPerMinute 2>&1
+                $groqExit = $LASTEXITCODE
+                $ErrorActionPreference = $prevEA
+                $parsed = ConvertFrom-WorkerLines @($stdout)
+                foreach ($p in $parsed) {
+                    if ($p.type -eq 'summary') { $groqSummary = $p; continue }
+                    if ($p.type -ne 'file') { continue }
+                    $audioName = [string]$p.audio
+                    $handled[$audioName] = $true
+                    if ($p.ok) {
+                        $results += $p
                         $groqOk++
                     } else {
                         $reason = 'groq_worker_failed'
-                        if ($fileResult -and $fileResult.reason) { $reason = [string]$fileResult.reason }
-                        $fallbackFiles += $c
-                        $fallbackMap[$c.Name] = $reason
+                        if ($p.PSObject.Properties['reason'] -and $p.reason) { $reason = [string]$p.reason }
+                        if ($candidateByName.ContainsKey($audioName)) {
+                            $fallbackFiles += $candidateByName[$audioName]
+                            $fallbackMap[$audioName] = $reason
+                        }
                         $fallbackReasons += $reason
-                        Write-LogLine ('groq fallback for ' + $c.Name + ': ' + (Get-FallbackReasonGerman $reason))
+                        Write-LogLine ('groq fallback for ' + $audioName + ': ' + (Get-FallbackReasonGerman $reason))
                     }
-                    if ($groqExit -ne 0 -and -not $fileResult) {
-                        Write-LogLine ('groq worker exit ' + $groqExit)
-                    }
+                }
+                # The process died before it reported a file: fall back for it, never drop it.
+                foreach ($c in $candidates) {
+                    if ($handled.ContainsKey($c.Name)) { continue }
+                    $fallbackFiles += $c
+                    $fallbackMap[$c.Name] = 'groq_worker_failed'
+                    $fallbackReasons += 'groq_worker_failed'
+                    Write-LogLine ('groq fallback for ' + $c.Name + ': ' + (Get-FallbackReasonGerman 'groq_worker_failed'))
+                }
+                if ($groqExit -ne 0 -and $parsed.Count -eq 0) {
+                    Write-LogLine ('groq worker exit ' + $groqExit)
                 }
 
                 if ($fallbackFiles.Count -gt 0) {
@@ -330,6 +353,7 @@ try {
         local_model          = $Model
         groq_seconds_today   = $groqSecondsToday
         daily_cap_seconds    = $DailyCapSeconds
+        hour_cap_seconds     = $HourCapSeconds
         device               = $device
     }
     Write-Utf8 (Join-Path $VaultPath '000-meta\life-os-transcribe.json') ($transcribeState | ConvertTo-Json -Depth 4)

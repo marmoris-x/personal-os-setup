@@ -198,6 +198,7 @@ $attention = @()
 $noGitNow = @()
 $noGitNew = @()
 $missingNew = @()
+$gitErrors = @()
 $stateChanged = $false
 
 foreach ($dir in $projectDirs) {
@@ -219,7 +220,9 @@ foreach ($dir in $projectDirs) {
     $head = ''
     if ($headOut.Code -eq 0 -and $headOut.Lines.Count -gt 0) { $head = [string]$headOut.Lines[0] }
 
+    $repoError = ''
     $statusOut = Get-Git $dir.FullName @('status', '--porcelain')
+    if ($statusOut.Code -ne 0) { $repoError = 'git status failed' }
     $statusLines = @($statusOut.Lines | Where-Object { [string]$_ -ne '' })
     $dirty = ($statusLines.Count -gt 0)
     $statusHash = Get-StatusHash $statusLines
@@ -230,9 +233,11 @@ foreach ($dir in $projectDirs) {
     if (-not $noUpstream) {
         $countOut = Get-Git $dir.FullName @('rev-list', '--count', '@{upstream}..HEAD')
         if ($countOut.Code -eq 0 -and $countOut.Lines.Count -gt 0) { $unpushed = [int]$countOut.Lines[0] }
+        elseif ($countOut.Code -ne 0) { $repoError = 'git rev-list failed' }
     }
 
     $stashOut = Get-Git $dir.FullName @('stash', 'list')
+    if ($stashOut.Code -ne 0) { $repoError = 'git stash list failed' }
     $stashes = @($stashOut.Lines | Where-Object { [string]$_ -ne '' }).Count
 
     $oldHead = ''
@@ -253,7 +258,18 @@ foreach ($dir in $projectDirs) {
     $rewritten = $false
     if ($oldHead -and $head -and ($oldHead -ne $head)) {
         $ancestor = Get-Git $dir.FullName @('merge-base', '--is-ancestor', $oldHead, $head)
-        if ($ancestor.Code -ne 0) { $rewritten = $true }
+        if ($ancestor.Code -eq 1) { $rewritten = $true }
+        elseif ($ancestor.Code -ne 0) { $repoError = 'git merge-base failed' }
+    }
+
+    if ($repoError) {
+        # Never report an unreadable repository as clean. Keep the last known state and let
+        # the flag carry the error, so the morning report names it instead of writing false
+        # frontmatter values.
+        $gitErrors += [pscustomobject]@{ name = $name; error = $repoError }
+        if ($old) { $newRepos[$name] = $old }
+        Write-Host ('git error: ' + $name + ' - ' + $repoError)
+        continue
     }
 
     $headChanged = ($isNew -or $returned -or ($oldHead -ne $head))
@@ -303,8 +319,11 @@ foreach ($dir in $projectDirs) {
             }
             $parts += ('Commits: ' + $joined)
         }
-        if ($dirtyEvent) { $parts += ('nicht committet: ' + $(if ($dirty) { 'ja' } else { 'nein' })) }
-        if ($isNew -or $returned -or $unpushedChanged) { $parts += ('nicht gepusht: ' + $unpushed) }
+        # The activity line always names both values, as the task asks; a changed project
+        # without them would hide whether it is dirty or has unpushed commits.
+        $parts += ('nicht committet: ' + $(if ($dirty) { 'ja' } else { 'nein' }))
+        $parts += ('nicht gepusht: ' + $unpushed)
+        if ($noUpstream) { $parts += 'kein Upstream' }
         if ($stashChanged) { $parts += ('Stashes: ' + $stashes) }
         if ($parts.Count -eq 0) { $parts += 'Aenderung' }
         $line = '- ' + $today + ' - ' + $name + ' - ' + ($parts -join ' - ')
@@ -331,7 +350,7 @@ foreach ($dir in $projectDirs) {
         }
     }
 
-    if ($dirty -or $unpushed -gt 0) {
+    if ($dirty -or $unpushed -gt 0 -or $noUpstream) {
         $attention += [pscustomobject]@{
             name        = $name
             uncommitted = $dirty
@@ -413,25 +432,43 @@ foreach ($file in $allFiles) {
 $mediaRawTotal = [math]::Round($mediaRawTotal / 1GB, 2)
 
 # --- flag file for the morning agent --------------------------------------------------------
-$needsFlag = ($changedProjects.Count -gt 0 -or $attention.Count -gt 0 -or $missingNew.Count -gt 0 -or $noGitNew.Count -gt 0 -or $largeFiles.Count -gt 0)
-if ($needsFlag) {
+# A flag is a signal the agent has not consumed yet: morning.ps1 deletes it only after a
+# successful agent run. A quiet day therefore writes nothing new and leaves an old flag
+# alone, so a failed agent run is retried instead of silently losing the project updates.
+$oldFlag = $null
+if (Test-Path -LiteralPath $flagFile) {
+    try { $oldFlag = Get-Content -LiteralPath $flagFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $oldFlag = $null }
+}
+# A git error alone does not start the agent: it keeps the last known state and is printed
+# in the tracker line. It travels in the flag when the flag is written for another reason.
+$newSignal = ($changedProjects.Count -gt 0 -or $missingNew.Count -gt 0 -or $noGitNew.Count -gt 0 -or $largeFiles.Count -gt 0)
+if ($newSignal) {
+    $byName = @{}
+    if ($oldFlag -and $oldFlag.PSObject.Properties['projects']) {
+        foreach ($p in @($oldFlag.projects)) { if ($p.name) { $byName[[string]$p.name] = $p } }
+    }
+    foreach ($p in $changedProjects) { $byName[$p.name] = $p }
+    $mergedProjects = @($byName.Values | Sort-Object name)
+    $mergedMissing = @(@($oldFlag.missing) + @($missingNew) | Where-Object { $_ } | Sort-Object -Unique)
+    foreach ($p in $changedProjects) { $mergedMissing = @($mergedMissing | Where-Object { $_ -ne $p.name }) }
+    $mergedNoGit = @(@($oldFlag.no_git) + @($noGitNew) | Where-Object { $_ } | Sort-Object -Unique)
     $flag = [pscustomobject]@{
         generated          = (Get-Date).ToString('s')
         state_file         = $StatePath
-        changed            = ($changedProjects.Count -gt 0)
-        projects           = @($changedProjects)
+        changed            = ($mergedProjects.Count -gt 0)
+        projects           = @($mergedProjects)
         attention          = @($attention)
-        missing            = @($missingNew)
-        no_git             = @($noGitNew)
+        missing            = @($mergedMissing)
+        no_git             = @($mergedNoGit)
         large_files        = @($largeFiles)
+        git_errors         = @($gitErrors)
         media_raw_total_gb = $mediaRawTotal
     }
     Write-Utf8 $flagFile ($flag | ConvertTo-Json -Depth 8)
-} elseif (Test-Path -LiteralPath $flagFile) {
-    Remove-Item -LiteralPath $flagFile -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ('projects: changed=' + $changedProjects.Count + ' attention=' + $attention.Count +
             ' no_git_new=' + $noGitNew.Count + ' missing=' + $missingNew.Count +
-            ' large_files=' + $largeFiles.Count + ' state=' + $StatePath)
+            ' large_files=' + $largeFiles.Count + ' git_errors=' + $gitErrors.Count +
+            ' state=' + $StatePath)
 exit 0

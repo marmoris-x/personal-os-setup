@@ -24,7 +24,7 @@ unfiltered memory. What you write here he will read for years.
 | `000-meta/life-os-conflicts.json` | sync conflict files found by the vault-lint check: `file`, `original`, `modified`, `bytes` |
 | `000-meta/life-os-expiry.json` | notes whose `valid_until` is past or within 7 days: `file`, `valid_until`, `days`, `status` (written by the runner; may not exist) |
 | `000-meta/life-os-transcribe.json` | this run's transcription: `engine`, `files`, `groq_ok`, `local_fallback`, `fallback_reasons_de` (German reasons), `groq_seconds_today`, `daily_cap_seconds` (may not exist) |
-| `000-meta/life-os-projects.json` | project changes from the tracker: `projects`, `attention`, `missing`, `no_git`, `large_files`, `media_raw_total_gb` (written only when something needs action; may not exist) |
+| `000-meta/life-os-projects.json` | project changes from the tracker: `projects`, `attention`, `missing`, `no_git`, `large_files`, `git_errors`, `media_raw_total_gb` (written only when something needs action; may not exist) |
 | `000-meta/life-os-runs.log` | one line per script run: `<iso> \| transcribe\|morning \| ok\|warn\|fail \| detail` |
 | `000-meta/life-os-state.json` | what was already processed (may not exist yet) |
 | `000-meta/trash-queue.txt` | list of vault-relative paths to remove (may not exist yet) |
@@ -123,12 +123,14 @@ For every entry in `projects` (changed since the last run):
    "N nicht gepusht"; `stashes` greater than 0 -> "N Stash(es)". Join with ", ".
    If the same line (same date and wording) is already there, do not add it again.
 3. Replace the content of `## Next step` with the entry's `next_step` when that is not null.
-   Keep the heading. When `next_step` is null, leave the section unchanged. Copy the text
+   Keep the heading; when the note has no `## Next step`, add the heading before
+   `## Timeline`. When `next_step` is null, leave the section unchanged. Copy the text
    as it stands, do not shorten or improve it.
 
 An entry in `attention` that is not in `projects` is unchanged since an earlier run: no
 Timeline line and no "Next step" update; only the Morgenbericht lines in step 6 apply.
 An entry in `missing` (repository gone or renamed) is never written into a note.
+An entry in `git_errors` is reported only; never guess its state.
 
 ### 6. Morgenbericht and state
 
@@ -147,6 +149,8 @@ Ensure today's note exists (same rule as step 1), then replace the content of it
     greater than 0; join several with `; `.
   - `Nicht committet seit <N> Tag(en): <name>` for every `attention` entry with
     `uncommitted` true. When `dirty_days` is 0, write `Nicht committet: <name>`.
+  - `Kein Upstream: <name>` for every `attention` entry with `no_upstream` true.
+  - `Git-Fehler: <name> (<error>)` for every entry in `git_errors`.
   - `Große Datei im Backup (außerhalb media\raw): <path> (<size_gb> GB)` for every entry in
     `large_files`.
   - `Projekt ohne Notiz: <name>` for every entry in `projects` with `note_missing` true.

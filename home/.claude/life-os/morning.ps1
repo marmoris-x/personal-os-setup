@@ -248,6 +248,13 @@ try {
     }
 
     $success = (-not $timedOut) -and ($null -ne $res) -and (-not $isError)
+    # The flag is a signal, not a log: a successful agent has consumed it. On a failure it
+    # stays, so the next morning's pre-check starts the agent again instead of losing the
+    # Timeline/Next-step update.
+    if ($success -and (Test-Path -LiteralPath $projectsFlag)) {
+        Remove-Item -LiteralPath $projectsFlag -Force -ErrorAction SilentlyContinue
+        Write-RunLog 'project flag consumed'
+    }
     $firstLine = ''
     if ($resultText) { $firstLine = (($resultText -split "`r?`n") | Where-Object { $_.Trim() } | Select-Object -First 1) }
     if ($firstLine.Length -gt 150) { $firstLine = $firstLine.Substring(0, 150) }

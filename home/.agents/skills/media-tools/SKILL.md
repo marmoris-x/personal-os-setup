@@ -1,6 +1,6 @@
 ---
 name: media-tools-portable
-description: Download, convert and inspect media and documents on this Windows PC. Use when the user says "Lade dieses Video als MP3", "YouTube herunterladen", "in MP3 umwandeln", "Tonspur extrahieren", "konvertieren", "Metadaten", "Dokument zu Markdown", "PDF zusammenfuegen", "Archiv entpacken" or asks for a video, audio file, archive, image conversion, ebook conversion or document conversion. Holds the exact command and the install rule for each case.
+description: Download, convert and inspect media and documents on this Windows PC. Use when the user says "Lade dieses Video als MP3", "YouTube herunterladen", "in MP3 umwandeln", "Tonspur extrahieren", "konvertieren", "Metadaten", "Dokument zu Markdown", "PDF zusammenfügen", "PDF zusammenfuegen", "Archiv entpacken" or asks for a video, audio file, archive, image conversion, ebook conversion or document conversion. Holds the exact command and the install rule for each case.
 ---
 
 # Media tools
@@ -65,7 +65,7 @@ yt-dlp -x --audio-format mp3 <url>            # audio only, as MP3
 yt-dlp --embed-metadata --embed-thumbnail <url>
 ```
 
-Do not add a second output path while the config exists. Do not delete the config line.
+The config already sets the folder, so a download lands there without a path argument.
 
 ## Audio and video with ffmpeg
 

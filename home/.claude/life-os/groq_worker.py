@@ -14,16 +14,20 @@ https://console.groq.com/docs/speech-to-text
 
 Quota guard: the free limits are shared with OpenWhispr dictation. The worker keeps a daily
 log of the audio seconds it sent and stops at --cap-seconds (default 21600 = 6 hours),
-leaving 2 of the 8 free hours for dictation. Groq's rate-limit headers report requests and
-tokens, not audio seconds, so the cap rests on this local log; a 429 still falls back.
+leaving 2 of the 8 free hours for dictation. It also stops a file when the audio seconds of
+the last hour plus that file would exceed --hour-cap-seconds (default 7200, the free hourly
+limit). One worker process handles all files of a run, so the request pacing (20 per minute)
+and both caps apply across files, not once per file. Groq's rate-limit headers report
+requests and tokens, not audio seconds, so the caps rest on this local log; a 429 still
+falls back.
 
 Output contract, one JSON object per line on stdout:
   {"type": "file", "audio": ..., "ok": true, "engine": "groq", "txt": ..., "audio_seconds": ...,
    "seconds_sent": ..., "chunks": n, "model": ...}
-  {"type": "file", "audio": ..., "ok": false, "reason": "missing_key|daily_cap|rate_limit|
-   auth_error|network|api_error|preprocess_error", "error": ...}
+  {"type": "file", "audio": ..., "ok": false, "reason": "missing_key|daily_cap|hourly_cap|
+   rate_limit|auth_error|network|api_error|preprocess_error", "error": ...}
   {"type": "summary", "engine": "groq", "ok": n, "failed": n, "seconds_sent": ...,
-   "today_seconds": ..., "daily_cap_seconds": ...}
+   "today_seconds": ..., "daily_cap_seconds": ..., "hour_cap_seconds": ...}
 Exit 0 when every file succeeded, 2 when at least one file failed.
 
 The API key is read from GROQ_API_KEY in the process environment. It is never printed.
@@ -170,6 +174,29 @@ def read_daily_seconds(log_path, today):
     return total
 
 
+def read_hourly_seconds(log_path, now=None):
+    """Audio seconds sent in the last 60 minutes, from the same daily log."""
+    total = 0.0
+    if not log_path.exists():
+        return total
+    now = now or datetime.now().astimezone()
+    for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            entry = json.loads(line)
+            stamp = entry.get("ts")
+            if not stamp:
+                continue
+            sent_at = datetime.fromisoformat(str(stamp))
+            if sent_at.tzinfo is None:
+                sent_at = sent_at.astimezone()
+            age = (now - sent_at).total_seconds()
+            if 0 <= age < 3600:
+                total += float(entry.get("seconds", 0))
+        except Exception:
+            continue
+    return total
+
+
 def append_daily(log_path, today, audio_name, chunk_index, seconds, model):
     log_path.parent.mkdir(parents=True, exist_ok=True)
     entry = {
@@ -249,7 +276,7 @@ def error_reason(status, headers, body):
     return "api_error"
 
 
-def transcribe_one(audio_path, args, today):
+def transcribe_one(audio_path, args, today, request_times):
     audio_path = Path(audio_path)
     result: dict[str, object] = {"type": "file", "audio": audio_path.name}
     if not audio_path.exists():
@@ -290,10 +317,19 @@ def transcribe_one(audio_path, args, today):
                 "planned_seconds": round(planned, 1),
             })
             return result, 0.0
+        hour_seconds = read_hourly_seconds(daily_log)
+        if hour_seconds + planned > args.hour_cap_seconds:
+            result.update({
+                "ok": False, "reason": "hourly_cap",
+                "error": ("last hour %0.0f s + this file %0.0f s exceeds the hourly cap of %d s"
+                          % (hour_seconds, planned, args.hour_cap_seconds)),
+                "hour_seconds": round(hour_seconds, 1),
+                "planned_seconds": round(planned, 1),
+            })
+            return result, 0.0
 
         texts = []
         sent = 0.0
-        request_times = []
         for index, (chunk_path, _start, chunk_seconds) in enumerate(chunks):
             rate_wait(request_times, args.requests_per_minute)
             status, headers, body = post_audio(
@@ -338,6 +374,7 @@ def main():
     parser.add_argument("--daily-log", default=os.path.join(
         os.environ.get("LOCALAPPDATA", str(Path.home())), "life-os", "groq-audio.jsonl"))
     parser.add_argument("--cap-seconds", type=int, default=21600)
+    parser.add_argument("--hour-cap-seconds", type=int, default=7200)
     parser.add_argument("--requests-per-minute", type=int, default=20)
     parser.add_argument("--max-bytes", type=int, default=MAX_BYTES)
     parser.add_argument("--chunk-seconds", type=int, default=CHUNK_SECONDS)
@@ -348,8 +385,10 @@ def main():
     ok_count = 0
     fail_count = 0
     total_sent = 0.0
+    # One list for the whole run: the 20-requests-per-minute limit is per account, not per file.
+    request_times = []
     for name in args.files:
-        result, sent = transcribe_one(name, args, today)
+        result, sent = transcribe_one(name, args, today, request_times)
         total_sent += sent
         if result.get("ok"):
             ok_count += 1
@@ -361,7 +400,8 @@ def main():
     emit({
         "type": "summary", "engine": "groq", "ok": ok_count, "failed": fail_count,
         "seconds_sent": round(total_sent, 1), "today_seconds": round(today_total, 1),
-        "daily_cap_seconds": args.cap_seconds, "model": args.model,
+        "daily_cap_seconds": args.cap_seconds, "hour_cap_seconds": args.hour_cap_seconds,
+        "model": args.model,
     })
     return 0 if fail_count == 0 else 2
 
