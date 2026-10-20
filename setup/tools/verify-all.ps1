@@ -1353,6 +1353,12 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_expiry.py'; Reason = '2026-10-18 (batch-and-hygiene Part 4): 13 fixture cases (past, soon, far, missing, malformed, quoted, out-of-scope, days limit, frontmatter position, CLI exit codes and JSON)' }
         @{ Path = 'VAULT/000-meta/templates/person.md'; Reason = '2026-10-18 (batch-and-hygiene Part 4): the optional valid_until field as a YAML comment' }
         @{ Path = 'VAULT/000-meta/templates/project.md'; Reason = '2026-10-18 (batch-and-hygiene Part 4): the optional valid_until field as a YAML comment' }
+        @{ Path = 'HOME/.claude/life-os/groq_worker.py'; Reason = '2026-10-21 (media-and-projects Part 3): Groq whisper-large-v3-turbo as the default engine, 16 kHz mono FLAC preprocessing, 600 s chunks with 10 s overlap copied from the Groq cookbook, the 21,600 s daily cap shared with dictation, and one German fallback reason' }
+        @{ Path = 'HOME/.claude/life-os/project-tracker.ps1'; Reason = '2026-10-21 (Part 4): read-only git scan of C:\Dev\Projects with a state file, the five edge cases, the activity log, the three frontmatter keys, the Next-step carry-over, the Bases data and the >1 GB safety net' }
+        @{ Path = 'HOME/.claude/skills/media-tools/SKILL.md'; Reason = '2026-10-21 (Part 5b): the personal skill with the tested recipes for downloads, ffmpeg, markitdown, docling, pypdf, archives, images and ebooks, and the media-project template' }
+        @{ Path = 'HOME/.agents/skills/media-tools/SKILL.md'; Reason = '2026-10-21 (Part 5b): the portable copy of the media-tools skill for OpenCode and Codex' }
+        @{ Path = 'HOME/.claude/life-os/transcribe.ps1'; Reason = '2026-10-21 (Part 3): -Engine groq|local, the user-key import, the Groq worker call, the German fallback line and the transcribe.json handover to the morning report' }
+        @{ Path = 'VAULT/000-meta/overview.base'; Reason = '2026-10-21 (Part 4.5): a Project activity view with last_activity, uncommitted and unpushed, sorted newest first' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

@@ -138,3 +138,30 @@ properties:
       settings:
         id: Kopia.KopiaUI
         source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: deno
+      directives:
+        description: Deno - the runtime yt-dlp needs for YouTube (EJS)
+        securityContext: elevated
+      settings:
+        id: DenoLand.Deno
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: yt-dlp-ffmpeg
+      directives:
+        description: FFmpeg for yt-dlp - the one ffmpeg and ffprobe on PATH
+        securityContext: elevated
+      settings:
+        id: yt-dlp.FFmpeg
+        source: winget
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: yt-dlp
+      directives:
+        description: yt-dlp - video and audio downloads; depends on Deno and yt-dlp.FFmpeg
+        securityContext: elevated
+      settings:
+        id: yt-dlp.yt-dlp
+        source: winget

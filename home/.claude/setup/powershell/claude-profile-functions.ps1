@@ -31,12 +31,13 @@ $env:CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR = '1'
 # launcher below and every shell started from this profile has it.
 $env:GIT_OPTIONAL_LOCKS = '0'
 
-# The six research keys live in the Windows user environment (set-research-keys.ps1). A
-# terminal or session started before the keys were set keeps the old environment, so every
-# claude-ds start copies the current user values into this process. ASCII only (5.1).
+# The research keys and the Groq transcription key live in the Windows user environment
+# (set-research-keys.ps1). A terminal or session started before the keys were set keeps the
+# old environment, so every claude-ds start copies the current user values into this process.
+# ASCII only (5.1).
 function Import-ResearchKeys {
     if ($env:OS -ne 'Windows_NT') { return }
-    foreach ($name in @('EXA_API_KEY', 'YDC_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'TINYFISH_API_KEY', 'SERPER_API_KEY')) {
+    foreach ($name in @('EXA_API_KEY', 'YDC_API_KEY', 'TAVILY_API_KEY', 'FIRECRAWL_API_KEY', 'TINYFISH_API_KEY', 'SERPER_API_KEY', 'GROQ_API_KEY')) {
         $value = [Environment]::GetEnvironmentVariable($name, 'User')
         if ($value) { Set-Item -Path ('Env:' + $name) -Value $value }
     }

@@ -4,31 +4,55 @@
 # What it does, in order:
 #   1. find new audio in <vault>\inbox\audio (top level only; files with a .txt are done,
 #      files younger than 30 s are still syncing and wait)
-#   2. transcribe them with faster-whisper (worker: transcribe_worker.py, venv beside it);
-#      one .txt per recording, written next to the audio
+#   2. transcribe them with the chosen engine:
+#        groq  -> groq_worker.py, Groq's whisper-large-v3-turbo (default)
+#        local -> transcribe_worker.py, faster-whisper in the Life OS venv
+#      The Groq engine falls back to local, never silently, when the key is missing, the
+#      daily cap is reached, Groq answers 429 or is unreachable, or the worker fails.
+#      One .txt per recording is written next to the audio.
 #   3. write <vault>\000-meta\life-os-inbox.json  - every .txt waiting in the inbox
 #      (all of them, not only the new ones: self-healing if an agent run fails later)
 #   4. write <vault>\000-meta\life-os-conflicts.json - sync conflicts found by
 #      .claude\skills\vault-lint\conflicts.py (the agent has no shell, so it reads this file)
-#   5. append one line to <vault>\000-meta\life-os-runs.log
+#   5. write <vault>\000-meta\life-os-transcribe.json - engine, fallbacks and the German
+#      reason, so the morning report can name it in one line
+#   6. append one line to <vault>\000-meta\life-os-runs.log
 #
 # Exit code 0 when everything it tried worked (including "nothing to do"), 1 on a hard
 # failure (python, worker or vault missing). A single broken audio file does not fail the run.
+#
+# Groq quota: the free limits are shared with OpenWhispr dictation. groq_worker.py keeps its
+# own daily log of the audio seconds it sent (default %LOCALAPPDATA%\life-os\groq-audio.jsonl)
+# and stops at 21600 s per day (6 of the 8 free hours); above that the file goes local.
 #
 # Lock: takes morning.lock itself unless -CalledByRunner says the runner already holds it.
 
 param(
     [string]$VaultPath = '{{VAULT}}',
     [string]$Model = 'large-v3-turbo',
+    [ValidateSet('groq', 'local')]
+    [string]$Engine = 'groq',
+    [string]$Language = 'de',
     [string]$PythonExe = "{{LIFEOS_PYTHON}}",
     [string]$Worker = "{{HOME_ENV}}\.claude\life-os\transcribe_worker.py",
+    [string]$GroqWorker = "{{HOME_ENV}}\.claude\life-os\groq_worker.py",
+    [string]$GroqModel = 'whisper-large-v3-turbo',
+    [string]$GroqBaseUrl = 'https://api.groq.com/openai/v1/audio/transcriptions',
+    [string]$GroqDailyLog = "{{LIFEOS_STATE}}\groq-audio.jsonl",
+    [int]$DailyCapSeconds = 21600,
+    [int]$GroqRequestsPerMinute = 20,
     [string]$LockPath = "{{LIFEOS_LOCK}}",
-    [switch]$CalledByRunner
+    [switch]$CalledByRunner,
+    [switch]$SkipUserKeyImport
 )
 
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\life-os-common.ps1"
 $script:log = @()
+
+# A scheduled task or a shell started before winget changed PATH keeps the old value. The
+# Groq worker needs ffmpeg and ffprobe from the winget package, so read the current value once.
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 
 function Write-LogLine([string]$text) {
     $script:log += ((Get-Date).ToString('s') + ' ' + $text)
@@ -61,7 +85,46 @@ function Get-ConflictEntries([string]$vault) {
     return @($entries)
 }
 
+function Get-FallbackReasonGerman([string]$code) {
+    # One plain German reason for the run log and the morning report. The JSON keeps the
+    # code as well, so a later reader can tell the cases apart without parsing German text.
+    switch ($code) {
+        'missing_key'      { return 'kein API-Schluessel hinterlegt' }
+        'daily_cap'        { return 'Tageslimit fuer die Transkription erreicht' }
+        'rate_limit'       { return 'Groq-Anfragelimit erreicht (429)' }
+        'auth_error'       { return 'API-Schluessel abgelehnt (401)' }
+        'network'          { return 'Groq nicht erreichbar' }
+        'api_error'        { return 'Fehler der Groq-API' }
+        'preprocess_error' { return 'Audiodatei konnte nicht vorbereitet werden' }
+        'worker_missing'   { return 'lokaler Whisper-Worker fehlt' }
+        default            { return $code }
+    }
+}
+
+function ConvertFrom-WorkerLines([string[]]$lines) {
+    # Turns the JSON lines of a worker into objects and passes text lines through the log.
+    $objects = @()
+    foreach ($line in $lines) {
+        $text = [string]$line
+        if ($text.TrimStart().StartsWith('{')) {
+            try { $objects += ($text | ConvertFrom-Json) }
+            catch { Write-LogLine ('unparsable worker line: ' + $text) }
+        } else {
+            Write-LogLine ('worker: ' + $text)
+        }
+    }
+    return @($objects)
+}
+
 # --- main ---------------------------------------------------------------------------------
+
+if (-not $env:GROQ_API_KEY -and -not $SkipUserKeyImport) {
+    # A shell started before the key was set keeps the old environment; read the user value
+    # once for this run. The value is never printed. SkipUserKeyImport exists for the
+    # missing-key fallback test only; a normal run always imports the user value.
+    $userKey = [Environment]::GetEnvironmentVariable('GROQ_API_KEY', 'User')
+    if ($userKey) { $env:GROQ_API_KEY = $userKey }
+}
 
 $ok = $true
 if (-not (Test-Path -LiteralPath (Join-Path $VaultPath '000-meta'))) {
@@ -91,34 +154,122 @@ try {
     }
 
     $results = @()
+    $localFallback = 0
+    $groqOk = 0
+    $fallbackReasons = @()
+    $groqSummary = $null
+    $localSummary = $null
+
     if ($candidates.Count -gt 0) {
-        if (-not (Test-Path -LiteralPath $PythonExe) -or -not (Test-Path -LiteralPath $Worker)) {
-            Write-LogLine 'python or worker missing - transcription skipped'
+        if (-not (Test-Path -LiteralPath $PythonExe)) {
+            Write-LogLine 'python missing - transcription skipped'
             $ok = $false
         } else {
-            Write-LogLine ('transcribing ' + $candidates.Count + ' file(s) with model ' + $Model)
-            $paths = @($candidates | ForEach-Object { $_.FullName })
-            $prevEA = $ErrorActionPreference
-            $ErrorActionPreference = 'Continue'
-            $stdout = & $PythonExe -I -X utf8 $Worker --model $Model --language de @paths 2>&1
-            $exitCode = $LASTEXITCODE
-            $ErrorActionPreference = $prevEA
-            foreach ($line in $stdout) {
-                $text = [string]$line
-                if ($text.TrimStart().StartsWith('{')) {
-                    try { $results += ($text | ConvertFrom-Json) } catch { Write-LogLine ('unparsable worker line: ' + $text) }
+            Write-LogLine ('transcribing ' + $candidates.Count + ' file(s), engine ' + $Engine + ', language ' + $Language)
+
+            if ($Engine -eq 'groq' -and (Test-Path -LiteralPath $GroqWorker)) {
+                $fallbackFiles = @()
+                $fallbackMap = @{}
+                foreach ($c in $candidates) {
+                    $prevEA = $ErrorActionPreference
+                    $ErrorActionPreference = 'Continue'
+                    $stdout = & $PythonExe -I -X utf8 $GroqWorker $c.FullName --model $GroqModel `
+                        --language $Language --base-url $GroqBaseUrl --daily-log $GroqDailyLog `
+                        --cap-seconds $DailyCapSeconds --requests-per-minute $GroqRequestsPerMinute 2>&1
+                    $groqExit = $LASTEXITCODE
+                    $ErrorActionPreference = $prevEA
+                    $parsed = ConvertFrom-WorkerLines @($stdout)
+                    $fileResult = $null
+                    foreach ($p in $parsed) {
+                        if ($p.type -eq 'file' -and -not $fileResult) { $fileResult = $p }
+                        elseif ($p.type -eq 'summary') { $groqSummary = $p }
+                    }
+                    if ($fileResult -and $fileResult.ok) {
+                        $results += $fileResult
+                        $groqOk++
+                    } else {
+                        $reason = 'groq_worker_failed'
+                        if ($fileResult -and $fileResult.reason) { $reason = [string]$fileResult.reason }
+                        $fallbackFiles += $c
+                        $fallbackMap[$c.Name] = $reason
+                        $fallbackReasons += $reason
+                        Write-LogLine ('groq fallback for ' + $c.Name + ': ' + (Get-FallbackReasonGerman $reason))
+                    }
+                    if ($groqExit -ne 0 -and -not $fileResult) {
+                        Write-LogLine ('groq worker exit ' + $groqExit)
+                    }
+                }
+
+                if ($fallbackFiles.Count -gt 0) {
+                    $localFallback = $fallbackFiles.Count
+                    if (-not (Test-Path -LiteralPath $Worker)) {
+                        Write-LogLine 'local worker missing - fallback not possible'
+                        $ok = $false
+                    } else {
+                        $paths = @($fallbackFiles | ForEach-Object { $_.FullName })
+                        $prevEA = $ErrorActionPreference
+                        $ErrorActionPreference = 'Continue'
+                        $stdout = & $PythonExe -I -X utf8 $Worker --model $Model --language $Language @paths 2>&1
+                        $localExit = $LASTEXITCODE
+                        $ErrorActionPreference = $prevEA
+                        $parsed = ConvertFrom-WorkerLines @($stdout)
+                        foreach ($p in $parsed) {
+                            if ($p.type -eq 'summary') { $localSummary = $p; continue }
+                            if ($p.type -ne 'file') { continue }
+                            $reason = 'unknown'
+                            if ($fallbackMap.ContainsKey([string]$p.audio)) { $reason = [string]$fallbackMap[[string]$p.audio] }
+                            $p | Add-Member -NotePropertyName engine -NotePropertyValue 'local' -Force
+                            $p | Add-Member -NotePropertyName fallback_reason -NotePropertyValue $reason -Force
+                            $results += $p
+                        }
+                        if ($localExit -ne 0 -and $localExit -ne 2) {
+                            Write-LogLine ('local worker exit ' + $localExit)
+                            $ok = $false
+                        }
+                    }
+                }
+            } else {
+                if ($Engine -eq 'groq') {
+                    Write-LogLine 'groq worker missing - falling back to local for every file'
+                    $fallbackReasons += 'worker_missing'
+                    $localFallback = $candidates.Count
+                }
+                if (-not (Test-Path -LiteralPath $Worker)) {
+                    Write-LogLine 'local worker missing - transcription skipped'
+                    $ok = $false
                 } else {
-                    Write-LogLine ('worker: ' + $text)
+                    $paths = @($candidates | ForEach-Object { $_.FullName })
+                    $prevEA = $ErrorActionPreference
+                    $ErrorActionPreference = 'Continue'
+                    $stdout = & $PythonExe -I -X utf8 $Worker --model $Model --language $Language @paths 2>&1
+                    $exitCode = $LASTEXITCODE
+                    $ErrorActionPreference = $prevEA
+                    $parsed = ConvertFrom-WorkerLines @($stdout)
+                    foreach ($p in $parsed) {
+                        if ($p.type -eq 'summary') { $localSummary = $p; continue }
+                        $results += $p
+                    }
+                    if ($exitCode -ne 0 -and $exitCode -ne 2) {
+                        Write-LogLine ('worker exit code ' + $exitCode)
+                        $ok = $false
+                    }
                 }
             }
-            if ($exitCode -ne 0 -and $exitCode -ne 2) {
-                Write-LogLine ('worker exit code ' + $exitCode)
-                $ok = $false
-            }
+
             foreach ($r in $results) {
                 if ($r.type -eq 'file') {
-                    if ($r.ok) { Write-LogLine ('ok: ' + $r.audio + ' (' + $r.audio_seconds + 's audio, ' + $r.seconds + 's, ' + $r.device + ')') }
-                    else { Write-LogLine ('failed: ' + $r.audio + ' - ' + $r.error) }
+                    if ($r.ok) {
+                        $engineText = 'local'
+                        if ($r.PSObject.Properties['engine'] -and $r.engine) { $engineText = [string]$r.engine }
+                        $reasonText = ''
+                        if ($r.PSObject.Properties['fallback_reason'] -and $r.fallback_reason) { $reasonText = ', fallback=' + $r.fallback_reason }
+                        $secondsText = ''
+                        if ($r.PSObject.Properties['seconds']) { $secondsText = [string]$r.seconds }
+                        elseif ($r.PSObject.Properties['seconds_sent']) { $secondsText = [string]$r.seconds_sent }
+                        Write-LogLine ('ok: ' + $r.audio + ' (' + $r.audio_seconds + 's audio, ' + $secondsText + 's, ' + $engineText + $reasonText + ')')
+                    } else {
+                        Write-LogLine ('failed: ' + $r.audio + ' - ' + $r.error)
+                    }
                 }
             }
         }
@@ -153,12 +304,45 @@ try {
     Write-Utf8 (Join-Path $VaultPath '000-meta\life-os-conflicts.json') ($cf | ConvertTo-Json -Depth 4)
     if ($conflicts.Count -gt 0) { Write-LogLine ('conflict files: ' + $conflicts.Count) }
 
-    # 5. runs.log
-    $summary = $results | Where-Object { $_.type -eq 'summary' } | Select-Object -First 1
-    $detail = 'files=' + $candidates.Count
-    if ($summary) { $detail += ' ok=' + $summary.ok + ' failed=' + $summary.failed + ' device=' + $summary.device + ' model=' + $summary.model }
+    # 5. transcribe.json - one German reason for the morning report, never a silent fallback
+    $reasonText = ''
+    $reasonTextDe = ''
+    if ($fallbackReasons.Count -gt 0) {
+        $reasonCodes = @($fallbackReasons | Select-Object -Unique)
+        $reasonText = ($reasonCodes -join ', ')
+        $reasonTextDe = (($reasonCodes | ForEach-Object { Get-FallbackReasonGerman ([string]$_) }) -join ', ')
+    }
+    $groqSecondsToday = 0
+    if ($groqSummary -and $groqSummary.PSObject.Properties['today_seconds']) { $groqSecondsToday = [double]$groqSummary.today_seconds }
+    $device = 'groq'
+    if ($localSummary -and $localSummary.PSObject.Properties['device']) { $device = [string]$localSummary.device }
+    if ($Engine -eq 'local') { $device = '' }
+    if ($Engine -eq 'local' -and $localSummary -and $localSummary.PSObject.Properties['device']) { $device = [string]$localSummary.device }
+    $transcribeState = [pscustomobject]@{
+        generated            = (Get-Date).ToString('s')
+        engine               = $Engine
+        files                = $candidates.Count
+        groq_ok              = $groqOk
+        local_fallback       = $localFallback
+        fallback_reasons     = @($fallbackReasons | Select-Object -Unique)
+        fallback_reasons_de  = @($reasonTextDe -split ', ' | Where-Object { $_ })
+        groq_model           = $GroqModel
+        local_model          = $Model
+        groq_seconds_today   = $groqSecondsToday
+        daily_cap_seconds    = $DailyCapSeconds
+        device               = $device
+    }
+    Write-Utf8 (Join-Path $VaultPath '000-meta\life-os-transcribe.json') ($transcribeState | ConvertTo-Json -Depth 4)
+
+    # 6. runs.log
+    $failedCount = @($results | Where-Object { $_.type -eq 'file' -and -not $_.ok }).Count
+    $detail = 'files=' + $candidates.Count + ' ok=' + @($results | Where-Object { $_.type -eq 'file' -and $_.ok }).Count +
+              ' failed=' + $failedCount + ' device=' + $device + ' engine=' + $Engine +
+              ' model=' + $(if ($Engine -eq 'groq' -and $localFallback -eq 0) { $GroqModel } else { $Model })
+    if ($localFallback -gt 0) { $detail += ' local_fallback=' + $localFallback }
+    if ($reasonTextDe) { $detail += ' fallback_reason=' + $reasonTextDe }
     $state = 'ok'; if (-not $ok) { $state = 'fail' }
-    elseif ($summary -and $summary.failed -gt 0) { $state = 'warn' }
+    elseif ($failedCount -gt 0) { $state = 'warn' }
     Append-Utf8 (Join-Path $VaultPath '000-meta\life-os-runs.log') `
         ((Get-Date).ToString('s') + ' | transcribe | ' + $state + ' | ' + $detail + "`n")
 

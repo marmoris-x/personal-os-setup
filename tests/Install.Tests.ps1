@@ -252,8 +252,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         Test-Path -LiteralPath (Join-Path $t3 'VAULT\README.md') | Should -BeFalse
         $files = @(Get-ChildItem -LiteralPath $t3 -Recurse -File -Force | Where-Object { $_.FullName -notmatch '[\\/]\.install-state[\\/]' })
         $files.Count | Should -BeGreaterThan 90
-        # 137 measured 2026-10-19: `fix_quotes.py` and its test add two core files.
-        $files.Count | Should -BeLessThan 138 -Because 'two intended core files were added on 2026-10-19'
+        # 140 measured 2026-10-21: groq_worker.py, project-tracker.ps1 and the two
+        # media-tools skill copies (personal and portable) add four core files.
+        $files.Count | Should -BeLessThan 142 -Because 'four intended core files were added on 2026-10-21'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

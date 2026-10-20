@@ -5,6 +5,24 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## 3.5.0 (2026-10-21, not tagged yet)
+
+The media-and-projects task: one copy each of ffmpeg, yt-dlp and deno; Groq as the default
+transcription engine with the local Whisper as its fallback; a zero-token project tracker that
+keeps the vault project notes current; the personal `media-tools` skill in both harness roots;
+and the written conventions for a media project.
+
+| What | Why |
+|---|---|
+| `windows/configuration.winget`, `windows/winget-core.json`, live `restore-tools.ps1`: `DenoLand.Deno`, `yt-dlp.FFmpeg` and `yt-dlp.yt-dlp` | Exactly one ffmpeg/ffprobe, yt-dlp and deno on PATH, all through winget; `yt-dlp.yt-dlp` brings its own `yt-dlp.FFmpeg`, so `Gyan.FFmpeg` is not added. The declarative and the JSON list name the same programs (Platforms.Tests) |
+| `home/.claude/life-os/groq_worker.py` (new), `home/.claude/life-os/transcribe.ps1`: Groq `whisper-large-v3-turbo` as the default engine, `-Engine groq|local`, 16 kHz mono FLAC preprocessing, 600 s chunks with 10 s overlap copied from the Groq cookbook, word-level overlap merge, a 21,600 s daily cap (six of the eight free hours, two left for OpenWhispr dictation), and a German fallback reason in the run log and `life-os-transcribe.json` | Groq's free tier is faster than the GPU and saves it; the local route stays the never-silent fallback for a missing key, 429, network or API error. The cap keeps an agent job from using up the account's day and breaking dictation |
+| `home/.claude/life-os/project-tracker.ps1` (new), `home/.claude/life-os/morning.ps1`: read-only `git --no-optional-locks` scan of every repository directly under `C:\Dev\Projects` (HEAD, porcelain count and hash, unpushed, stashes), a state file instead of a time window, the five edge cases, one activity line per changed project, only `last_activity`/`uncommitted`/`unpushed` in the project note, the `Next step` from `PROGRESS.md`, and the >1 GB / `media\raw` safety net | Quiet days cost no tokens and start no agent; a day with changes, attention or a large file writes one flag file and the agent only then runs for the flagged projects. Rewritten history is reported, never counted as new commits |
+| `home/.claude/skills/life-os-morning/SKILL.md`: the `life-os-projects.json` and `life-os-transcribe.json` inputs, the project Timeline/Next-step step, and the German report lines for unpushed, uncommitted, large files, missing notes, folders without git and the transcription fallback | The agent has no shell and may not read outside the vault; the tracker's JSON is its only window into the projects |
+| `VAULT/000-meta/overview.base`: a `Project activity` view with `last_activity`, `uncommitted` and `unpushed`, sorted newest first | The state is visible in Obsidian without an agent or a token |
+| `home/.claude/CLAUDE.md`, `home/.claude/skills/media-tools/SKILL.md` (new), `home/.agents/skills/media-tools/SKILL.md` (new): the six project-boundary/media lines and the tested recipes (yt-dlp, ffmpeg/ffprobe, markitdown `[all]`, docling `convert`, pypdf, WinRAR/PowerShell archives, images, calibre, first-need Pandoc/ExifTool) | The next session in any folder finds the exact command and the install rule; nothing new is installed before it is really needed, and never a second copy |
+| `docs/media-projects.md` (new), `README.md`: the `media\raw`/`media\work`/`output` template, the two ignore files, no Git LFS and no global media extension exclusion | Written down now, built only when the owner starts the first media project. The raw originals stay in the Kopia backup; the work and output folders do not |
+| `setup/tools/check-language.ps1`, `tests/Install.Tests.ps1`, `setup/tools/verify-all.ps1` check J, `docs/structure.md`: the exemptions for the owner's German report lines, the measured 140-file minimal install, and one intended-change line per new or changed mirror file | The tree, the language check and the acceptance run count every new file; an undocumented delta is a defect |
+
 ## 3.4.0 (2026-10-18, not tagged yet)
 
 The second pass of the web-research upgrade, driven by measurements on this PC: the Crawl4AI

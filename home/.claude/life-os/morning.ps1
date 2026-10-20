@@ -48,6 +48,29 @@ $summary = 'not started'
 try {
     Write-RunLog ('run start (whisper model ' + $Model + ', agent timeout ' + $TimeoutMinutes + ' min)')
 
+    # 0. projects: read-only git scan of {{DEV}}\Projects. It writes the flag file only on a
+    # day with changes, attention (uncommitted/unpushed) or a large file; the pre-check below
+    # uses exactly that file. A tracker failure makes the agent run: skipping it would hide
+    # the projects for a whole day.
+    $projectsFlag = Join-Path $VaultPath '000-meta\life-os-projects.json'
+    $projectChanges = $false
+    $trackerScript = Join-Path $PSScriptRoot 'project-tracker.ps1'
+    if (Test-Path -LiteralPath $trackerScript) {
+        $prevEA = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $trackerOut = & {{PWSH_HOST}} -NoProfile -ExecutionPolicy Bypass -File $trackerScript `
+            -VaultPath $VaultPath -LogDir $LogDir 2>&1
+        $trackerExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEA
+        Write-RunLog ('tracker exit ' + $trackerExit)
+        foreach ($line in $trackerOut) { Write-RunLog ('  tracker: ' + [string]$line) }
+        $projectChanges = Test-Path -LiteralPath $projectsFlag
+        if ($trackerExit -ne 0) { $projectChanges = $true }
+    } else {
+        Write-RunLog 'tracker skipped: project-tracker.ps1 missing - the agent runs'
+        $projectChanges = $true
+    }
+
     # 1. transcribe (child process: it holds its own exit codes)
     $prevEA = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -94,8 +117,10 @@ try {
     # not start - an empty run would cost money for nothing. Nothing to do means, all at once:
     # no waiting transcript (self-healing stays: a stuck .txt from an earlier failed run
     # counts), no sync conflict in conflicts.json, no failed file in this run's transcribe
-    # line, and no change under 100-daily since the last "morning" line in the run log.
-    # On any doubt (unreadable file, no run log yet, transcription not clean) the agent runs.
+    # line, no change under 100-daily since the last "morning" line in the run log, no note
+    # expiring within 7 days, and no project flag from the tracker (a quiet day leaves none).
+    # On any doubt (unreadable file, no run log yet, transcription not clean, tracker failed)
+    # the agent runs.
     $runsLog = Join-Path $VaultPath '000-meta\life-os-runs.log'
     $skipAgent = $false
     $skipReason = ''
@@ -139,9 +164,9 @@ try {
         } catch {
             Write-RunLog ('pre-check unreadable, the agent runs: ' + $_.Exception.Message)
         }
-        if ($transcribeClean -and $waiting -eq 0 -and $conflicts -eq 0 -and (-not $dailyChanged) -and $expiring -eq 0) {
+        if ($transcribeClean -and $waiting -eq 0 -and $conflicts -eq 0 -and (-not $dailyChanged) -and $expiring -eq 0 -and (-not $projectChanges)) {
             $skipAgent = $true
-            $skipReason = 'nothing to do (no waiting transcripts, no conflicts, no 100-daily change since ' + $lastRun + ', no note expiring within 7 days)'
+            $skipReason = 'nothing to do (no waiting transcripts, no conflicts, no 100-daily change since ' + $lastRun + ', no note expiring within 7 days, no project changes)'
         }
     }
     if ($skipAgent) {

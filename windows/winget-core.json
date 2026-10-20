@@ -16,6 +16,9 @@
           "PackageIdentifier": "astral-sh.uv"
         },
         {
+          "PackageIdentifier": "DenoLand.Deno"
+        },
+        {
           "PackageIdentifier": "GermanCoding.SyncTrayzor"
         },
         {
@@ -44,6 +47,12 @@
         },
         {
           "PackageIdentifier": "Python.Python.3.13"
+        },
+        {
+          "PackageIdentifier": "yt-dlp.FFmpeg"
+        },
+        {
+          "PackageIdentifier": "yt-dlp.yt-dlp"
         }
       ]
     }

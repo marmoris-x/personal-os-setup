@@ -206,12 +206,14 @@ docs/documents.md
 docs/guards.md
 docs/inspiration.md
 docs/install-with-an-agent.md
+docs/media-projects.md
 docs/phone-setup.md
 docs/platforms.md
 docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
 home/.agents/skills/docs-import-portable/SKILL.md
+home/.agents/skills/media-tools/SKILL.md
 home/.agents/skills/quick-research-portable/SKILL.md
 home/.agents/skills/web-research/SKILL.md
 home/.claude/agents/evidence-extractor.md
@@ -240,8 +242,10 @@ home/.claude/hooks/stop-notify.ps1
 home/.claude/hooks/trifecta-guard.ps1
 home/.claude/kopiaignore
 home/.claude/life-os/cleanup.ps1
+home/.claude/life-os/groq_worker.py
 home/.claude/life-os/life-os-common.ps1
 home/.claude/life-os/morning.ps1
+home/.claude/life-os/project-tracker.ps1
 home/.claude/life-os/register-tasks-elevated.ps1
 home/.claude/life-os/register-tasks.ps1
 home/.claude/life-os/requirements.txt
@@ -295,6 +299,7 @@ home/.claude/setup/tests/test-skill-usage.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
 home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
+home/.claude/skills/media-tools/SKILL.md
 home/.claude/skills/quick-research/SKILL.md
 home/.claude/skills/research/references/style-rules.md
 home/.claude/skills/research/research.workflow.js

@@ -116,6 +116,7 @@ end, and `docs/install-with-an-agent.md` walks an agent through the same ground:
 - `docs/structure.md` — how the repo is built, the naming rules, the whole tree.
 - `docs/components.md` — every component (generated from `setup/manifest.yaml`).
 - `docs/guards.md` — what the guard hooks block and allow.
+- `docs/media-projects.md` — folders and ignore files for a project with large media.
 - `docs/install-with-an-agent.md` — the step-by-step version for an agent.
 - `docs/updating.md` — keeping the repo current after system changes.
 - `docs/troubleshooting.md` — when a step gets stuck.

@@ -1,4 +1,4 @@
-# Global instructions (v14)
+# Global instructions (v15)
 
 These apply in every project and every agent tool. A project's own AGENTS.md or CLAUDE.md
 is more specific and wins where the two differ. My explicit request in the chat wins over both.
@@ -43,6 +43,15 @@ is more specific and wins where the two differ. My explicit request in the chat 
   - `{{DEV}}\External` is for other people's code, not for documentation. Only `docs/vendor/` and
     `500-sources/docs/` are exempt from the gitleaks scan (public docs contain sample keys).
   - The `docs-import` skill does all of this without asking.
+
+## Media, transcription and the vault boundary
+
+- A session in `{{DEV}}\Projects` never writes in the vault; the morning tracker brings project changes to the vault. A vault session never changes project code.
+- Before writing anything in the vault from another folder, read the vault AGENTS.md first.
+- `{{DEV}}\Temp\media` is shared media scratch, not a task folder: never delete it or its files during a task's cleanup.
+- ffmpeg, yt-dlp and deno are on PATH; documents and PDFs run on demand with `uvx`/`uv run --with`, archives via PowerShell and WinRAR; recipes are in the `media-tools` skill. Install nothing new before it is really needed, and never a second copy.
+- Downloads and media scratch go to `{{DEV}}\Temp\media` (scratch); when I say "behalten", move the file into `Downloads\Videos` or `Downloads\Music`; originals of a project go to its `media\raw\` (backed up).
+- To transcribe audio, copy it to the vault's `inbox\audio` and run `~/.claude/life-os/transcribe.ps1` (Groq by default, local as the fallback or when I say "lokal"). Never install another Whisper.
 
 ## How to talk to me
 

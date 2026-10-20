@@ -16,6 +16,12 @@ properties:
     displayName: "Code lives at"
   date:
     displayName: "Since"
+  last_activity:
+    displayName: "Last activity"
+  uncommitted:
+    displayName: "Uncommitted"
+  unpushed:
+    displayName: "Unpushed"
 
 views:
   - type: table
@@ -28,6 +34,21 @@ views:
       - status
       - repo
       - date
+
+  - type: table
+    name: "Project activity"
+    filters:
+      and:
+        - 'type == "project"'
+    order:
+      - file.name
+      - last_activity
+      - uncommitted
+      - unpushed
+      - status
+    sort:
+      - property: last_activity
+        direction: DESC
 
   - type: table
     name: "People and organisations"

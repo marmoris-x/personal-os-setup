@@ -13,6 +13,7 @@ $services = [ordered]@{
     'EXA_API_KEY'       = 'Exa           -> dashboard.exa.ai/api-keys'
     'TINYFISH_API_KEY'  = 'TinyFish      -> agent.tinyfish.ai/api-keys'
     'SERPER_API_KEY'    = 'Serper/Google -> serper.dev (Dashboard, API Key)'
+    'GROQ_API_KEY'      = 'Groq          -> console.groq.com/keys (API Keys)'
 }
 
 function ConvertTo-EnvFileValue {
