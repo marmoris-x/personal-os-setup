@@ -69,7 +69,7 @@ Headless runs with `claude --settings <profile> -p`, the test file given through
 | Plain `claude` (no profile, one question, no tools) | Neither word, 0 tool calls; the run cost 0.17 USD |
 | `rm -rf` of a path that does not exist, DeepSeek profile | Blocked by `block-dangerous.ps1`; the path still does not exist |
 | Placeholder file, `/context` | Identical to a session without the file (Messages 864 tokens) |
-| File of 33,852 characters | Warning "Orientierungsdatei zu lang: 33.852 Zeichen, höchstens 28.500", nothing injected, the model does not know the marker word |
+| File of 33,852 characters | A German warning that names the length and the maximum of 28,500, nothing injected, the model does not know the marker word |
 
 ## Consequences
 

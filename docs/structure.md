@@ -202,6 +202,8 @@ docs/decisions/0015-portable-engine-instead-of-chezmoi.md
 docs/decisions/0016-public-repository.md
 docs/decisions/0017-unique-skill-names.md
 docs/decisions/0018-research-as-a-workflow.md
+docs/decisions/0019-local-image-generation-comfy-cli.md
+docs/decisions/0020-model-specific-orientation-through-profile-hooks.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
@@ -213,6 +215,8 @@ docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
 home/.agents/skills/docs-import-portable/SKILL.md
+home/.agents/skills/image-portable/agents/openai.yaml
+home/.agents/skills/image-portable/SKILL.md
 home/.agents/skills/media-tools-portable/SKILL.md
 home/.agents/skills/quick-research-portable/SKILL.md
 home/.agents/skills/web-research/SKILL.md
@@ -230,6 +234,7 @@ home/.claude/gitignore
 home/.claude/gitleaksignore
 home/.claude/hooks/archive-guard.ps1
 home/.claude/hooks/block-dangerous.ps1
+home/.claude/hooks/deepseek-orientation.ps1
 home/.claude/hooks/downloads-guard.ps1
 home/.claude/hooks/fetch-guard.ps1
 home/.claude/hooks/no-license-files.ps1
@@ -298,6 +303,8 @@ home/.claude/setup/tests/test-session-check.ps1
 home/.claude/setup/tests/test-skill-usage.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
 home/.claude/skills/docs-import/SKILL.md
+home/.claude/skills/image/scripts/new-image.ps1
+home/.claude/skills/image/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
 home/.claude/skills/media-tools/SKILL.md
 home/.claude/skills/quick-research/SKILL.md
@@ -368,15 +375,19 @@ setup/tools/privacy-scan.ps1
 setup/tools/verify-all.ps1
 setup/verify.ps1
 tests/AgentFileBudget.Tests.ps1
+tests/Export.Tests.ps1
+tests/fixtures/image-template-minimal.json
 tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
 tests/fixtures/personal.dummy.yaml
 tests/Format-Strings.Tests.ps1
 tests/Harness.Tests.ps1
 tests/Hooks.Tests.ps1
+tests/Image.Tests.ps1
 tests/Install.Tests.ps1
 tests/LineEndings.Tests.ps1
 tests/Manifest.Tests.ps1
+tests/Orientation.Tests.ps1
 tests/PersonalLayer.Tests.ps1
 tests/Platforms.Tests.ps1
 tests/Privacy-Scan.Tests.ps1

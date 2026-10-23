@@ -58,7 +58,7 @@ Rules that hold for the skill and its script:
   (session times 64.3 s cold including the server start, then 30.3 s and 28.9 s).
 - Zero cost when unused: the Skills row of `/context all` is 4.5k with and without the skill, and
   `image` is not listed.
-- A plain sentence ("Mach mir ein Bild von einem Hund") does not start the skill. The session
+- A plain sentence asking for a picture of a dog, without `/image`, does not start the skill. The session
   then improvised with an online image service; the local-only rule exists only inside the skill.
 - After `-Stop`, no ComfyUI process remains and the port is closed.
 
