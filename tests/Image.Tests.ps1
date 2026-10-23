@@ -84,7 +84,7 @@ switch ($args[0]) {
         $env:FAKE_COMFY_DIR = $dir
         $env:FAKE_COMFY_MODE = $Mode
         if (-not $TemplateArgs) { $TemplateArgs = @('-Template', $script:template) }
-        $a = @('-NoProfile', '-File', $script:newImage) + $Arguments + $TemplateArgs + @(
+        $a = @('-NoProfile', '-NonInteractive', '-File', $script:newImage) + $Arguments + $TemplateArgs + @(
             '-OutputDir', $out, '-JobsDir', (Join-Path $dir 'jobs'),
             '-Comfy', $script:fakeComfy, '-Port', $Port, '-StartupTimeoutSec', 2)
         $text = & pwsh @a 2>&1 | Out-String

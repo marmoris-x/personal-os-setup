@@ -40,7 +40,7 @@ BeforeAll {
                 ('dev_root: "' + ($dev -replace '\\', '\\') + '"')
             )) -join "`n"
         [IO.File]::WriteAllText((Join-Path $fake 'personal.yaml'), $config, $utf8)
-        $out = & pwsh -NoProfile -File $script:export -RepoRoot $fake -ManifestPath (Join-Path $fake 'manifest.yaml') `
+        $out = & pwsh -NoProfile -NonInteractive -File $script:export -RepoRoot $fake -ManifestPath (Join-Path $fake 'manifest.yaml') `
             -ConfigPath (Join-Path $fake 'personal.yaml') -StatePath (Join-Path $fake 'state.json') -SkipScan 2>&1 | Out-String
         $written = Get-ChildItem -LiteralPath $fake -Recurse -File -Filter 'RULES.md' | Where-Object { $_.FullName -ne (Join-Path $dev 'RULES.md') } | Select-Object -First 1
         return @{ Output = $out; Exit = $LASTEXITCODE; Text = $(if ($written) { [IO.File]::ReadAllText($written.FullName) } else { '' }) }

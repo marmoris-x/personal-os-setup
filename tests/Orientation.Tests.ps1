@@ -40,7 +40,7 @@ BeforeAll {
     function Invoke-Hook {
         param([int]$Part, [string]$File = '', [string]$Event = 'SessionStart', [string]$EnvFile = '', [string]$Stdin = '__default__')
         if ($Stdin -eq '__default__') { $Stdin = '{"hook_event_name":"' + $Event + '","session_id":"t"}' }
-        $a = @('-NoProfile', '-File', $script:hook, '-Part', $Part)
+        $a = @('-NoProfile', '-NonInteractive', '-File', $script:hook, '-Part', $Part)
         if ($File) { $a += @('-OrientationFile', $File) }
         $env:PERSONAL_OS_ORIENTATION_FILE = $EnvFile
         $text = ($Stdin | & pwsh @a 2>&1 | Out-String)
