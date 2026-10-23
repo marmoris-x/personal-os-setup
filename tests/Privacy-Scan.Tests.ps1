@@ -61,3 +61,23 @@ Describe 'privacy-scan worktree scope' {
         $r.Output | Should -Match 'clean'
     }
 }
+
+# The DeepSeek orientation file is public in this repository once the owner has written it
+# (ADR 0020). Two things must hold: the scan reads that path, and no ignore rule hides it.
+Describe 'privacy-scan covers the DeepSeek orientation file' {
+    It 'a planted leak in home/.claude/orientation/deepseek.md is found' -Skip:(-not $script:hasGit) {
+        $dir = Join-Path $script:fixtureRoot 'git-orientation'
+        New-Item -ItemType Directory -Force -Path (Join-Path $dir 'home/.claude/orientation') | Out-Null
+        $utf8 = New-Object Text.UTF8Encoding($false)
+        [IO.File]::WriteAllText((Join-Path $dir 'home/.claude/orientation/deepseek.md'), ('## Notes' + "`n" + 'aws key AKIA' + 'QWERTYUIOPASDFGH' + "`n"), $utf8)
+        & git -C $dir init --quiet 2>$null | Out-Null
+        $r = Invoke-PrivateScan $dir
+        $r.Exit | Should -Be 1
+        $r.Output | Should -Match 'orientation.deepseek\.md'
+    }
+    It 'no .gitignore rule of this repository hides the file' -Skip:(-not $script:hasGit) {
+        $repo = Split-Path -Parent $PSScriptRoot
+        & git -C $repo check-ignore -q 'home/.claude/orientation/deepseek.md' 2>$null
+        $LASTEXITCODE | Should -Be 1 -Because 'check-ignore exits 1 when the path is not ignored'
+    }
+}

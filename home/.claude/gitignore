@@ -19,6 +19,8 @@
 !skills/**
 !profiles-template/
 !profiles-template/*.json
+!orientation/
+!orientation/*.md
 !docs/
 !docs/**
 !setup/

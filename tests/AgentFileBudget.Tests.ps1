@@ -32,6 +32,19 @@ Describe 'agent rule file size budget' {
         }
     }
 
+    # The DeepSeek orientation file is not a rule file every session loads: only DeepSeek sessions
+    # get it, through three hooks of at most 9,500 characters each (ADR 0020). It has its own
+    # ceiling, 28,500 characters = about 7,100 tokens, and stays under the 10,000-token budget.
+    # Skipped in a checkout that does not carry the file: the owner's file is pushed in a second
+    # step, after the owner has written it (ADR 0020). This is only the character ceiling; whether
+    # the sections really pack into three parts is the hook's own business (tests/Orientation.Tests.ps1).
+    It 'keeps the DeepSeek orientation file inside its own ceiling of 28,500 characters' -Skip:(-not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'home/.claude/orientation/deepseek.md'))) {
+        $path = Join-Path $repoRoot 'home/.claude/orientation/deepseek.md'
+        $text = [IO.File]::ReadAllText($path)
+        $text.Length | Should -BeLessOrEqual 28500 -Because "the file has $($text.Length) characters; the hooks inject nothing above 28,500 and show a warning instead"
+        [int][math]::Floor($text.Length / 4) | Should -BeLessOrEqual $script:budgetTokens
+    }
+
     It 'keeps every rule file inside the token budget' {
         foreach ($rel in $script:ruleFiles) {
             $text = [IO.File]::ReadAllText((Join-Path $repoRoot $rel))

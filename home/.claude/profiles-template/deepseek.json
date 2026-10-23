@@ -21,5 +21,104 @@
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
     "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "1"
+            ],
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "2"
+            ],
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "3"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "1"
+            ],
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "2"
+            ],
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/deepseek-orientation.ps1",
+              "-Part",
+              "3"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
