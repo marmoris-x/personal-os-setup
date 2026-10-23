@@ -101,6 +101,7 @@ $script:expectedFails = @{
     windows = @(
         @{ Id = 'mcp-exa'; Detail = 'claude is not on PATH'; Why = 'no Claude Code on a CI machine; installing and signing in needs a person' }
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
+        @{ Id = 'mcp-context7'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
     macos = @(
         # The life-os-venv entry that stood here until 2026-10-15 is gone, and the reason it gave
@@ -116,10 +117,12 @@ $script:expectedFails = @{
         # covered by this list.
         @{ Id = 'mcp-exa'; Detail = 'claude is not on PATH'; Why = 'no Claude Code on a CI machine; installing and signing in needs a person' }
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
+        @{ Id = 'mcp-context7'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
     linux = @(
         @{ Id = 'mcp-exa'; Detail = 'claude is not on PATH'; Why = 'no Claude Code on a CI machine; installing and signing in needs a person' }
         @{ Id = 'mcp-parallel'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
+        @{ Id = 'mcp-context7'; Detail = 'claude is not on PATH'; Why = 'same machine, same reason as mcp-exa' }
     )
 }
 
