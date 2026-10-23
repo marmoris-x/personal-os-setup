@@ -3,7 +3,7 @@
 Conventions for a project that works with video, audio or large images. No such project
 exists yet; this page is the template an agent follows when the first one starts. The
 `media-tools` skill (`~/.claude/skills/media-tools/`, portable copy in
-`~/.agents/skills/media-tools/`) holds the commands and the install rule.
+`~/.agents/skills/media-tools-portable/`) holds the commands and the install rule.
 
 ## The folders
 
