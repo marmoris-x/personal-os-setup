@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `f6b8552dae91a98a` (SHA256, first 16 characters)
+- Manifest checksum: `b3b2cd75e9f26350` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (63 of 78)
+## Core (64 of 80)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -67,6 +67,7 @@ file no longer matches the manifest (`-Check`).
 | `task-life-os-morning` | life-os | core | scheduled task "Life OS Morning" from `windows/scheduled-tasks/life-os-morning.xml.tmpl` |
 | `mcp-exa` | research | core | MCP server "exa" |
 | `mcp-parallel` | research | core | MCP server "parallel" |
+| `mcp-context7` | research | core | MCP server "context7" |
 | `obsidian-plugin-obsidian-git` | vault | core | Vinzent03/obsidian-git v2.40.0 |
 | `obsidian-plugin-tasks` | vault | core | obsidian-tasks-group/obsidian-tasks v8.4.0 |
 | `life-os-venv` | life-os | core | created by install.ps1: python -m venv %LOCALAPPDATA%\life-os\venv + home/.claude/life-os/requirements.txt; model loads on first run (-WithWhisperModel preloads) |
@@ -75,7 +76,7 @@ file no longer matches the manifest (`-Check`).
 | `os-backup` | backup | core | Kopia and KopiaUI from the OS package source. Connecting the repository and typing the password stays manual (decision D8) |
 | `os-onedrive` | backup | core | The OneDrive client and the document archive beside the documents folder. Windows and macOS only - there is no official OneDrive client for Linux (decision D9) |
 
-## Optional (15)
+## Optional (16)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -94,6 +95,7 @@ file no longer matches the manifest (`-Check`).
 | `winget-optional` | windows | optional | programs from `windows/winget-optional.json` |
 | `plugins-claude-code` | claude | optional | Claude Code marketplaces and plugins are installed by install.ps1 from settings.json (enabledPlugins). |
 | `crawl4ai` | research | optional | uv tool install crawl4ai + crawl4ai-setup (browser); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it |
+| `comfy-cli` | research | optional | Local image generation (/image skill, ADR 0019): `uv tool install comfy-cli --python 3.13`, then ComfyUI and one model by the recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose. |
 
 ## Fixed installer stages (deliberately not in the manifest, see `docs/decisions/0013-install-stages.md`)
 

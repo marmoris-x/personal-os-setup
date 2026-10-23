@@ -165,7 +165,11 @@ components:
     recursive: true
     # synced holds skills Claude Code synced from elsewhere - runtime, the same reason
     # export.ps1's forbidden list refuses it.
-    exclude: ["synced", "__pycache__", "*.pyc"]
+    # image_z_image_turbo.json is the official ComfyUI template, copied verbatim into the live
+    # skill folder. It is kept out of the repo (a decimal number in it reads as a 12-digit id to
+    # the privacy scan); new-image.ps1 fetches it again from a pinned commit and checks its hash
+    # (ADR 0019).
+    exclude: ["synced", "__pycache__", "*.pyc", "image_z_image_turbo.json"]
     replace:
       - { root: HOME, to: "{{HOME}}" }
       - { root: VAULT, to: "{{VAULT}}" }
@@ -676,6 +680,16 @@ components:
     name: "parallel"
     json: '{"type":"http","url":"https://search.parallel.ai/mcp"}'
 
+  - id: mcp-context7
+    area: research
+    type: mcp
+    core: true
+    name: "context7"
+    # No "?client=claude-code-plugin": since 2026-10-23 the server answers that exact value with
+    # HTTP 401 (the plugin's own address), while this plain address lists resolve-library-id and
+    # query-docs without an account. The plugin is disabled in settings.json (enabledPlugins).
+    json: '{"type":"http","url":"https://mcp.context7.com/mcp"}'
+
   - id: plugins-claude-code
     area: claude
     type: generated
@@ -709,6 +723,12 @@ components:
     type: generated
     core: false
     note: "uv tool install crawl4ai + crawl4ai-setup (browser); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it"
+
+  - id: comfy-cli
+    area: research
+    type: generated
+    core: false
+    note: "Local image generation (/image skill, ADR 0019): `uv tool install comfy-cli --python 3.13`, then ComfyUI and one model by the recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose."
 
   - id: own-tools
     area: windows

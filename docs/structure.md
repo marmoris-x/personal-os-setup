@@ -213,7 +213,7 @@ docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
 home/.agents/skills/docs-import-portable/SKILL.md
-home/.agents/skills/media-tools/SKILL.md
+home/.agents/skills/media-tools-portable/SKILL.md
 home/.agents/skills/quick-research-portable/SKILL.md
 home/.agents/skills/web-research/SKILL.md
 home/.claude/agents/evidence-extractor.md

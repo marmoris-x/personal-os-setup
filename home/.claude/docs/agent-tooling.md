@@ -179,6 +179,35 @@ The same run is also the proof that the order rule holds: in the session without
 first tool call was `mcp__exa__web_search_exa`, and neither session touched the built-in
 `WebSearch`/`WebFetch`.
 
+### Re-measured 2026-10-23 (Claude Code 2.1.309): the 2026-09-28 statement no longer holds
+
+The section above is kept as history. On 2026-10-23 `claude-ds` **does** defer MCP tool
+definitions, with no setting asking for it:
+
+- `ENABLE_TOOL_SEARCH` is set nowhere: not in `profiles/deepseek.json` (`env`), not in
+  `settings.json` (`env`), not in the user or machine environment, not in the launcher
+  functions or hooks (checked 2026-10-23).
+- The `/context` of a fresh `claude-ds` session lists the MCP tools as "(deferred)", and the
+  headless session's tool list carries `ToolSearch`.
+- Same method as 2026-09-28, but the server set is chosen with `--strict-mcp-config
+  --mcp-config <file>` so the user config stays untouched: two identical headless runs
+  (`claude --settings profiles/deepseek.json --strict-mcp-config --mcp-config <file> -p "Reply
+  with the single word OK. Do not use any tool." --output-format stream-json --verbose`), each
+  twice, reading the usage of the first request (no cache hits in any of the four runs).
+
+| In the run | Tools in the session | Whole first request (tokens) |
+|---|---|---|
+| no MCP server | 27 | 22,920 (both runs) |
+| `parallel` only | 31 (`mcp__parallel__web_search` plus the three MCP resource tools) | 23,300 (both runs) |
+
+The marginal cost of the second index is **380 tokens**, not the 1,557 of 2026-09-28: the
+definition of `web_search` is no longer sent up front, only its name, and Claude Code loads the
+definition when it is needed. What this changes: the rule "keep few servers in the main
+conversation" is much less pressing on `claude-ds` than the section above says, and a third
+server would cost a few hundred tokens, not a thousand and more. The proxy caveat about
+`ENABLE_TOOL_SEARCH=true` above is not needed. `claude-or` was not measured; do not assume the
+same. No setting was changed because of this result.
+
 ## A named teammate silently drops the agent file's MCP servers (found 2026-09-28)
 
 `agents/web-researcher.md` carries `mcpServers` and `disallowedTools`. Both take effect only

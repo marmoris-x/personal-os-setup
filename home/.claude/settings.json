@@ -319,6 +319,7 @@
   "enableWorkflows": true,
   "workflowSizeGuideline": "medium",
   "defaultShell": "powershell",
+  "bashOutputMaxChars": 15000,
   "statusLine": {
     "type": "command",
     "command": "{{PWSH_PATH}} -NoProfile -ExecutionPolicy Bypass -File {{HOME_FWD}}/.claude/statusline.ps1"
@@ -328,7 +329,7 @@
     "pyright-lsp@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
     "codeguard-security@project-codeguard": false,
-    "context7@claude-plugins-official": true
+    "context7@claude-plugins-official": false
   },
   "extraKnownMarketplaces": {
     "project-codeguard": {
@@ -342,14 +343,16 @@
   "feedbackSurveyRate": 0,
   "modelSettings": {
     "claude-opus-5-5": {
-      "effortLevel": "high"
+      "effortLevel": "medium"
     },
     "claude-sonnet-5-5": {
-      "effortLevel": "medium"
+      "effortLevel": "high"
+    },
+    "deepseek-flash": {
+      "effortLevel": "xhigh"
     }
   },
   "autoCompactWindow": 400000,
-  "bashOutputMaxChars": 15000,
   "fastModePerSessionOptIn": true,
   "promptSuggestionEnabled": false,
   "pluginConfigs": {

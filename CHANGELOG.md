@@ -5,6 +5,23 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## 3.6.0 (2026-10-23, not tagged yet)
+
+The ComfyUI task: `/image` for local picture generation, the Context7 fix, the re-measured MCP
+cost, and an orientation file that only DeepSeek sessions load.
+
+| What | Why |
+|---|---|
+| `home/.claude/skills/image/` (new), `home/.agents/skills/image-portable/` (new), `tests/Image.Tests.ps1`, `tests/fixtures/image-template-minimal.json`, `docs/decisions/0019-local-image-generation-comfy-cli.md`: `/image <what the picture shows>` drives ComfyUI through comfy-cli, local only (`--where local`, partner nodes off, `127.0.0.1`), user-invoked only. The official workflow template is fetched from a pinned commit and checked by SHA-256; `claude-skills` excludes it from the export | Zero tokens in sessions that do not use it, no MCP server. The template's line 439 holds a 12-digit decimal that privacy-scan rule `svnr-digits` reads as an identifier, and the owner wanted the rule left alone |
+| `setup/manifest.yaml`, `setup/platforms.yaml`: `comfy-cli` (generated, Windows manual, macOS/Linux unsupported) and `mcp-context7` | Every component the kit knows is in the manifest first. The plugin's `.mcp.json` sends `?client=claude-code-plugin`, which the server answers with HTTP 401, so Context7 is an own user-level entry on the plain URL |
+| `home/.agents/skills/media-tools` renamed `media-tools-portable`, `docs/media-projects.md`, check J | The folder matches its `name:` field (ADR 0017) |
+| `home/.claude/settings.json`: `context7@claude-plugins-official` off, `modelSettings` effort levels (Opus 5.5 `medium`, Sonnet 5.5 `high`, new `deepseek-flash` `xhigh`), `bashOutputMaxChars` moved | The plugin is replaced by the own entry above. The effort levels are the owner's own settings, committed with the rest; the key was only moved |
+| `setup/export.ps1`, `tests/Export.Tests.ps1`: the `append` rule compares with normalised line endings | A live file saved with CRLF never matched the LF block of the manifest, so every export added the personal-layer import a second time (measured 2026-10-23); red first, then green |
+| `setup/tools/verify-all.ps1` check 10: a hook that only one profile may run counts as named when the live profile (or, on a test target, the profile template) registers its parts 1-3 under SessionStart and SubagentStart; `setup/tools/drift-check.ps1`: `life-os-transcribe.json` is a runtime file | The orientation hook must not be named in `settings.json` (that would load it everywhere). The transcription handover file was reported as unmanaged |
+| `home/.claude/docs/agent-tooling.md`: MCP tool loading re-measured on Claude Code 2.1.309 | The 2026-09-28 statement (+1,557 tokens for a parallel server) no longer holds: +380 |
+| `home/.claude/hooks/deepseek-orientation.ps1` (new), `home/.claude/orientation/deepseek.md`, `home/.claude/profiles-template/deepseek.json`, `home/.claude/gitignore`, `tests/Orientation.Tests.ps1`, `tests/AgentFileBudget.Tests.ps1`, `tests/Privacy-Scan.Tests.ps1`, `docs/decisions/0020-model-specific-orientation-through-profile-hooks.md`: SessionStart and SubagentStart hooks registered in the DeepSeek profile only inject the owner's file in up to three parts of 9,500 characters | A profile hook is the only way to reach DeepSeek main sessions and subagents, including `morning.ps1` and `batch-run.ps1`, without touching the other profiles (ADR 0020) |
+| `setup/tools/verify-all.ps1` check J, `docs/structure.md`: one intended-change line per new or changed mirror file | An undocumented delta is a defect |
+
 ## 3.5.0 (2026-10-21, not tagged yet)
 
 The media-and-projects task: one copy each of ffmpeg, yt-dlp and deno; Groq as the default
