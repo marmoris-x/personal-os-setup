@@ -674,6 +674,41 @@ if (Test-Selected '10') { try {
         foreach ($p in $registered) { if ((Split-Path $p -Leaf) -eq $f.Name) { $named = $true; break } }
         if (-not $named) { $unregistered.Add($f.Name) }
     }
+    # A hook that only one profile may run (ADR 0020) is named in that profile file, never in
+    # settings.json - putting it there would load it into every profile. It counts as named when
+    # the profile registers parts 1, 2 and 3 of it under SessionStart and under SubagentStart,
+    # each with an existing -File path. The live profile is read; a test target holds only the
+    # template (placeholders still in it), so there the template must name it the same way.
+    $profileOnlyHooks = @{ 'deepseek-orientation.ps1' = 'deepseek.json' }
+    foreach ($leaf in @($profileOnlyHooks.Keys)) {
+        if (-not $unregistered.Contains($leaf)) { continue }
+        $liveProfile = Join-Path $HomeRoot ('.claude\profiles\' + $profileOnlyHooks[$leaf])
+        $templateProfile = Join-Path $HomeRoot ('.claude\profiles-template\' + $profileOnlyHooks[$leaf])
+        $useTemplate = -not (Test-Path -LiteralPath $liveProfile -PathType Leaf)
+        $profilePath = if ($useTemplate) { $templateProfile } else { $liveProfile }
+        try {
+            $prof = [IO.File]::ReadAllText($profilePath) | ConvertFrom-Json
+            $wired = New-Object System.Collections.Generic.List[string]
+            foreach ($ev in $prof.hooks.PSObject.Properties) {
+                foreach ($entry in @($ev.Value)) {
+                    foreach ($h in @($entry.hooks)) {
+                        $parts = @($h.args | ForEach-Object { [string]$_ })
+                        for ($ai = 0; $ai -lt $parts.Count - 3; $ai++) {
+                            if (($parts[$ai] -match '^-{1,2}(file|f)$') -and ((Split-Path $parts[$ai + 1] -Leaf) -eq $leaf) -and ($parts[$ai + 2] -eq '-Part')) {
+                                $scriptPath = $parts[$ai + 1] -replace '/', '\'
+                                # a template still carries {{...}} placeholders; the file itself is judged by the live path only
+                                if ($useTemplate -or (Test-Path -LiteralPath $scriptPath -PathType Leaf)) { $wired.Add($ev.Name + ' ' + $parts[$ai + 3]) }
+                            }
+                        }
+                    }
+                }
+            }
+            $allWired = $true
+            foreach ($evName in 'SessionStart', 'SubagentStart') { foreach ($n in 1, 2, 3) { if (-not $wired.Contains($evName + ' ' + $n)) { $allWired = $false } } }
+            if ($allWired) { [void]$unregistered.Remove($leaf) }
+        }
+        catch { }   # unreadable profile: the file stays reported as not named
+    }
     foreach ($need in $requiredUnderPreToolUse) {
         if (-not ($preToolUseNames -contains $need)) { $notUnderPreToolUse.Add($need) }
     }
@@ -1356,9 +1391,17 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/life-os/groq_worker.py'; Reason = '2026-10-21 (media-and-projects Part 3): Groq whisper-large-v3-turbo as the default engine, 16 kHz mono FLAC preprocessing, 600 s chunks with 10 s overlap copied from the Groq cookbook, the 21,600 s daily cap shared with dictation, and one German fallback reason' }
         @{ Path = 'HOME/.claude/life-os/project-tracker.ps1'; Reason = '2026-10-21 (Part 4): read-only git scan of C:\Dev\Projects with a state file, the five edge cases, the activity log, the three frontmatter keys, the Next-step carry-over, the Bases data and the >1 GB safety net' }
         @{ Path = 'HOME/.claude/skills/media-tools/SKILL.md'; Reason = '2026-10-21 (Part 5b): the personal skill with the tested recipes for downloads, ffmpeg, markitdown, docling, pypdf, archives, images and ebooks, and the media-project template' }
-        @{ Path = 'HOME/.agents/skills/media-tools/SKILL.md'; Reason = '2026-10-21 (Part 5b): the portable copy of the media-tools skill for OpenCode and Codex' }
+        @{ Path = 'HOME/.agents/skills/media-tools-portable/SKILL.md'; Reason = '2026-10-21 (Part 5b): the portable copy of the media-tools skill for OpenCode and Codex; folder renamed to media-tools-portable on 2026-10-23 so it matches the name: field (ADR 0017)' }
         @{ Path = 'HOME/.claude/life-os/transcribe.ps1'; Reason = '2026-10-21 (Part 3): -Engine groq|local, the user-key import, the Groq worker call, the German fallback line and the transcribe.json handover to the morning report' }
         @{ Path = 'VAULT/000-meta/overview.base'; Reason = '2026-10-21 (Part 4.5): a Project activity view with last_activity, uncommitted and unpushed, sorted newest first' }
+        @{ Path = 'HOME/.claude/skills/image/SKILL.md'; Reason = '2026-10-23 (ComfyUI task, Part 4): the /image skill - local picture generation through comfy-cli, user-invoked only, with the binding local-only rules (ADR 0019)' }
+        @{ Path = 'HOME/.claude/skills/image/scripts/new-image.ps1'; Reason = '2026-10-23 (Part 4): the one script behind /image - fetches the pinned official template (SHA-256 checked), starts ComfyUI on 127.0.0.1 with partner nodes off, runs the workflow with --where local, prints the image path and the seed; the official template itself stays out of the repository (ADR 0019)' }
+        @{ Path = 'HOME/.agents/skills/image-portable/SKILL.md'; Reason = '2026-10-23 (Part 4): the portable twin of the /image skill for OpenCode and Codex, explicit invocation only' }
+        @{ Path = 'HOME/.agents/skills/image-portable/agents/openai.yaml'; Reason = '2026-10-23 (Part 4): Codex policy allow_implicit_invocation false for the portable /image skill' }
+        @{ Path = 'HOME/.claude/hooks/deepseek-orientation.ps1'; Reason = '2026-10-23 (Part 8): the orientation hook - reads the owner''s orientation file, splits it at "## " headings into at most three parts of 9,500 characters, prints one part as additionalContext; registered by the DeepSeek profile only (ADR 0020)' }
+        @{ Path = 'HOME/.claude/orientation/deepseek.md'; Reason = '2026-10-23 (Part 8): the owner-written orientation file for DeepSeek sessions; shipped as a one-line placeholder until the owner writes it (ADR 0020)' }
+        @{ Path = 'HOME/.claude/.gitignore'; Reason = '2026-10-23 (Part 8): the claude-config whitelist names orientation/ and orientation/*.md, otherwise the orientation file would never be committed' }
+        @{ Path = 'HOME/.claude/profiles-template/deepseek.json'; Reason = '2026-10-23 (Part 8): the DeepSeek profile template carries the SessionStart (startup|clear|compact) and SubagentStart hooks of the orientation file, three parts each; no other profile gets them' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

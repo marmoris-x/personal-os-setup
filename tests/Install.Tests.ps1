@@ -254,7 +254,10 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         $files.Count | Should -BeGreaterThan 90
         # 140 measured 2026-10-21: groq_worker.py, project-tracker.ps1 and the two
         # media-tools skill copies (personal and portable) add four core files.
-        $files.Count | Should -BeLessThan 142 -Because 'four intended core files were added on 2026-10-21'
+        # 143 measured 2026-10-23: the /image skill (SKILL.md and new-image.ps1) and the
+        # deepseek-orientation.ps1 hook add three core files; the orientation file and the
+        # portable twin are not core.
+        $files.Count | Should -BeLessThan 144 -Because 'three intended core files were added on 2026-10-23'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

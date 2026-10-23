@@ -236,7 +236,8 @@ function Convert-File([string]$src, $entry) {
     $raw = [IO.File]::ReadAllText($src)
     $text = Apply-DropLines $raw $entry.drop_lines
     $text = Apply-Replacements $text (Get-EntryPairs $entry)
-    if ($entry.append -and -not $text.Contains($entry.append.Trim())) { $text = $text.TrimEnd() + "`r`n" + $entry.append }
+    # the manifest text has LF line breaks; a live file saved with CRLF must still count as carrying it
+    if ($entry.append -and -not $text.Replace("`r`n", "`n").Contains($entry.append.Trim())) { $text = $text.TrimEnd() + "`r`n" + $entry.append }
     return $text
 }
 
