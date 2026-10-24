@@ -257,7 +257,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 143 measured 2026-10-23: the /image skill (SKILL.md and new-image.ps1) and the
         # deepseek-orientation.ps1 hook add three core files; the orientation file and the
         # portable twin are not core.
-        $files.Count | Should -BeLessThan 144 -Because 'three intended core files were added on 2026-10-23'
+        # 144 measured 2026-10-24: the /distill skill (SKILL.md) adds one core file; its portable
+        # twin is not core, like the other portable skills.
+        $files.Count | Should -BeLessThan 145 -Because 'one intended core file was added on 2026-10-24'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

@@ -1401,6 +1401,10 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/hooks/deepseek-orientation.ps1'; Reason = '2026-10-23 (Part 8): the orientation hook - reads the owner''s orientation file, splits it at "## " headings into at most three parts of 9,500 characters, prints one part as additionalContext; registered by the DeepSeek profile only (ADR 0020)' }
         @{ Path = 'HOME/.claude/orientation/deepseek.md'; Reason = '2026-10-23 (Part 8): the owner-written orientation file for DeepSeek sessions; shipped as a one-line placeholder until the owner writes it (ADR 0020)' }
         @{ Path = 'HOME/.claude/.gitignore'; Reason = '2026-10-23 (Part 8): the claude-config whitelist names orientation/ and orientation/*.md, otherwise the orientation file would never be committed' }
+        @{ Path = 'HOME/.claude/skills/distill/SKILL.md'; Reason = '2026-10-24 (vault-knowledge task, Part 4): the /distill skill - files a finished session back into the vault as one knowledge page, user-invoked only' }
+        @{ Path = 'HOME/.agents/skills/distill-portable/SKILL.md'; Reason = '2026-10-24 (Part 4): the portable twin of the /distill skill for OpenCode and Codex, explicit invocation only' }
+        @{ Path = 'HOME/.agents/skills/distill-portable/agents/openai.yaml'; Reason = '2026-10-24 (Part 4): Codex policy allow_implicit_invocation false for the portable /distill skill' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-24 (vault-knowledge task, Parts 1, 2 and 4): the orientation blocks count as the owner''s instructions (Safety exception), Parallel is free without a key with unpublished limits, and /distill is the one exception to "a project session never writes in the vault"' }
         @{ Path = 'HOME/.claude/profiles-template/deepseek.json'; Reason = '2026-10-23 (Part 8): the DeepSeek profile template carries the SessionStart (startup|clear|compact) and SubagentStart hooks of the orientation file, three parts each; no other profile gets them' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))

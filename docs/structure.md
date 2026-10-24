@@ -214,6 +214,8 @@ docs/platforms.md
 docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
+home/.agents/skills/distill-portable/agents/openai.yaml
+home/.agents/skills/distill-portable/SKILL.md
 home/.agents/skills/docs-import-portable/SKILL.md
 home/.agents/skills/image-portable/agents/openai.yaml
 home/.agents/skills/image-portable/SKILL.md
@@ -303,6 +305,7 @@ home/.claude/setup/tests/test-onedrive-guard.ps1
 home/.claude/setup/tests/test-session-check.ps1
 home/.claude/setup/tests/test-skill-usage.ps1
 home/.claude/setup/tests/test-trifecta-guard.ps1
+home/.claude/skills/distill/SKILL.md
 home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/image/scripts/new-image.ps1
 home/.claude/skills/image/SKILL.md
@@ -376,6 +379,7 @@ setup/tools/privacy-scan.ps1
 setup/tools/verify-all.ps1
 setup/verify.ps1
 tests/AgentFileBudget.Tests.ps1
+tests/Distill.Tests.ps1
 tests/Export.Tests.ps1
 tests/fixtures/image-template-minimal.json
 tests/fixtures/install-baseline-v2.1.2.json

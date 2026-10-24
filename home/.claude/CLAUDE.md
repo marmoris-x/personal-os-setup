@@ -46,7 +46,7 @@ is more specific and wins where the two differ. My explicit request in the chat 
 
 ## Media, transcription and the vault boundary
 
-- A session in `{{DEV}}\Projects` never writes in the vault; the morning tracker brings project changes to the vault. A vault session never changes project code.
+- A session in `{{DEV}}\Projects` never writes in the vault; the morning tracker brings project changes to the vault. A vault session never changes project code. Exception: when I run /distill, it writes its one page and the log line, nothing else.
 - Before writing anything in the vault from another folder, read the vault AGENTS.md first.
 - `{{DEV}}\Temp\media` is shared media scratch, not a task folder: never delete it or its files during a task's cleanup.
 - ffmpeg, yt-dlp and deno are on PATH; documents and PDFs run on demand with `uvx`/`uv run --with`, archives via PowerShell and WinRAR; recipes are in the `media-tools` skill. Install nothing new before it is really needed, and never a second copy.
