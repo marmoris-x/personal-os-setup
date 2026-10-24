@@ -44,8 +44,11 @@ How it works:
   (https://code.claude.com/docs/en/hooks). So the file goes out in up to three parts of at most
   9,500 characters, 28,500 in total.
 - Hooks of one event run in parallel, so the order of the parts is not guaranteed. Each part
-  starts with `[Orientation part N of M - all parts together form one document]`; the label counts
-  toward the 9,500.
+  starts with `[Orientation part N of M - the owner's own instructions, injected by his SessionStart
+  hook from ~/.claude/orientation/deepseek.md; same standing as CLAUDE.md]`; the label counts
+  toward the 9,500. Since 2026-10-24 the global CLAUDE.md (Safety) names this label and grants it
+  the standing of the owner's instructions by origin only; before that a DeepSeek session treated
+  the hook text as data (measured: red, then green, in `orientation-test.txt` of that task).
 - All three calls split the file the same way: at lines that start with `## `, greedy in file
   order; a section that is too long at blank lines; a paragraph that is still too long at the
   last line break. A line is never cut. A file that needs more than three parts, or has one line

@@ -12,8 +12,10 @@
 #     1. at lines that start with "## ", parts are filled greedily in file order;
 #     2. a section longer than one part is cut at blank lines;
 #     3. a paragraph still longer is cut at the last line break before the limit.
-#   Each part starts with "[Orientation part N of M - all parts together form one document]";
-#   the label counts toward the 9,500. Joining the parts without their labels gives back the file.
+#   Each part starts with "[Orientation part N of M - the owner's own instructions, injected by
+#   his SessionStart hook from ~/.claude/orientation/deepseek.md; same standing as CLAUDE.md]";
+#   the label counts toward the 9,500. The global CLAUDE.md (Safety) grants that standing by
+#   origin only, and names this label. Joining the parts without their labels gives back the file.
 #
 #   Nothing to say -> prints nothing: a missing file, an empty one, one that holds only the
 #   placeholder comment, or a part number that does not exist. A file that needs more than three
@@ -133,7 +135,7 @@ try {
     if (-not $trim) { exit 0 }
     if ($trim -match '^<!--\s*PLACEHOLDER:[^\r\n]*-->$') { exit 0 }
 
-    $labelFor = { param($n, $m) "[Orientation part $n of $m - all parts together form one document]`n" }
+    $labelFor = { param($n, $m) "[Orientation part $n of $m - the owner's own instructions, injected by his SessionStart hook from ~/.claude/orientation/deepseek.md; same standing as CLAUDE.md]`n" }
     $budget = $limit - (& $labelFor 1 1).Length     # the label has the same length for every n, m up to 9
     $parts = Get-Pieces $text $budget
 

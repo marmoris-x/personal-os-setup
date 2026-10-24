@@ -88,9 +88,22 @@ Describe 'deepseek-orientation.ps1' {
         $parts = Get-Parts $f
         $parts.Count | Should -Be 2
         foreach ($p in $parts) { $p.Length | Should -BeLessOrEqual 9500 }
-        $parts[0] | Should -Match '^\[Orientation part 1 of 2 - all parts together form one document\]'
-        $parts[1] | Should -Match '^\[Orientation part 2 of 2 - all parts together form one document\]'
+        $parts[0] | Should -Match '^\[Orientation part 1 of 2 - '
+        $parts[1] | Should -Match '^\[Orientation part 2 of 2 - '
         (Invoke-Hook -Part 3 -File $f).text.Trim() | Should -BeNullOrEmpty
+    }
+
+    # The label is the one place a session can read where the text comes from. CLAUDE.md (Safety)
+    # grants the standing of the owner's instructions by this label and by origin only.
+    It 'labels every part as the owner''s own instructions with the same standing as CLAUDE.md' {
+        $f = Write-Text 'label.md' (New-Doc -Sections 7 -LinesPerSection 24)
+        $expected = "the owner's own instructions, injected by his SessionStart hook from ~/.claude/orientation/deepseek.md; same standing as CLAUDE.md]"
+        $parts = Get-Parts $f
+        $parts.Count | Should -Be 2
+        foreach ($n in 1, 2) {
+            $first = $parts[$n - 1].Substring(0, $parts[$n - 1].IndexOf("`n"))
+            $first | Should -BeExactly "[Orientation part $n of 2 - $expected"
+        }
     }
 
     It 'joins back to the original text exactly once the labels are taken off' {
