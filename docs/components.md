@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `b3b2cd75e9f26350` (SHA256, first 16 characters)
+- Manifest checksum: `04d13d25bb4f938f` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (64 of 80)
+## Core (64 of 81)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -76,11 +76,12 @@ file no longer matches the manifest (`-Check`).
 | `os-backup` | backup | core | Kopia and KopiaUI from the OS package source. Connecting the repository and typing the password stays manual (decision D8) |
 | `os-onedrive` | backup | core | The OneDrive client and the document archive beside the documents folder. Windows and macOS only - there is no official OneDrive client for Linux (decision D9) |
 
-## Optional (16)
+## Optional (17)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
 | `claude-docs-agent-tooling` | research | optional | file/folder to `HOME/.claude/docs/agent-tooling.md` |
+| `claude-orientation-deepseek` | claude | optional | file/folder to `HOME/.claude/orientation/deepseek.md` |
 | `claude-docs-repositories` | research | optional | file/folder to `HOME/.claude/docs/repositories.md` |
 | `claude-repair-script` | claude | optional | file/folder to `HOME/.claude/setup/repair-claude-code.ps1` |
 | `claude-other-harnesses` | claude | optional | file/folder to `HOME/.claude/setup/other-harnesses` |

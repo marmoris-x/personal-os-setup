@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `b3b2cd75e9f26350`
+- Manifest checksum: `04d13d25bb4f938f`
 
 ## What each system can do
 
@@ -42,6 +42,7 @@ written next to it. An agent that meets one of these skips the component and say
 | `claude-skills` | `files` | `files` | `files` |
 | `claude-docs-research-standard` | `files` | `files` | `files` |
 | `claude-docs-agent-tooling` | `files` | `files` | `files` |
+| `claude-orientation-deepseek` | `files` | `files` | `files` |
 | `claude-docs-repositories` | `files` | `files` | `files` |
 | `claude-lessons-skeleton` | `files` | `files` | `files` |
 | `claude-changelog-skeleton` | `files` | `files` | `files` |

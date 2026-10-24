@@ -256,6 +256,7 @@ home/.claude/life-os/register-tasks.ps1
 home/.claude/life-os/requirements.txt
 home/.claude/life-os/transcribe_worker.py
 home/.claude/life-os/transcribe.ps1
+home/.claude/orientation/deepseek.md
 home/.claude/profiles-template/deepseek.json
 home/.claude/profiles-template/openrouter.json
 home/.claude/rules/browser-extensions-userscripts.md

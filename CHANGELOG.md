@@ -28,6 +28,7 @@ Added on 2026-10-24 (same release, not tagged yet):
 |---|---|
 | `home/.claude/hooks/fetch-guard.ps1`, `home/.claude/setup/tests/test-fetch-guard.ps1`, `home/.claude/settings.json` (matcher), `setup/tools/verify-all.ps1` check J: URLs of online picture services, image endpoints such as `/v1/images/generations` and image-making MCP tools are denied for every sink and also under `POS_ALLOW_DIRECT_FETCH=1`; the matcher hands browser `navigate` and `browser_batch` to the guard | A session had made a picture through pollinations.ai because a download with a file sink passed the fetch rules; pictures are to come only from `/image`. The new test cases failed first (26 errors), then passed |
 | `home/.claude/settings.json`: `skillOverrides` sets eight bundled skills to `user-invocable-only` (`dataviz`, `claude-api`, `update-config`, `loop`, `plugin-authoring`, `keybindings-help`, `simplify`, `fewer-permission-prompts`) | The owner accepted proposal 7.4; measured with `/context all`: skills 4.5k to 3k tokens |
+| `home/.claude/orientation/deepseek.md`, `setup/manifest.yaml` and `setup/platforms.yaml` (`claude-orientation-deepseek`), `docs/components.md`, `docs/platforms.md`, `docs/structure.md`: the owner's orientation file (14,751 characters) and its catalogue entries | Part 8.6, second step. Checked first: budget test, privacy-scan test, gitleaks, one DeepSeek session without override (injected in 2 parts) |
 
 ## 3.5.0 (2026-10-21, not tagged yet)
 

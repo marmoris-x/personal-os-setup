@@ -113,6 +113,10 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
+  claude-orientation-deepseek:
+    windows: "files"
+    macos: "files"
+    linux: "files"
   # --- area research ---
   claude-docs-research-standard:
     windows: "files"

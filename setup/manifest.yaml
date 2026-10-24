@@ -189,6 +189,17 @@ components:
     source: "{HOME}/.claude/docs/agent-tooling.md"
     target: "HOME/.claude/docs/agent-tooling.md"
 
+  - id: claude-orientation-deepseek
+    area: claude
+    type: copy
+    core: false
+    # The owner's orientation file for DeepSeek sessions (ADR 0020). It loads through three
+    # SessionStart/SubagentStart hooks in the DeepSeek profile only (hooks/deepseek-orientation.ps1),
+    # never through rules/ or CLAUDE.md. Until the owner writes it, it holds one placeholder line.
+    # It is public in this repository, so the privacy scan and gitleaks read it like any file.
+    source: "{HOME}/.claude/orientation/deepseek.md"
+    target: "HOME/.claude/orientation/deepseek.md"
+
   - id: claude-docs-repositories
     area: research
     type: copy
