@@ -199,7 +199,7 @@
         ]
       },
       {
-        "matcher": "WebFetch|mcp__.*__(?:.*(?:fetch|scrape|extract|crawl|contents|read[_-]?url).*)|Bash|PowerShell",
+        "matcher": "WebFetch|mcp__.*__(?:.*(?:fetch|scrape|extract|crawl|contents|read[_-]?url).*)|mcp__.*__(?:navigate|browser_batch|.*(?:generate|create|make|text[_-]?to|txt2)[_-]?image.*|.*image[_-]?(?:generat|creat|gen).*)|Bash|PowerShell",
         "hooks": [
           {
             "type": "command",
@@ -323,6 +323,16 @@
   "statusLine": {
     "type": "command",
     "command": "{{PWSH_PATH}} -NoProfile -ExecutionPolicy Bypass -File {{HOME_FWD}}/.claude/statusline.ps1"
+  },
+  "skillOverrides": {
+    "dataviz": "user-invocable-only",
+    "claude-api": "user-invocable-only",
+    "update-config": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "plugin-authoring": "user-invocable-only",
+    "keybindings-help": "user-invocable-only",
+    "simplify": "user-invocable-only",
+    "fewer-permission-prompts": "user-invocable-only"
   },
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true,

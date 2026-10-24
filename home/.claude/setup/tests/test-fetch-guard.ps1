@@ -155,6 +155,44 @@ $cases = @(
     @{ E = 'block'; T = 'PowerShell'; I = @{ command = 'setx /M POS_ALLOW_DIRECT_FETCH 1' } },
     @{ E = 'block'; T = 'Bash'; I = @{ command = 'python -c "open(''/home/user/.bashrc'',''a'').write(''POS_ALLOW_DIRECT_FETCH=1'')"' } },
     @{ E = 'block'; T = 'PowerShell'; I = @{ command = 'setx POS_ALLOW_DIRECT_FETCH 1' }; Env = @{ POS_ALLOW_DIRECT_FETCH = '1' } },
+    # --- online image services: pictures are made only by the /image skill (2026-10-24) ---
+    # A download WITH a file sink passes the fetch rules above, which is how a session got a
+    # picture from pollinations.ai. These stay blocked for every sink, also under the override.
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o dog.jpg "https://image.pollinations.ai/prompt/a%20dog"' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -sL https://pollinations.ai/p/dog -o dog.png' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl https://image.pollinations.ai/prompt/dog > dog.jpg' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o dog.jpg image.pollinations.ai/prompt/dog' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'wget -O dog.jpg https://IMAGE.Pollinations.AI/prompt/dog' } },
+    @{ E = 'block'; T = 'PowerShell'; I = @{ command = 'Invoke-WebRequest https://image.pollinations.ai/prompt/dog -OutFile dog.png' } },
+    @{ E = 'block'; T = 'PowerShell'; I = @{ command = '$u=''https://image.pollinations.ai/prompt/dog''; iwr $u -OutFile a.png' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'bash -c "curl -o a.png https://image.pollinations.ai/prompt/dog"' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'python -c "import requests; open(''x.png'',''wb'').write(requests.get(''https://image.pollinations.ai/prompt/dog'').content)"' } },
+    @{ E = 'block'; T = 'PowerShell'; I = @{ command = 'Invoke-RestMethod -Method Post https://api.openai.com/v1/images/generations -Body $b -OutFile r.json' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o r.json https://api.together.xyz/v1/images/generations' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o r.json https://api.stability.ai/v2beta/stable-image/generate/core' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o r.json https://fal.run/fal-ai/flux/dev' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o r.json https://api.replicate.com/v1/predictions' } },
+    @{ E = 'block'; T = 'WebFetch'; I = @{ url = 'https://image.pollinations.ai/prompt/dog'; prompt = 'x' } },
+    @{ E = 'block'; T = 'mcp__claude-in-chrome__navigate'; I = @{ url = 'https://pollinations.ai/'; tabId = 1 } },
+    @{ E = 'block'; T = 'mcp__claude-in-chrome__browser_batch'; I = @{ actions = @(@{ tool = 'navigate'; url = 'https://www.craiyon.com/' }) } },
+    @{ E = 'block'; T = 'mcp__x__generate_image'; I = @{ prompt = 'a dog' } },
+    @{ E = 'block'; T = 'mcp__x__create-image'; I = @{ prompt = 'a dog' } },
+    @{ E = 'block'; T = 'mcp__x__text_to_image'; I = @{ prompt = 'a dog' } },
+    @{ E = 'block'; T = 'Bash'; I = @{ command = 'curl -o dog.jpg https://image.pollinations.ai/prompt/dog' }; Env = @{ POS_ALLOW_DIRECT_FETCH = '1' } },
+    @{ E = 'block'; T = 'WebFetch'; I = @{ url = 'https://image.pollinations.ai/prompt/dog'; prompt = 'x' }; Env = @{ POS_ALLOW_DIRECT_FETCH = '1' } },
+    # --- image services: what must keep working ---------------------------------
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'git commit -m "block https://image.pollinations.ai in the fetch guard"' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'echo "curl -o a.png https://image.pollinations.ai/prompt/dog"' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'grep -rn "pollinations.ai" docs/' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'curl -o page.html https://example.com/pollinations.ai' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'curl -o page.html https://notpollinations.ai.example.com/x' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'git clone https://github.com/pollinations/pollinations.git' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'curl https://api.openai.com/v1/chat/completions' } },
+    @{ E = 'allow'; T = 'PowerShell'; I = @{ command = 'pwsh -NoProfile -File {{HOME}}\.claude\skills\image\scripts\new-image.ps1 -Prompt "ein Hund"' } },
+    @{ E = 'allow'; T = 'Bash'; I = @{ command = 'comfy --skip-prompt run --where local --workflow w.json' } },
+    @{ E = 'allow'; T = 'mcp__claude-in-chrome__navigate'; I = @{ url = 'http://127.0.0.1:8188'; tabId = 1 } },
+    @{ E = 'allow'; T = 'mcp__claude-in-chrome__navigate'; I = @{ url = 'https://example.com'; tabId = 1 } },
+    @{ E = 'allow'; T = 'mcp__x__list_images'; I = @{ folder = 'a' } },
     # --- other tools are not this guard's job ---------------------------------
     @{ E = 'allow'; T = 'Read'; I = @{ file_path = 'C:\x\page.html' } },
     @{ E = 'allow'; T = 'Grep'; I = @{ pattern = 'curl'; path = 'C:\x' } },
@@ -242,6 +280,15 @@ else {
     elseif ($fetchEntry.matcher -notmatch 'WebFetch' -or $fetchEntry.matcher -notmatch 'mcp__' -or
             $fetchEntry.matcher -notmatch 'Bash' -or $fetchEntry.matcher -notmatch 'PowerShell') {
         $wiringErrors++; Write-Output ('FAIL  fetch-guard matcher is too narrow: ' + $fetchEntry.matcher)
+    }
+    else {
+        # the image-service rule only works for tools the matcher hands to the guard
+        foreach ($toolName in @('mcp__claude-in-chrome__navigate', 'mcp__claude-in-chrome__browser_batch',
+                                'mcp__x__generate_image', 'mcp__x__create-image', 'mcp__x__text_to_image')) {
+            if (-not [regex]::IsMatch($toolName, '^(?:' + $fetchEntry.matcher + ')$')) {
+                $wiringErrors++; Write-Output ("FAIL  fetch-guard matcher does not cover $toolName (online image services)")
+            }
+        }
     }
 }
 if ($wiringErrors -eq 0) { Write-Output 'OK    expected block | result block | every security guard is fail-closed (onFailure block + timeout), fetch matcher specific' }

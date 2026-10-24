@@ -22,6 +22,13 @@ cost, and an orientation file that only DeepSeek sessions load.
 | `home/.claude/hooks/deepseek-orientation.ps1` (new), `home/.claude/orientation/deepseek.md`, `home/.claude/profiles-template/deepseek.json`, `home/.claude/gitignore`, `tests/Orientation.Tests.ps1`, `tests/AgentFileBudget.Tests.ps1`, `tests/Privacy-Scan.Tests.ps1`, `docs/decisions/0020-model-specific-orientation-through-profile-hooks.md`: SessionStart and SubagentStart hooks registered in the DeepSeek profile only inject the owner's file in up to three parts of 9,500 characters | A profile hook is the only way to reach DeepSeek main sessions and subagents, including `morning.ps1` and `batch-run.ps1`, without touching the other profiles (ADR 0020) |
 | `setup/tools/verify-all.ps1` check J, `docs/structure.md`: one intended-change line per new or changed mirror file | An undocumented delta is a defect |
 
+Added on 2026-10-24 (same release, not tagged yet):
+
+| What | Why |
+|---|---|
+| `home/.claude/hooks/fetch-guard.ps1`, `home/.claude/setup/tests/test-fetch-guard.ps1`, `home/.claude/settings.json` (matcher), `setup/tools/verify-all.ps1` check J: URLs of online picture services, image endpoints such as `/v1/images/generations` and image-making MCP tools are denied for every sink and also under `POS_ALLOW_DIRECT_FETCH=1`; the matcher hands browser `navigate` and `browser_batch` to the guard | A session had made a picture through pollinations.ai because a download with a file sink passed the fetch rules; pictures are to come only from `/image`. The new test cases failed first (26 errors), then passed |
+| `home/.claude/settings.json`: `skillOverrides` sets eight bundled skills to `user-invocable-only` (`dataviz`, `claude-api`, `update-config`, `loop`, `plugin-authoring`, `keybindings-help`, `simplify`, `fewer-permission-prompts`) | The owner accepted proposal 7.4; measured with `/context all`: skills 4.5k to 3k tokens |
+
 ## 3.5.0 (2026-10-21, not tagged yet)
 
 The media-and-projects task: one copy each of ffmpeg, yt-dlp and deno; Groq as the default

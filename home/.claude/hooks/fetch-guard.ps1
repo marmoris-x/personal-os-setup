@@ -15,6 +15,11 @@
 #           and JSON calls to API hosts (api.*, *.api.*, api.github.com, registry.npmjs.org,
 #           pypi.org/pypi/*/json).
 #
+#   ONLINE IMAGE SERVICES (2026-10-24): URLs of picture-making services (pollinations.ai and the
+#   like, see $script:ImageHosts), image endpoints such as /v1/images/generations, and MCP tools
+#   that generate images are denied for every sink and also under the override below. Pictures
+#   are made only by the /image skill (local ComfyUI).
+#
 #   THE USER-ONLY OVERRIDE: if POS_ALLOW_DIRECT_FETCH=1 is set in the Claude Code process
 #   environment, the guard allows and appends one line to state/fetch-guard.log. A command
 #   that would set the variable persistently (setx, [Environment]::SetEnvironmentVariable,
@@ -425,6 +430,105 @@ function Test-ShellFetch([string]$text, [int]$depth = 0) {
     return $false
 }
 
+# --- online image services (2026-10-24) -------------------------------------
+# Pictures are made only by the /image skill (local ComfyUI). A download WITH a file sink passes
+# the fetch rules above, which is how a session got a picture from pollinations.ai. So these
+# hosts are denied for every sink, for every tool that hands a URL to the guard, and also while
+# POS_ALLOW_DIRECT_FETCH=1 is set (that override is about reading pages, not about pictures).
+
+$script:ImageReason = 'Online image services are blocked: pictures are made only with the /image skill (local ComfyUI). Tell the user if a picture is wanted.'
+
+# A host matches when it is one of these or a subdomain of one.
+$script:ImageHosts = @(
+    'pollinations.ai', 'stability.ai', 'midjourney.com', 'leonardo.ai', 'ideogram.ai',
+    'replicate.com', 'replicate.delivery', 'fal.ai', 'fal.run', 'bfl.ai', 'bfl.ml',
+    'runwayml.com', 'craiyon.com', 'lexica.art', 'getimg.ai', 'clipdrop.co', 'openart.ai',
+    'nightcafe.studio', 'playground.com', 'imagine.art', 'novita.ai', 'segmind.com',
+    'krea.ai', 'recraft.ai', 'dezgo.com', 'deepai.org'
+)
+# Image endpoints of general API hosts, judged by the path of the URL.
+$script:ImagePathPattern = '/(images/(generations|edits|variations)|text-?to-?image|txt2img)(/|\?|$)'
+
+function Test-ImageServiceUrl([string]$url) {
+    try { $uri = [Uri]$url } catch { return $false }
+    $hostName = $uri.Host.ToLower()
+    if ([string]::IsNullOrEmpty($hostName)) { return $false }
+    foreach ($h in $script:ImageHosts) {
+        if ($hostName -eq $h -or $hostName.EndsWith('.' + $h)) { return $true }
+    }
+    if ($uri.AbsolutePath.ToLower() -match $script:ImagePathPattern) { return $true }
+    # Google's image models are named in the path of the generic API host.
+    if ($hostName -eq 'generativelanguage.googleapis.com' -and $uri.AbsolutePath -imatch '(imagen|-image|generateImages)') { return $true }
+    return $false
+}
+
+function Test-AnyImageServiceUrl([string]$text) {
+    foreach ($url in @(Get-Urls $text)) {
+        if (Test-ImageServiceUrl $url) { return $true }
+    }
+    return $false
+}
+
+function Test-ShellImageService([string]$text, [int]$depth = 0) {
+    if ([string]::IsNullOrWhiteSpace($text)) { return $false }
+    $t = $text.Trim()
+    if ($t.Length -ge 2 -and (($t[0] -eq '"' -and $t[$t.Length - 1] -eq '"') -or
+                              ($t[0] -eq "'" -and $t[$t.Length - 1] -eq "'"))) {
+        $t = $t.Substring(1, $t.Length - 2)
+    }
+    $urlVars = @{}
+    foreach ($m in [regex]::Matches($t, '(?m)(?:^|[;\r\n])\s*\$?([A-Za-z_][\w:]*)\s*=\s*[''"]?(https?://[^\s''";|)]+)')) {
+        $name = $m.Groups[1].Value
+        if (-not $urlVars.ContainsKey($name)) { $urlVars[$name] = $m.Groups[2].Value.TrimEnd('.', ',', ';') }
+    }
+    foreach ($statement in @(Get-Statements $t)) {
+        if ([string]::IsNullOrWhiteSpace($statement)) { continue }
+        $expanded = if ($urlVars.Count -gt 0) { Expand-UrlVariables $statement $urlVars } else { $statement }
+        $tokens = @(Get-SegmentTokens $expanded)
+        if ($tokens.Count -eq 0) { continue }
+        $start = Get-CommandWord $tokens
+        if ($null -eq $start) { continue }
+        $word = $start.Word
+        if ($word -in @('powershell', 'pwsh', 'cmd', 'bash', 'sh', 'zsh')) {
+            $inner = Get-InnerShellText $tokens $start
+            if (-not [string]::IsNullOrWhiteSpace($inner) -and $depth -lt 3) {
+                if (Test-ShellImageService $inner ($depth + 1)) { return $true }
+            }
+            continue
+        }
+        # Only a program that can request a URL is judged; echo, grep, git commit are text.
+        if ($word -notin @('curl', 'wget', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm', 'crwl',
+                           'python', 'python3', 'py', 'node', 'uv', 'start', 'start-process', 'explorer', 'open', 'xdg-open')) { continue }
+        if (Test-AnyImageServiceUrl $expanded) { return $true }
+        # curl and wget also take an address without the scheme
+        if ($word -in @('curl', 'wget', 'invoke-webrequest', 'iwr', 'invoke-restmethod', 'irm')) {
+            foreach ($token in $tokens) {
+                $bare = Strip-Quotes $token
+                if ($bare -match '^(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}(?:[/:?]|$)' -and (Test-ImageServiceUrl ('http://' + $bare))) { return $true }
+            }
+        }
+    }
+    return $false
+}
+
+function Test-ImageServiceCall {
+    # Any tool that carries a URL (WebFetch, a browser's navigate, a batch of browser actions).
+    $inputText = ''
+    try { $inputText = ($call.tool_input | ConvertTo-Json -Compress -Depth 10) } catch { $inputText = '' }
+    if ($toolName -ine 'Bash' -and $toolName -ine 'PowerShell') {
+        if ($inputText -and (Test-AnyImageServiceUrl $inputText)) { return $true }
+    }
+    # An MCP tool that makes pictures.
+    if ($toolName -match '^mcp__(.+?)__(.+)$') {
+        $verb = $Matches[2]
+        if ($verb -imatch '(generate|create|make|text[-_]?to|txt2)[-_]?image|image[-_]?(generat|creat|gen($|[-_]))|imagine') { return $true }
+    }
+    if (($toolName -ieq 'Bash' -or $toolName -ieq 'PowerShell') -and -not [string]::IsNullOrWhiteSpace($command)) {
+        if (Test-ShellImageService $command) { return $true }
+    }
+    return $false
+}
+
 function Write-OverrideLog([string]$name) {
     try {
         $state = Join-Path {{HOME_ENV}} '.claude/state'
@@ -441,6 +545,9 @@ function Write-OverrideLog([string]$name) {
 if (($toolName -ieq 'Bash' -or $toolName -ieq 'PowerShell') -and (Test-ShellPersistent $command)) {
     Send-Deny $script:OverrideReason
 }
+
+# Online image services are denied before the override is looked at.
+if (Test-ImageServiceCall) { Send-Deny $script:ImageReason }
 
 if ($env:POS_ALLOW_DIRECT_FETCH -eq '1') {
     Write-OverrideLog $toolName
