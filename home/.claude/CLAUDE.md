@@ -80,7 +80,7 @@ is more specific and wins where the two differ. My explicit request in the chat 
   if a documentation tool such as Context7 is available, use it.
 - Researched, sourced or saved research runs through the skill `research`, by the rules in
   `docs/research-standard.md` (nine search services, verified word-for-word evidence).
-- Quick single facts: Parallel first (free, no monthly cap), Exa only when Parallel has nothing. A question that needs several sources goes to quick-research; a thorough one to research.
+- Quick single facts: Parallel first (free without a key; limits not published), Exa only when Parallel has nothing. A question that needs several sources goes to quick-research; a thorough one to research.
   The harness's own built-in web search is always the last resort: it scores below the measured
   services and exists in only one harness. It is not the cross-check either - a cross-check is
   two of the measured services agreeing.

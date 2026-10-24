@@ -68,7 +68,7 @@ a service when the local crawler cannot read a page:
 | Service | Calls per run | 90 runs = | Free allowance | Headroom |
 |---|---|---|---|---|
 | exa + exa-key (one `EXA_API_KEY`) | 10 | 900 searches | $10 a month at $7/1k = about 1,400 searches, plus $1/1k pages | about 1.4x with the page fallback (see below) |
-| parallel | 8 | 720 | 5,000 requests a month | 6.9x |
+| parallel | 8 | 720 | keyless MCP, limits not published (https://docs.parallel.ai/integrations/mcp/search-mcp); the 5,000 requests a month are the card-only $5 credit, see the verification log of 2026-10-24 | not computable |
 | you-free | 3 | 270 | 100 searches a day | 11x |
 | you | 3 | 270 searches | $100 one-time at $5/1k = 20,000 searches | 74x |
 | tavily | 5 | 450 searches + 90 extract credits | 1,000 credits a month | 1.85x |
@@ -374,6 +374,18 @@ stale copies of three pricing pages).
 | Tavily: 1,000 credits a month, no card, basic 1 and advanced 2 | Confirmed; a keyless mode exists; Nebius owns Tavily | docs.tavily.com, tavily.com/pricing, nebius.com/blog |
 | Firecrawl: 1,000 credits a month, page 1, search 2 per 10 results, free rate limits 10 and 2 per minute | Confirmed | firecrawl.dev/pricing, docs.firecrawl.dev/rate-limits |
 | Firecrawl: refund cap 100 credits a day | **Not in the documentation**, only a default in the source code | github.com/firecrawl/firecrawl (apps/api config) |
+
+**2026-10-24 - correction of the Parallel allowance.** The budget table used to say
+"parallel | 8 | 720 | 5,000 requests a month | 6.9x", and `CLAUDE.md` said "Parallel first (free, no
+monthly cap)". Both were wrong for the keyless MCP server this setup uses.
+
+| Claim | Result | Source |
+|---|---|---|
+| The 5,000 requests a month belong to the $5 monthly credit, which needs a card | Not valid for the keyless MCP; the budget row now reads "keyless MCP, limits not published" | https://parallel.ai/blog/free-tier-parallel.md |
+| The keyless MCP server publishes no request limit | Confirmed on the MCP page; `CLAUDE.md` now says "free without a key; limits not published" | https://docs.parallel.ai/integrations/mcp/search-mcp |
+| The setup uses the keyless server | Measured: `claude mcp get parallel` under `claude` and `claude-ds`: user scope, type http, URL without query string, no header configured; `PARALLEL_API_KEY` is set in no environment scope | live check 2026-10-24 |
+
+The row of 2026-09-29 above ("up to 5,000 requests a month free") is kept as history.
 
 **Method note, still valid.** A star count read through a caching fetch layer is not
 evidence. Read it twice, from two hosts, or not at all.
