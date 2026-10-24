@@ -26,6 +26,8 @@ supersedes: DonSeTch decision of 2026-09-07
 | 2. Built-in search — **last resort, always behind layer 1**. The built-in page fetch is **denied** | Claude Code `WebSearch`, OpenCode `websearch`, Codex web search | Included |
 | 3. Page reading — **one entry point only**: `fetch_page.py` (Crawl4AI first, saved as a file) | `~/.claude/skills/research/scripts/fetch_page.py`; the guard `hooks/fetch-guard.ps1` denies WebFetch and every MCP page reader | Local Crawl4AI is free; the services inside `save_pages.py` draw on the same allowances |
 
+Analysis of 2026-10-24 (stack, rejected candidates, Brave, Parallel): `{{VAULT}}\400-knowledge\personal-os-setup\web-search\index.md`.
+
 **Replaces:** DonSeTch (decision of 2026-09-07).
 **Not part of research:** browser automation (Chrome DevTools MCP, Playwright MCP). Those
 stay per project, for testing the user's own extensions and website.
