@@ -182,6 +182,7 @@ CHANGELOG.md
 CLAUDE.md
 dev/External/CLAUDE.md
 dev/External/README.md
+dev/Projects/CLAUDE.md
 dev/README.md
 docs/components.md
 docs/decisions/0001-repo-layout.md
@@ -204,6 +205,7 @@ docs/decisions/0017-unique-skill-names.md
 docs/decisions/0018-research-as-a-workflow.md
 docs/decisions/0019-local-image-generation-comfy-cli.md
 docs/decisions/0020-model-specific-orientation-through-profile-hooks.md
+docs/decisions/0021-everything-flows-in-by-itself.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
@@ -239,6 +241,7 @@ home/.claude/hooks/block-dangerous.ps1
 home/.claude/hooks/deepseek-orientation.ps1
 home/.claude/hooks/downloads-guard.ps1
 home/.claude/hooks/fetch-guard.ps1
+home/.claude/hooks/hub-reminder.ps1
 home/.claude/hooks/no-license-files.ps1
 home/.claude/hooks/notification-events.ps1
 home/.claude/hooks/notification-idle.ps1
@@ -248,9 +251,11 @@ home/.claude/hooks/skill-usage.ps1
 home/.claude/hooks/stop-notify.ps1
 home/.claude/hooks/trifecta-guard.ps1
 home/.claude/kopiaignore
+home/.claude/life-os/area-check.ps1
 home/.claude/life-os/cleanup.ps1
 home/.claude/life-os/groq_worker.py
 home/.claude/life-os/life-os-common.ps1
+home/.claude/life-os/morning-checks.ps1
 home/.claude/life-os/morning.ps1
 home/.claude/life-os/project-tracker.ps1
 home/.claude/life-os/register-tasks-elevated.ps1
@@ -388,8 +393,14 @@ tests/fixtures/personal.dummy.yaml
 tests/Format-Strings.Tests.ps1
 tests/Harness.Tests.ps1
 tests/Hooks.Tests.ps1
+tests/HubReminder.Tests.ps1
 tests/Image.Tests.ps1
 tests/Install.Tests.ps1
+tests/LifeOsAreas.Tests.ps1
+tests/LifeOsInbox.Tests.ps1
+tests/LifeOsMorning.Tests.ps1
+tests/LifeOsTasks.Tests.ps1
+tests/LifeOsTestVault.ps1
 tests/LineEndings.Tests.ps1
 tests/Manifest.Tests.ps1
 tests/Orientation.Tests.ps1
@@ -420,6 +431,7 @@ vault/.claude/skills/vault-lint/graph_health.py
 vault/.claude/skills/vault-lint/project_sync.py
 vault/.claude/skills/vault-lint/SKILL.md
 vault/.claude/skills/vault-lint/test_expiry.py
+vault/.claude/skills/vault-lint/test_project_sync.py
 vault/.obsidian/app.json
 vault/.obsidian/appearance.json
 vault/.obsidian/community-plugins.json

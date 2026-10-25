@@ -23,8 +23,8 @@ words, and a token-free check restores whatever the agent should not have change
 
 | What | How |
 |---|---|
-| The agent starts only for work | `morning-checks.ps1` `Get-AgentReasons`: a transcript, a loose note, a sync conflict, an unseen other file, text typed after the stored anchor, a changed project whose hub is older than its repository. The log line `agent reasons: ...` names why. Everything else (not committed, not pushed, a note about to expire, a transcription fallback, a failed run, files that were not processed) is written into the Morgenbericht by `morning.ps1` itself, between `<!-- morning.ps1 -->` markers the agent never touches. |
-| Loose notes | `.md` and `.txt` files directly in `inbox/` (at least ten minutes old) are copied word for word into `## Roh` of their change day by the script, images become their alt text, the file goes to the trash queue. A model copy of a 60,000-character note was measured to invent one line and drop another, which breaks vault rule 14, so the script copies and the agent only orders. Any other file in `inbox/` is named in the Morgenbericht as not processed. |
+| The agent starts only for work | `morning-checks.ps1` `Get-AgentReasons`: a transcript, a loose note, a sync conflict, an unseen other file, text typed after the stored anchor, a changed project whose hub is older than its repository. The log line `agent reasons: ...` names why. Everything else (not committed, not pushed, a note about to expire, a transcription fallback, a failed run, files that were not processed) is written into the morning report by `morning.ps1` itself, between `<!-- morning.ps1 -->` markers the agent never touches. |
+| Loose notes | `.md` and `.txt` files directly in `inbox/` (at least ten minutes old) are copied word for word into `## Roh` of their change day by the script, images become their alt text, the file goes to the trash queue. A model copy of a 60,000-character note was measured to invent one line and drop another, which breaks vault rule 14, so the script copies and the agent only orders. Any other file in `inbox/` is named in the morning report as not processed. |
 | One task list | The agent writes `- [ ] task` into the daily note; the script moves it to `## Next` of `000-meta/todo.md` with a link back and a `📅` date. Nothing was queryable before: the Tasks plugin is installed but no query exists. |
 | Areas follow the owner | The agent appends a Timeline line and may replace a sentence of "Current truth" in `300-areas/`, only from his own entries, with the source (`[[100-daily/<date>]]`) and the old sentence kept. `area-check.ps1` compares with a snapshot taken before the agent ran and restores every change that has no source, a word the source does not contain, a number of four digits or more, a changed frontmatter or a removed line. One vault commit per run. |
 | Project hubs | The agent that worked in a project writes the hub itself at the end of every task (`dev/Projects/CLAUDE.md`, key `hub_written`). The Stop hook `hub-reminder.ps1` blocks the end of a turn once when the hub is older than the repository. The morning run catches up what is still missing, in its own words (`hub_stale` in the flag file). |
@@ -60,7 +60,7 @@ A day with nothing to order costs nothing, where it cost 0.25 to 0.59 USD before
 
 ## Consequences
 
-- The morning agent runs on fewer days. The Morgenbericht gains script-written lines and loses
+- The morning agent runs on fewer days. The morning report gains script-written lines and loses
   nothing the agent used to write.
 - Vault rule 12 and rule 4 change (`hub_written`), the vault `AGENTS.md` gets one exception for
   `300-areas/`, and the global `CLAUDE.md` gets the hub exception.
