@@ -199,3 +199,36 @@ pushed with the fix.
 - **Run research through `batch-run.ps1`.** Rejected for the same question: a batch starts
   fresh sessions per item, but the research pipeline is one multi-stage run with shared
   intermediate state, not many independent items.
+
+## Pruned reading copy (search tuning, 2026-10-25)
+
+Crawl4AI's `PruningContentFilterLXML` (threshold 0.6, docs example) now yields a `fit_markdown` next
+to the unchanged raw markdown. `save_pages.py` writes it to `pages/fit/<same name>` (the full text
+when pruning leaves nothing); `verify_evidence.py` keeps checking the raw page. The workflow
+argument `fit` lets the extractors read the copy; the same code ran both measurement runs
+(Kilometergeld, deep, German, identical `plan.md`, SHA-256 `d3b81a69...c8f39`). The owner ran them in
+`claude-ds` at the same time.
+
+| | Run A: fit off | Run B: fit on |
+|---|---|---|
+| Pages saved | 36 | 34 |
+| Extractor input tokens | 3,236,521 | 2,584,633 (-20.1 %; per saved page 89,903 vs 76,019, -15.4 %) |
+| Verified evidence | 76 | 75 |
+| `check_article.py` | 1 error | 0 errors |
+| DeepSeek cost by timestamp | 0.5025 USD | 0.4361 USD (not used: run B reads the cache run A warmed) |
+
+Run A alone, same pages: the pruned copies hold 30.9 % fewer tokens than the full pages (about
+437,600 vs 633,300; 23 of 36 pages shortened).
+
+The saved URLs overlap by 17 of 53 (Jaccard 0.32; 50 % of the smaller run): search results differ
+between two runs, and run B's Tavily search hit a 429 on its second call. By the owner's gate
+(under 70 % overlap) the evidence comparison is **not reliable**. Taken at face value the task's
+rule is not met either: the extractor drop is 20.1 % in total but 15.4 % per page, and verified
+evidence is 75 against 76.
+
+Decision: the reading copy **stays off by default** (`fit: true` switches it on); the code stays
+because it is tested and the copy is a pure addition. A fair decision needs both arms on the
+same URL set, i.e. extracting once from the saved pages of one run, with and without the
+reading copy, rather than two fresh searches. Run A's one remaining `check_article` error (E67: the key-point
+bullet writes "gesetzlicher Anspruch", the recorded fragment reads "gesetzlichen Anspruch") belongs
+to the existing writer step, not to the reading copy; it does not touch the token numbers.
