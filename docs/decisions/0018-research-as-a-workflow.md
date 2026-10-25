@@ -242,6 +242,6 @@ wording, the fragment is rewritten to what the paragraph says, and each changed 
 `forms` (used, original). A span qualifies when it has the same number of words, every
 differing word is an ending variant (the same first four letters or more, one German ending
 of at most two letters, no digit) and the spans are at least 90 % alike by letters. `same_stem`
-alone is too wide: it also accepts zulässig/unzulässig, ein/kein, 20/120 and
-steuerfrei/steuerpflichtig, so a reversed statement would pass as checked. On run A's real draft
+alone is too wide: it also accepts the pairs permissible/impermissible, a/no, 20/120 and
+tax-free/taxable (German originals in `test_fix_quotes.py`), so a reversed statement would pass as checked. On run A's real draft
 `check_article.py` goes from 1 error to 0.

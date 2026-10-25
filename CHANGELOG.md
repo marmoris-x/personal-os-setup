@@ -22,7 +22,9 @@ Search tuning after the review of 2026-10-24.
 - Search tuning, Part 2 measured and taken back: the pruned reading copy saved 20.1 % extractor input (15.4 % per page) but verified evidence fell 76 to 75 and the two runs shared only 17 of 53 URLs (ADR 0018). The `fit_markdown` request, `pages/fit/`, the `fit` workflow argument and their tests are removed; the untrusted marker stays.
 - `fix_quotes.py` also repairs a paragraph that spells a fragment with other word endings: the fragment is rewritten to the paragraph's words and each changed word is declared in `forms` (test first, real draft of the Kilometergeld run: `check_article` 1 error to 0).
 
-- `fix_quotes.py` declares a changed word in `forms` only for an ending variant (four shared first letters, one German ending of at most two letters, no digit); `same_stem` was too wide (zulässig/unzulässig, ein/kein, 20/120 ...). Eight pairs red first.
+- `fix_quotes.py` declares a changed word in `forms` only for an ending variant (four shared first letters, one German ending of at most two letters, no digit); `same_stem` was too wide (it also accepted permissible/impermissible, a/no, 20/120 ...). Eight pairs red first.
+
+- `verify-all` check 1: Markdown headings are outline, not open work; a heading that opens with Next/Open/TODO must have only "none" under it, and box or marker-word lines still fail (six tests, two red first). ADR 0018 text uses English example words so check E passes without a new exemption.
 
 ## 3.7.0 (2026-10-25)
 

@@ -4,9 +4,9 @@ setup/tools/verify-all.ps1 - the acceptance run for this repo.
 Each check prints the command it ran, the decisive output and the exit code. The last line is
 exactly "VERIFY-ALL: ALL CHECKS PASSED".
 
-  1  the PROGRESS.md in the work root has no open work (no `[ ]` box in any shape, no line whose
-     first word - after heading marks, table pipes, quotes and bullets - is NEXT/TODO/TBD/FIXME/
-     Open/OFFEN)
+  1  the PROGRESS.md in the work root has no open work (no `[ ]` box in any shape, no non-heading
+     line whose first word - after table pipes, quotes and bullets - is NEXT/TODO/TBD/FIXME/Open/
+     OFFEN, and nothing but "none" under a heading that opens with one of those words)
   S  the repository is in the state setup/config/repo.yaml describes: the visibility matches,
      and the settings that must be on are on. This was check 2 ("the GitHub repository is
      private") until v3.0.0; the release task's acceptance table names it S, and it kept that
@@ -277,9 +277,20 @@ if (Test-Selected '1') { try {
     $boxPattern = '\[ \]'
     $markerPattern = '^\s*(?:[#>\|\-\*\+]|\d+[\.\)]?|\s)*\**\s*(NEXT|TODO|TBD|FIXME|Open|OFFEN)\b'
     $open = @(Select-String -LiteralPath $progress -Pattern $boxPattern).Count
-    $next = @(Select-String -LiteralPath $progress -Pattern $markerPattern).Count
+    # A Markdown heading is outline, not open work (the PROGRESS.md format of the agent rule has
+    # "## Next step" and "## Open questions" on purpose). What stands under such a heading is
+    # judged instead: every non-empty line under a heading that opens with a marker word counts as
+    # open work unless it says none/nothing; a marker word at the start of any other line counts too.
+    $nonePattern = '^\s*(?:[>\-\*\+]|\d+[\.\)])?\s*\**\s*(none|nothing( open| left)?|n/a)\b[\s\.\!\*]*$'
+    $next = 0
+    $inOpenSection = $false
+    foreach ($line in (Get-Content -LiteralPath $progress)) {
+        if ($line -match '^\s{0,3}#{1,6}\s') { $inOpenSection = [bool]($line -match $markerPattern); continue }
+        if ($line -match $markerPattern) { $next++; continue }
+        if ($inOpenSection -and $line.Trim() -ne '' -and $line -notmatch $nonePattern) { $next++ }
+    }
     $ok = ($open -eq 0) -and ($next -eq 0)
-    Add-Result 1 'PROGRESS.md has no open work' ("Select-String -LiteralPath <work>\PROGRESS.md -Pattern '" + $boxPattern + "' (any shape) and '" + $markerPattern + "' (first word of the line, after heading/table/bullet marks)") ('unchecked boxes: ' + $open + '; lines opening with an open-work marker: ' + $next) '0' $ok
+    Add-Result 1 'PROGRESS.md has no open work' ("Select-String -LiteralPath <work>\PROGRESS.md -Pattern '" + $boxPattern + "' (any shape) and '" + $markerPattern + "' (first word of a non-heading line, after table/bullet marks) and the lines under a Next/Open heading") ('unchecked boxes: ' + $open + '; lines opening with an open-work marker: ' + $next) '0' $ok
 } catch { Add-Result 1 'PROGRESS.md has no open work' 'Select-String PROGRESS.md' $_.Exception.Message '2' $false } }
 
 # ------------------------------------------- S visibility and repo settings ---
