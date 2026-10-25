@@ -414,6 +414,7 @@ tests/Roundtrip.Tests.ps1
 tests/sandbox/personal-os.wsb
 tests/sandbox/smoke-install.ps1
 tests/Structure.Tests.ps1
+tests/VerifyAllRoot.Tests.ps1
 vault/.claude/rules/sources.md
 vault/.claude/settings.json
 vault/.claude/skills/json-canvas/references/EXAMPLES.md

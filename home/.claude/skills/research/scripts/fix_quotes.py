@@ -6,6 +6,13 @@ default 0.90), the fragment in the compose comment and the same span in the para
 replaced with the evidence's exact wording. Anything less similar is left for the normal
 repair round. The decision is made in code; no model is called.
 
+The other direction is repaired too: when the fragment is the evidence's exact wording but the
+paragraph (a key-point bullet, for example) uses another ending of the same words ("gesetzlicher"
+for "gesetzlichen"), the paragraph keeps its grammatical wording, the fragment is rewritten to
+what the paragraph says, and each changed word is declared in "forms" (used, original). A span
+qualifies when it has the same number of words, every differing word passes common.same_stem,
+and the spans are at least --min-ratio alike by letters (word endings change letters, not words).
+
 Usage:
   python fix_quotes.py <draft file> --workdir <work folder> [--min-ratio 0.90]
 
@@ -23,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from common import (COMPOSE_RE, DataError, find_tokens, load_evidence, parse_compose,  # noqa: E402
-                    tokens, utf8_output)
+                    same_stem, tokens, utf8_output)
 
 MIN_RATIO = 0.90
 
@@ -102,6 +109,27 @@ def best_evidence_span(evidence_text, needle, min_ratio=MIN_RATIO):
     return evidence_text[spans[start][1]:spans[start + length - 1][2]], best[0][0]
 
 
+def paragraph_form_span(visible, words, min_ratio=MIN_RATIO):
+    """(exact paragraph text, [(used, original)]) for the paragraph span that is the fragment
+    with other word endings, or None."""
+    spans = token_spans(visible)
+    size = len(words)
+    wanted = " ".join(word.casefold() for word in words)
+    best = None
+    for start in range(len(spans) - size + 1):
+        window = [span[0] for span in spans[start:start + size]]
+        pairs = [(used, original) for used, original in zip(window, words) if used != original]
+        if not pairs or not all(same_stem(used, original) for used, original in pairs):
+            continue
+        ratio = difflib.SequenceMatcher(
+            None, " ".join(word.casefold() for word in window), wanted, autojunk=False).ratio()
+        if ratio + 1e-12 < min_ratio:
+            continue
+        if best is None or ratio > best[0]:
+            best = (ratio, visible[spans[start][1]:spans[start + size - 1][2]], pairs)
+    return None if best is None else (best[1], best[2])
+
+
 def fix_block(block, evidence_by_id, notes):
     """One paragraph with its compose comment; returns the repaired block."""
     match = COMPOSE_RE.search(block)
@@ -116,6 +144,8 @@ def fix_block(block, evidence_by_id, notes):
             forms[(entry[0], entry[1])] = entry[2]
     visible = block[:match.start()]
     replacements, new_frags, changed = [], [], False
+    new_forms = []
+    visible_tokens = tokens(visible)
     for entry in data.get("frags", []):
         if not (isinstance(entry, list) and len(entry) == 2):
             new_frags.append(entry)
@@ -128,6 +158,16 @@ def fix_block(block, evidence_by_id, notes):
             continue
         original = [forms.get((ev_id, word), word) for word in words]
         if find_tokens(tokens(item["text"]), original) >= 0:
+            if find_tokens(visible_tokens, words) < 0:
+                inflected = paragraph_form_span(visible, words)
+                if inflected:
+                    used_text, pairs = inflected
+                    new_frags.append([ev_id, used_text])
+                    new_forms.extend([ev_id, used, original_word] for used, original_word in pairs)
+                    notes.append('NOTE form declared: "%s" is written "%s" in the paragraph'
+                                 % (text, used_text))
+                    changed = True
+                    continue
             new_frags.append(entry)
             continue
         found = best_evidence_span(item["text"], original)
@@ -146,6 +186,8 @@ def fix_block(block, evidence_by_id, notes):
     if not changed:
         return block
     data["frags"] = new_frags
+    if new_forms:
+        data["forms"] = list(data.get("forms", [])) + [f for f in new_forms if f not in data.get("forms", [])]
     if data.get("forms"):
         frag_words = {}
         for entry in new_frags:

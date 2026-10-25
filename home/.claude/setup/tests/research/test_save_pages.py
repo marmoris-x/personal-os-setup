@@ -161,49 +161,6 @@ class SavePages(unittest.TestCase):
         entry = next(i for i in self.index() if i["url"].endswith("/blocked"))
         self.assertIn("crawl4ai: HTTP 403", entry["attempts"])
 
-    def test_every_saved_page_gets_a_reading_copy_in_pages_fit(self):
-        # Part 2: raw stays as it is (verification reads it); the extractors read pages/fit/<same name>.
-        # A page crawl4ai pruned carries the fit text; a page from a service carries the full text.
-        self.candidates({"url": "https://example.org/local"}, {"url": "https://example.org/service"})
-        fit = "Kurzer Kerntext. " * 20
-        fake = self.helper([
-            {"url": "https://example.org/local", "ok": True, "status": 200, "markdown": LONG,
-             "fit_markdown": fit},
-            {"url": "https://example.org/service", "ok": False, "status": 403, "error": "HTTP 403"}])
-        self.net.exa = exa_ok(("https://example.org/service", "S", LONG + " via exa"))
-        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="venv-python"), \
-                mock.patch.object(save_pages.subprocess, "run", fake):
-            code, out = self.run_script()
-        self.assertEqual(code, 0, out)
-        pages = self.work.path / "pages"
-        local_raw = read_page(pages / "001-example.org.md")
-        local_fit = read_page(pages / "fit" / "001-example.org.md")
-        self.assertTrue(local_raw[1].startswith("Dies ist ein langer Text"))
-        self.assertEqual(local_fit[1].strip(), fit.strip())
-        self.assertEqual(local_fit[0]["url"], "https://example.org/local")
-        service_fit = read_page(pages / "fit" / "002-example.org.md")
-        self.assertEqual(service_fit[1], read_page(pages / "002-example.org.md")[1])
-        first = (pages / "fit" / "001-example.org.md").read_text(encoding="utf-8").split(chr(10))[0]
-        self.assertTrue(first.startswith("<!-- untrusted web content from "))
-        entries = {i["url"]: i for i in self.index()}
-        self.assertEqual(entries["https://example.org/local"]["fit_file"], "fit/001-example.org.md")
-        self.assertLess(entries["https://example.org/local"]["fit_chars"], entries["https://example.org/local"]["chars"])
-        # the numbering and the other scripts only see the raw pages
-        self.assertEqual(sorted(p.name for p in pages.glob("*.md")),
-                         ["001-example.org.md", "002-example.org.md"])
-
-    def test_an_empty_fit_text_falls_back_to_the_full_text(self):
-        self.candidates({"url": "https://example.org/local"})
-        fake = self.helper([{"url": "https://example.org/local", "ok": True, "status": 200,
-                             "markdown": LONG, "fit_markdown": "  "}])
-        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="venv-python"), \
-                mock.patch.object(save_pages.subprocess, "run", fake):
-            code, out = self.run_script()
-        self.assertEqual(code, 0, out)
-        pages = self.work.path / "pages"
-        self.assertEqual(read_page(pages / "fit" / "001-example.org.md")[1],
-                         read_page(pages / "001-example.org.md")[1])
-
     def test_a_crawl4ai_block_page_is_a_failure_with_its_reason(self):
         self.candidates({"url": "https://example.org/captcha"})
         blocked = ("Access denied. Are you a robot? Please enable JavaScript. "
@@ -435,7 +392,7 @@ class SavePages(unittest.TestCase):
         with mock.patch.dict(os.environ, {"YDC_API_KEY": ""}):
             code, out = self.run_script()
         self.assertIn("you: no key in the environment, skipped", out)
-        everything = out + "".join(p.read_text(encoding="utf-8") for p in (self.work.path / "pages").rglob("*") if p.is_file())
+        everything = out + "".join(p.read_text(encoding="utf-8") for p in (self.work.path / "pages").iterdir())
         for secret in KEYS.values():
             self.assertNotIn(secret, everything)
         self.assertEqual(self.net.calls[0][2]["x-api-key"], KEYS["EXA_API_KEY"])  # but it was sent

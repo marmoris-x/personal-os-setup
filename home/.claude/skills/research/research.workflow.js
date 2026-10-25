@@ -66,10 +66,6 @@ const DEEP = true
 const GAP_PASS = DEEP && A.gap_pass === true
 const MAX_PAGES = DEEP ? 40 : 15
 const MAX_REPAIRS = DEEP ? 2 : 1
-// The extractors read the pruned reading copies in pages\fit; verify_evidence.py still checks
-// every quote against the full page. Off unless args.fit === true, until the A/B measurement of
-// the search-tuning task (ADR 0018) has decided.
-const READ_FIT = A.fit === true
 
 const PASS_SCHEMA = {
   type: 'object',
@@ -382,9 +378,7 @@ async function extract(pages, roundLabel) {
   log(roundLabel + ': ' + pages.length + ' page(s) in ' + groups.length + ' group(s)')
   return parallel(groups.map((group, index) => () =>
     agent(
-      'Read these saved pages in ' + WORK + '\\pages' + (READ_FIT ? '\\fit' : '') + ': ' + group.join(', ') +
-      (READ_FIT ? ' (reading copies; in page give the file name only, without the folder fit)' : '') +
-      '. Question: ' + QUESTION +
+      'Read these saved pages in ' + WORK + '\\pages: ' + group.join(', ') + '. Question: ' + QUESTION +
       '. Answer language: ' + ANSWER_LANG + '. Pages language: ' + SOURCE_LANGS + '. ' +
       'Return at most 25 evidence items for this group: the full sentence, character for character, plus the sentence ' +
       'before or after only when needed; page, text, heading, lang, type, claim (English, at most 15 words). ' +

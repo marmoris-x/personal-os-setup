@@ -1424,7 +1424,6 @@ if (Test-Selected 'J') { try {
         @{ Path = 'DEV/Projects/CLAUDE.md'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the hub rule - the agent writes the project hub in the vault at the end of every task and commits only that file' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): unit tests for the new project-sync finding (a finished hub whose repo path does not exist)' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): also reports a hub with status done whose repo: path does not exist' }
-        @{ Path = 'HOME/.claude/setup/tests/research/test_crawl4ai_fetch.py'; Reason = '2026-10-25 (search tuning, Part 2): tests for the fit_markdown reading copy that crawl4ai_fetch.py now returns next to the raw markdown' }
         @{ Path = 'HOME/.claude/setup/tests/research/test_store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): a copied page keeps its frontmatter on the first line although a saved page now opens with the untrusted marker line' }
         @{ Path = 'HOME/.claude/skills/research/scripts/common.py'; Reason = '2026-10-25 (search tuning, Part 4): read_page skips the untrusted marker line that save_pages.py writes on top of every saved page' }
         @{ Path = 'HOME/.claude/skills/research/scripts/store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): the vault copy of a page moves the marker line below the frontmatter, so the frontmatter stays on line 1' }

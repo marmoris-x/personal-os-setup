@@ -331,8 +331,7 @@ def fetch_crawl4ai(urls, max_age_hours):
         if record is None:
             out[url] = "crawl4ai: no line for this URL"
         elif record.get("ok") and isinstance(record.get("markdown"), str):
-            out[url] = {"text": record["markdown"], "status": record.get("status"),
-                        "fit": record.get("fit_markdown")}
+            out[url] = {"text": record["markdown"], "status": record.get("status")}
         else:
             out[url] = f"crawl4ai: {record.get('error') or 'HTTP ' + str(record.get('status'))}"
     return out
@@ -525,15 +524,8 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
         text = res["text"].replace("\r\n", "\n").replace("\x00", "")
         head = untrusted_marker(url) + "\n" + header_text(fields)
         (pages / name).write_text(head + text.strip("\n") + "\n", encoding="utf-8", newline="\n")
-        # The reading copy for the evidence extractors: the pruned text when crawl4ai made one,
-        # else the full text. verify_evidence.py keeps checking against the raw page above.
-        fit = res.get("fit")
-        fit = fit.replace("\r\n", "\n").replace("\x00", "") if isinstance(fit, str) and fit.strip() else text
-        (pages / "fit").mkdir(exist_ok=True)
-        (pages / "fit" / name).write_text(head + fit.strip("\n") + "\n", encoding="utf-8", newline="\n")
         index.append({**entry, "status": "saved", "file": name, "method": used[url],
-                      "chars": len(res["text"]), "title": fields["title"], "archive_url": archive_url,
-                      "fit_file": "fit/" + name, "fit_chars": len(fit)})
+                      "chars": len(res["text"]), "title": fields["title"], "archive_url": archive_url})
     (pages / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n",
                                       encoding="utf-8", newline="\n")
     return index, notes

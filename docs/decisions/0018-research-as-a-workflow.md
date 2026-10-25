@@ -200,35 +200,45 @@ pushed with the fix.
   fresh sessions per item, but the research pipeline is one multi-stage run with shared
   intermediate state, not many independent items.
 
-## Pruned reading copy (search tuning, 2026-10-25)
+## Pruned reading copy: tried and taken back (search tuning, 2026-10-25)
 
-Crawl4AI's `PruningContentFilterLXML` (threshold 0.6, docs example) now yields a `fit_markdown` next
-to the unchanged raw markdown. `save_pages.py` writes it to `pages/fit/<same name>` (the full text
-when pruning leaves nothing); `verify_evidence.py` keeps checking the raw page. The workflow
-argument `fit` lets the extractors read the copy; the same code ran both measurement runs
-(Kilometergeld, deep, German, identical `plan.md`, SHA-256 `d3b81a69...c8f39`). The owner ran them in
-`claude-ds` at the same time.
+The idea: Crawl4AI's `PruningContentFilterLXML` (threshold 0.6, docs example) yields a
+`fit_markdown` next to the raw markdown; the evidence extractors read the shorter copy and
+`verify_evidence.py` still checks every quote against the full page. The change was built behind a
+workflow argument `fit` and measured on the Kilometergeld deep run, German, identical `plan.md`
+(SHA-256 `d3b81a69...c8f39`), two runs at the same time in `claude-ds`.
 
-| | Run A: fit off | Run B: fit on |
+| | Run A (fit off) | Run B (fit on) |
 |---|---|---|
 | Pages saved | 36 | 34 |
-| Extractor input tokens | 3,236,521 | 2,584,633 (-20.1 %; per saved page 89,903 vs 76,019, -15.4 %) |
+| Extractor input tokens | 3,236,521 | 2,584,633 |
+| Extractor input per saved page | 89,903 | 76,019 |
 | Verified evidence | 76 | 75 |
-| `check_article.py` | 1 error | 0 errors |
-| DeepSeek cost by timestamp | 0.5025 USD | 0.4361 USD (not used: run B reads the cache run A warmed) |
+| `check_article.py` errors (final draft) | 1 | 0 |
+| DeepSeek cost by timestamp | 0.5025 USD | 0.4361 USD |
 
-Run A alone, same pages: the pruned copies hold 30.9 % fewer tokens than the full pages (about
-437,600 vs 633,300; 23 of 36 pages shortened).
+- Run B against run A: extractor input **-20.1 %** in total, **-15.4 %** per saved page. USD is not
+  used: run B reads the cache that run A warmed.
+- Run A alone, the same pages in both versions: the pruned copies hold **30.9 % fewer** tokens
+  (about 437,600 against 633,300; 23 of 36 pages were shortened).
+- Saved URLs: 17 of 53 are in both runs (overlap 0.32, 50 % of the smaller run). The searches
+  differ from run to run, and run B's Tavily search hit a 429 on its second call.
 
-The saved URLs overlap by 17 of 53 (Jaccard 0.32; 50 % of the smaller run): search results differ
-between two runs, and run B's Tavily search hit a 429 on its second call. By the owner's gate
-(under 70 % overlap) the evidence comparison is **not reliable**. Taken at face value the task's
-rule is not met either: the extractor drop is 20.1 % in total but 15.4 % per page, and verified
-evidence is 75 against 76.
+Decision: **taken back** (code, tests and switch), as the task's rule says. The rule is not
+met (verified evidence is 75 in run B against 76 in run A, and the per-page saving is 15.4 %),
+and with an overlap of 0.32 the evidence comparison is not reliable in either direction. The
+removed parts: the `fit_markdown` request in `crawl4ai_fetch.py`, the `pages/fit/` copies and the
+`fit_file`/`fit_chars` index fields in `save_pages.py`, the workflow argument `fit`, and their
+tests. The untrusted-marker line (Part 4) stays.
 
-Decision: the reading copy **stays off by default** (`fit: true` switches it on); the code stays
-because it is tested and the copy is a pure addition. A fair decision needs both arms on the
-same URL set, i.e. extracting once from the saved pages of one run, with and without the
-reading copy, rather than two fresh searches. Run A's one remaining `check_article` error (E67: the key-point
-bullet writes "gesetzlicher Anspruch", the recorded fragment reads "gesetzlichen Anspruch") belongs
-to the existing writer step, not to the reading copy; it does not touch the token numbers.
+Re-entry only with a test on the same saved pages: take the saved pages of one run, let the
+extractors read them once as raw pages and once as pruned copies, and compare tokens and
+verified evidence on the same URLs.
+
+Run A's remaining `check_article` error (E67, the key-point bullet says "gesetzlicher", the
+recorded fragment reads "gesetzlichen") was a gap in the existing system, not in the reading
+copy. `fix_quotes.py` now also repairs that direction: the paragraph keeps its grammatical
+wording, the fragment is rewritten to what the paragraph says, and each changed word is declared in
+`forms` (used, original). A span qualifies when it has the same number of words, every
+differing word passes `same_stem`, and the spans are at least 90 % alike by letters. On run A's
+real draft `check_article.py` goes from 1 error to 0.

@@ -11,7 +11,7 @@ from testlib import SCRIPTS, Work, run_script  # noqa: E402
 
 sys.path.insert(0, str(SCRIPTS))
 import fix_quotes  # noqa: E402
-from common import check_fragments, load_evidence, paragraphs, parse_compose  # noqa: E402
+from common import COMPOSE_RE, check_fragments, load_evidence, paragraphs, parse_compose  # noqa: E402
 
 E1 = "Beim PKW beträgt das Kilometergeld 0,50 Euro pro gefahrenem Kilometer."
 E2 = "Die Betriebskosten müssen von der fahrenden Person selbst getragen werden."
@@ -93,6 +93,39 @@ class FixQuotes(unittest.TestCase):
     def test_missing_evidence_is_left_alone(self):
         text = draft("Ein Satz. [[E9]]", [["E9", "Ein Satz"]], ids=["E9"])
         fixed, notes = fix_quotes.fix_text(text, evidence(E1=E1))
+        self.assertEqual(fixed, text)
+        self.assertEqual(notes, [])
+
+    def test_inflected_wording_in_the_paragraph_becomes_a_declared_form(self):
+        # The key-point block of the Kilometergeld run (search tuning, run A, 2026-10-25): the
+        # fragment E67 is the evidence's wording ("gesetzlichen"), the bullet says "gesetzlicher".
+        e67 = ("Es gibt keinen gesetzlichen Anspruch auf Kilometergeld. Ob und in welcher Hoehe "
+               "der Arbeitgeber zahlt, ergibt sich aus Kollektivvertrag oder Arbeitsvertrag.")
+        text = draft(
+            "- Beim Fahrrad gilt seit 2025 eine Grenze. [[E7]]\n"
+            "- Kein gesetzlicher Anspruch auf Kilometergeld. [[E67]]",
+            [["E7", "gilt seit 2025 eine Grenze"], ["E67", "gesetzlichen Anspruch auf Kilometergeld"]],
+            ids=["E7", "E67"])
+        ev = evidence(E7="Beim Fahrrad gilt seit 2025 eine Grenze von 3.000 Kilometern.", E67=e67)
+        before = paragraphs(text)[0]
+        self.assertTrue(check_fragments(parse_compose(before), ev,
+                                        paragraph_text=COMPOSE_RE.sub("", before)))
+
+        fixed, notes = fix_quotes.fix_text(text, ev)
+
+        block = paragraphs(fixed)[0]
+        self.assertEqual(check_fragments(parse_compose(block), ev,
+                                         paragraph_text=COMPOSE_RE.sub("", block)), [])
+        self.assertIn("Kein gesetzlicher Anspruch auf Kilometergeld.", fixed)  # the wording stays grammatical
+        self.assertEqual(parse_compose(block)["forms"], [["E67", "gesetzlicher", "gesetzlichen"]])
+        self.assertEqual(len(notes), 1)
+        self.assertIn("NOTE form declared", notes[0])
+
+    def test_a_different_wording_in_the_paragraph_is_left_alone(self):
+        text = draft("Ein Anspruch besteht nach Vertrag. [[E67]]",
+                     [["E67", "gesetzlichen Anspruch auf Kilometergeld"]])
+        ev = evidence(E67="Es gibt keinen gesetzlichen Anspruch auf Kilometergeld.")
+        fixed, notes = fix_quotes.fix_text(text, ev)
         self.assertEqual(fixed, text)
         self.assertEqual(notes, [])
 

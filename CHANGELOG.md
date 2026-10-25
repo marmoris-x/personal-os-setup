@@ -19,6 +19,9 @@ Search tuning after the review of 2026-10-24.
 
 - Review follow-up: a URL can no longer close the untrusted-marker comment early (whitespace folded, `--` split); check B accepts a local `PROGRESS.md` only when the repo's own `.gitignore` lists it (not `.git/info/exclude`); duplicate `$costDs` assignment removed.
 
+- Search tuning, Part 2 measured and taken back: the pruned reading copy saved 20.1 % extractor input (15.4 % per page) but verified evidence fell 76 to 75 and the two runs shared only 17 of 53 URLs (ADR 0018). The `fit_markdown` request, `pages/fit/`, the `fit` workflow argument and their tests are removed; the untrusted marker stays.
+- `fix_quotes.py` also repairs a paragraph that spells a fragment with other word endings: the fragment is rewritten to the paragraph's words and each changed word is declared in `forms` (test first, real draft of the Kilometergeld run: `check_article` 1 error to 0).
+
 ## 3.7.0 (2026-10-25)
 
 The Life OS inbox task (ADR 0021): everything the owner dictates or types flows in by itself,
