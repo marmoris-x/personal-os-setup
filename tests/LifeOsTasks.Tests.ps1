@@ -2,7 +2,13 @@
 # Part 3: one task list. The agent writes "- [ ] task" into ## Aufgaben of the daily note (as before);
 # the runner moves each new one into 000-meta/todo.md under ## Next and leaves "- task -> todo".
 
+# The Life OS scripts are Windows scripts (Windows PowerShell 5.1, German vault paths): on macOS and Linux
+# every Describe below is skipped. The flag is set at the top level because -Skip is evaluated at discovery.
+$script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+
 BeforeAll {
+    $script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+    if ($script:notWindows) { return }
     . (Join-Path $PSScriptRoot 'LifeOsTestVault.ps1')
     $script:Src = $env:LIFEOS_SRC
     if (-not $script:Src) { $script:Src = New-RenderedMirror (Join-Path (Split-Path -Parent $PSScriptRoot) 'home\.claude\life-os') (Join-Path ([IO.Path]::GetTempPath()) ('lifeos-src-' + [guid]::NewGuid().ToString('N').Substring(0, 8))) }
@@ -26,7 +32,7 @@ AfterAll {
     if ($script:Work -and (Test-Path -LiteralPath $script:Work)) { Remove-Item -LiteralPath $script:Work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-Describe 'Move-DailyTasksToTodo' {
+Describe 'Move-DailyTasksToTodo' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('t-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:Since = (Get-Date).AddMinutes(-5)
@@ -106,7 +112,7 @@ Describe 'Move-DailyTasksToTodo' {
     }
 }
 
-Describe 'Heute line' {
+Describe 'Heute line' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('h-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
     }
@@ -126,7 +132,7 @@ Describe 'Heute line' {
     }
 }
 
-Describe 'morning.ps1 moves tasks after the agent (Windows PowerShell 5.1)' {
+Describe 'morning.ps1 moves tasks after the agent (Windows PowerShell 5.1)' -Skip:$script:notWindows {
     It 'moves a task the agent wrote into the daily note to todo.md' {
         $v = New-TestVault (Join-Path $script:Work 'e2e')
         $d = Join-Path $script:Work 'e2e-dev'; New-Item -ItemType Directory -Force -Path $d | Out-Null

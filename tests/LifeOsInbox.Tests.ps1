@@ -1,7 +1,13 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.9.1' }
 # Part 2: loose notes in inbox/ (scan, json keys, seen list, trigger) - everything on copies.
 
+# The Life OS scripts are Windows scripts (Windows PowerShell 5.1, German vault paths): on macOS and Linux
+# every Describe below is skipped. The flag is set at the top level because -Skip is evaluated at discovery.
+$script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+
 BeforeAll {
+    $script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+    if ($script:notWindows) { return }
     . (Join-Path $PSScriptRoot 'LifeOsTestVault.ps1')
     $script:Src = $env:LIFEOS_SRC
     if (-not $script:Src) { $script:Src = New-RenderedMirror (Join-Path (Split-Path -Parent $PSScriptRoot) 'home\.claude\life-os') (Join-Path ([IO.Path]::GetTempPath()) ('lifeos-src-' + [guid]::NewGuid().ToString('N').Substring(0, 8))) }
@@ -16,7 +22,7 @@ AfterAll {
     if ($script:Work -and (Test-Path -LiteralPath $script:Work)) { Remove-Item -LiteralPath $script:Work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-Describe 'Get-InboxScan' {
+Describe 'Get-InboxScan' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('v-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:I = Join-Path $script:V 'inbox'
@@ -84,7 +90,7 @@ Describe 'Get-InboxScan' {
     }
 }
 
-Describe 'Update-InboxJson' {
+Describe 'Update-InboxJson' -Skip:$script:notWindows {
     It 'adds notes and other next to the transcripts and keeps the transcripts' {
         $v = New-TestVault (Join-Path $script:Work 'uj')
         Write-TestFile (Join-Path $v '000-meta\life-os-inbox.json') '{"generated":"g","transcripts":[{"txt":"a.txt","audio":null,"recorded":"2026-10-25T08:00:00","chars":3}]}'
@@ -111,7 +117,7 @@ Describe 'Update-InboxJson' {
     }
 }
 
-Describe 'Add-InboxNotesToRoh' {
+Describe 'Add-InboxNotesToRoh' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('r-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:I = Join-Path $script:V 'inbox'
@@ -204,7 +210,7 @@ Describe 'Add-InboxNotesToRoh' {
     }
 }
 
-Describe 'other files and the agent trigger' {
+Describe 'other files and the agent trigger' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('o-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:Seen = Join-Path $script:Work ('seen-' + [guid]::NewGuid().ToString('N').Substring(0, 6) + '.json')
@@ -241,7 +247,7 @@ Describe 'other files and the agent trigger' {
     }
 }
 
-Describe 'Get-HintLines for other files' {
+Describe 'Get-HintLines for other files' -Skip:$script:notWindows {
     It 'names every other file that was not processed, every day' {
         $v = New-TestVault (Join-Path $script:Work 'hl')
         Write-TestFile (Join-Path $v 'inbox\p.png') 'png'
@@ -251,7 +257,7 @@ Describe 'Get-HintLines for other files' {
     }
 }
 
-Describe 'morning.ps1 with loose files' {
+Describe 'morning.ps1 with loose files' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('e-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:D = Join-Path $script:Work ('ed-' + [guid]::NewGuid().ToString('N').Substring(0, 6))

@@ -2,7 +2,13 @@
 # Tests for the token-free helpers of the Life OS morning run (morning-checks.ps1) and for the
 # end-to-end behaviour of morning.ps1. Everything runs against throw-away copies.
 
+# The Life OS scripts are Windows scripts (Windows PowerShell 5.1, German vault paths): on macOS and Linux
+# every Describe below is skipped. The flag is set at the top level because -Skip is evaluated at discovery.
+$script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+
 BeforeAll {
+    $script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+    if ($script:notWindows) { return }
     . (Join-Path $PSScriptRoot 'LifeOsTestVault.ps1')
     $script:Src = $env:LIFEOS_SRC
     if (-not $script:Src) { $script:Src = New-RenderedMirror (Join-Path (Split-Path -Parent $PSScriptRoot) 'home\.claude\life-os') (Join-Path ([IO.Path]::GetTempPath()) ('lifeos-src-' + [guid]::NewGuid().ToString('N').Substring(0, 8))) }
@@ -30,7 +36,7 @@ AfterAll {
     if ($script:Work -and (Test-Path -LiteralPath $script:Work)) { Remove-Item -LiteralPath $script:Work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-Describe 'Get-AgentReasons' {
+Describe 'Get-AgentReasons' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('v-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:D = Join-Path $script:Work ('d-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
@@ -105,7 +111,7 @@ Describe 'Get-AgentReasons' {
     }
 }
 
-Describe 'Save-InboxSeen' {
+Describe 'Save-InboxSeen' -Skip:$script:notWindows {
     It 'remembers every other file by name and size, not one joined string' {
         $v = New-TestVault (Join-Path $script:Work ('s-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         Write-TestFile (Join-Path $v '000-meta\life-os-inbox.json') '{"generated":"x","transcripts":[],"notes":[],"other":[{"file":"a.jpg","bytes":1},{"file":"b.jpg","bytes":2}]}'
@@ -118,7 +124,7 @@ Describe 'Save-InboxSeen' {
     }
 }
 
-Describe 'Get-AgentReasons after a failed run' {
+Describe 'Get-AgentReasons after a failed run' -Skip:$script:notWindows {
     It 'still names a Roh line that was copied before the run failed' {
         $v = New-TestVault (Join-Path $script:Work ('f-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $d = Join-Path $script:Work ('fd-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
@@ -131,7 +137,7 @@ Describe 'Get-AgentReasons after a failed run' {
     }
 }
 
-Describe 'Get-HintLines' {
+Describe 'Get-HintLines' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('h-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
     }
@@ -185,7 +191,7 @@ Describe 'Get-HintLines' {
     }
 }
 
-Describe 'Set-MorgenberichtBlock' {
+Describe 'Set-MorgenberichtBlock' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('m-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
     }
@@ -225,7 +231,7 @@ Describe 'Set-MorgenberichtBlock' {
     }
 }
 
-Describe 'project-tracker.ps1 flag' {
+Describe 'project-tracker.ps1 flag' -Skip:$script:notWindows {
     It 'writes the flag file for an attention-only day (dirty repo, nothing else changed)' {
         $v = New-TestVault (Join-Path $script:Work 'tv')
         $d = Join-Path $script:Work 'td'
@@ -263,7 +269,7 @@ Describe 'project-tracker.ps1 flag' {
     }
 }
 
-Describe 'Get-AreaStaleness' {
+Describe 'Get-AreaStaleness' -Skip:$script:notWindows {
     BeforeEach {
         $script:SV = New-TestVault (Join-Path $script:Work ('st-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:Arch = Join-Path $script:SV '600-archive'
@@ -327,7 +333,7 @@ Describe 'Get-AreaStaleness' {
     }
 }
 
-Describe 'weekly area hint' {
+Describe 'weekly area hint' -Skip:$script:notWindows {
     It 'writes life-os-areas-stale.json and the hint line names the areas' {
         $v = New-TestVault (Join-Path $script:Work 'wk1')
         Write-TestFile (Join-Path $v '300-areas\ma40.md') "---`ntype: organisation`nstatus: active`ndate: 2026-09-21`n---`n# ma40`n`n## Documents`nin ``600-archive/06/MA40/``.`n`n## Timeline`n- 2026-03-05: latest`n"
@@ -350,7 +356,7 @@ Describe 'weekly area hint' {
     }
 }
 
-Describe 'Set-FlagHubStale' {
+Describe 'Set-FlagHubStale' -Skip:$script:notWindows {
     It 'adds the names of the stale hubs to the flag and keeps the rest' {
         $v = New-TestVault (Join-Path $script:Work 'fs1')
         Write-Flag $v @{ projects = @(@{ name = 'proj'; changed = $true }); changed = $true }
@@ -373,7 +379,7 @@ Describe 'Set-FlagHubStale' {
     }
 }
 
-Describe 'morning.ps1 end to end' {
+Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('e-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:D = Join-Path $script:Work ('ed-' + [guid]::NewGuid().ToString('N').Substring(0, 6))

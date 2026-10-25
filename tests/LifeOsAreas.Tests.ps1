@@ -2,7 +2,13 @@
 # Part 4: areas update themselves. life-os-areas.json, the pre-agent snapshot, and the safety net
 # area-check.ps1 that reverts what has no source.
 
+# The Life OS scripts are Windows scripts (Windows PowerShell 5.1, German vault paths): on macOS and Linux
+# every Describe below is skipped. The flag is set at the top level because -Skip is evaluated at discovery.
+$script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+
 BeforeAll {
+    $script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+    if ($script:notWindows) { return }
     . (Join-Path $PSScriptRoot 'LifeOsTestVault.ps1')
     $script:Src = $env:LIFEOS_SRC
     if (-not $script:Src) { $script:Src = New-RenderedMirror (Join-Path (Split-Path -Parent $PSScriptRoot) 'home\.claude\life-os') (Join-Path ([IO.Path]::GetTempPath()) ('lifeos-src-' + [guid]::NewGuid().ToString('N').Substring(0, 8))) }
@@ -41,7 +47,7 @@ AfterAll {
     if ($script:Work -and (Test-Path -LiteralPath $script:Work)) { Remove-Item -LiteralPath $script:Work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-Describe 'Write-AreasJson' {
+Describe 'Write-AreasJson' -Skip:$script:notWindows {
     It 'lists every area note with file name and aliases, and no content' {
         $v = New-TestVault (Join-Path $script:Work 'aj')
         $null = New-Area $v 'ma40'
@@ -59,7 +65,7 @@ Describe 'Write-AreasJson' {
     }
 }
 
-Describe 'Invoke-AreaCheck' {
+Describe 'Invoke-AreaCheck' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('c-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         $script:A = New-Area $script:V 'ma40' '- Antrag laeuft.' '- 2026-03-05: letztes Dokument'
@@ -159,7 +165,7 @@ Describe 'Invoke-AreaCheck' {
     }
 }
 
-Describe 'Save-VaultCommit' {
+Describe 'Save-VaultCommit' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('g-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
         & git -C $script:V init -q 2>$null | Out-Null
@@ -195,7 +201,7 @@ Describe 'Save-VaultCommit' {
     }
 }
 
-Describe 'morning.ps1 area flow (Windows PowerShell 5.1)' {
+Describe 'morning.ps1 area flow (Windows PowerShell 5.1)' -Skip:$script:notWindows {
     It 'keeps a good area change, restores a bad one, names it, and commits once' {
         $v = New-TestVault (Join-Path $script:Work 'flow')
         & git -C $v init -q 2>$null | Out-Null
@@ -229,7 +235,7 @@ Describe 'morning.ps1 area flow (Windows PowerShell 5.1)' {
     }
 }
 
-Describe 'Format-AreaResultLines' {
+Describe 'Format-AreaResultLines' -Skip:$script:notWindows {
     It 'names a reverted area with the reason and a new area note' {
         $res = @(
             [pscustomobject]@{ file = 'ma40'; status = 'reverted'; reasons = @('no source', 'digit run') },

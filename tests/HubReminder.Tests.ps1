@@ -1,7 +1,13 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.9.1' }
 # Tests for the Stop hook hub-reminder.ps1: silent unless the project hub is older than the repo.
 
+# The Life OS scripts are Windows scripts (Windows PowerShell 5.1, German vault paths): on macOS and Linux
+# every Describe below is skipped. The flag is set at the top level because -Skip is evaluated at discovery.
+$script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+
 BeforeAll {
+    $script:notWindows = -not ($IsWindows -or $env:OS -eq 'Windows_NT')
+    if ($script:notWindows) { return }
     . (Join-Path $PSScriptRoot 'LifeOsTestVault.ps1')
     $script:Hook = $env:HUB_REMINDER
     if (-not $script:Hook) { $script:Hook = Join-Path (New-RenderedMirror (Join-Path (Split-Path -Parent $PSScriptRoot) 'home\.claude\hooks\hub-reminder.ps1') (Join-Path ([IO.Path]::GetTempPath()) ('hubrem-src-' + [guid]::NewGuid().ToString('N').Substring(0, 8)))) 'hub-reminder.ps1' }
@@ -45,7 +51,7 @@ AfterAll {
     if ($script:Work -and (Test-Path -LiteralPath $script:Work)) { Remove-Item -LiteralPath $script:Work -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
-Describe 'hub-reminder.ps1' {
+Describe 'hub-reminder.ps1' -Skip:$script:notWindows {
     It 'is silent outside the projects folder' {
         $c = New-Case 'proj' '2000-01-01T00:00:00'
         $r = Invoke-Hook (Get-Stdin (Join-Path $script:Work 'elsewhere')) $c.Vault $c.Dev $c.State
