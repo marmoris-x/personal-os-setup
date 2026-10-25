@@ -213,6 +213,17 @@ Describe 'Set-MorgenberichtBlock' -Skip:$script:notWindows {
         ([regex]::Matches($t, 'morning\.ps1')).Count | Should -Be 2
     }
 
+    It 'drops an agent line that repeats a line of its own block, and keeps the other agent lines' {
+        $agent = "`n- 1 Notiz eingeordnet.`n- Nicht gepusht: proj (1 Commit(s))`n- Nicht committet seit 4 Tag(en): proj`n- Heute: keine f$([char]0x00E4)lligen Aufgaben.`n"
+        $p = New-Daily $script:V '2026-10-26' '' $agent
+        Set-MorgenberichtBlock -VaultPath $script:V -Date '2026-10-26' -Lines @('Nicht gepusht: proj (1 Commit(s))', 'Nicht committet seit 5 Tag(en): proj', ('Heute: Milch kaufen'))
+        $t = (Get-Content -LiteralPath $p -Raw -Encoding UTF8) -replace "`r`n", "`n"
+        ([regex]::Matches($t, 'Nicht gepusht')).Count | Should -Be 1
+        ([regex]::Matches($t, 'Nicht committet')).Count | Should -Be 1
+        ([regex]::Matches($t, 'Heute:')).Count | Should -Be 1
+        $t | Should -Match '1 Notiz eingeordnet'
+    }
+
     It 'never touches Roh, Protokoll or Aufgaben' {
         $p = New-Daily $script:V '2026-10-26' '- **08:00** raw'
         $before = (Get-Content -LiteralPath $p -Raw -Encoding UTF8) -replace '(?s)## Morgenbericht.*', ''
@@ -228,6 +239,33 @@ Describe 'Set-MorgenberichtBlock' -Skip:$script:notWindows {
         Set-MorgenberichtBlock -VaultPath $script:V -Date '2026-10-27' -Lines @('x')
         Set-MorgenberichtBlock -VaultPath $script:V -Date '2026-10-27' -Lines @()
         (Get-Content -LiteralPath $p -Raw -Encoding UTF8) | Should -Not -Match 'morning\.ps1'
+    }
+}
+
+Describe 'Remove-ResolvedUnclearLines' -Skip:$script:notWindows {
+    BeforeEach {
+        $script:V = New-TestVault (Join-Path $script:Work ('u-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
+        $arrow = [string][char]0x2192
+        $ue = [string][char]0x00FC
+        $text = "---`ntype: daily`nstatus: active`ndate: '2026-10-26'`n---`n# 2026-10-26`n`n## Roh`n`n- **13:21** Ich muss die Rezeptgeb${ue}hr-Befreiung neu beantragen.`n`n## Protokoll`n`n## Aufgaben`n`n- Rezeptgeb${ue}hr-Befreiung neu beantragen $arrow todo`n`n## Morgenbericht`n`n- 1 Aufgabe erg${([char]0x00E4)}nzt.`n- Nicht eingetragen (unklar): Ich muss die Rezeptgeb${ue}hr-Befreiung neu beantragen.`n- Nicht eingetragen (unklar): Vielleicht mal den Keller aufr${([char]0x00E4)}umen`n"
+        $script:P = Join-Path $script:V '100-daily\2026-10-26.md'
+        Write-TestFile $script:P $text
+        $script:Since = (Get-Date).AddMinutes(-5)
+    }
+
+    It 'drops the unclear line of an entry that became a task, and keeps the others' {
+        Remove-ResolvedUnclearLines -VaultPath $script:V -Since $script:Since
+        $t = Get-Content -LiteralPath $script:P -Raw -Encoding UTF8
+        $t | Should -Not -Match 'Rezeptgeb.hr-Befreiung neu beantragen\.\s*$'
+        ([regex]::Matches($t, 'Nicht eingetragen')).Count | Should -Be 1
+        $t | Should -Match 'Keller'
+        $t | Should -Match '1 Aufgabe'
+    }
+
+    It 'never touches Roh, Protokoll or Aufgaben' {
+        $before = (Get-Content -LiteralPath $script:P -Raw -Encoding UTF8) -replace '(?s)## Morgenbericht.*', ''
+        Remove-ResolvedUnclearLines -VaultPath $script:V -Since $script:Since
+        ((Get-Content -LiteralPath $script:P -Raw -Encoding UTF8) -replace '(?s)## Morgenbericht.*', '') | Should -BeExactly $before
     }
 }
 

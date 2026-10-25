@@ -133,7 +133,9 @@ happened, was decided, arrived, was approved). Only then open that one area note
    old sentence is not lost (vault rule 6: history stays apart from the current state).
 3. **Not written**, but named in the Morgenbericht as `Nicht eingetragen (unklar): <entry>`: a
    question, a plan or a hope ("ich muss noch", "hoffentlich", "wann kommt ..."), a statement
-   that names no known area, and anything where two areas could be meant.
+   that names no known area, and anything where two areas could be meant. Only for an entry that
+   became neither a task (step 2) nor an area fact: an entry you put under `## Aufgaben` is never
+   also named `Nicht eingetragen (unklar)`.
 4. An organisation that is not in the list: one Morgenbericht line `Neuer Bereich?: <name>`.
    Never create an area note and never touch the frontmatter, `valid_until`, another section,
    a merge or a move - those stay manual.
@@ -207,8 +209,11 @@ Ensure today's note exists (same rule as step 1), then replace the content of it
 the runner writes the lines that need no judgement after you are done: `Heute:` (the open tasks
 of `todo.md` that are due today or earlier), not committed, not pushed, expiring notes,
 transcription fallback, failed runs, files in `inbox/` that were not processed, project folders
-without a note, and on Mondays the areas whose archive holds newer documents than the note. Do not write those lines yourself, and when you
-replace the content of the section keep that block exactly as it stands.
+without a note, and on Mondays the areas whose archive holds newer documents than the note. Do not write those lines yourself - not
+once in your list and not a second time: never repeat, reword or summarise a line of that block
+(`Nicht gepusht`, `Nicht committet`, `Heute`, ...). When you replace the content of the section
+keep that block exactly as it stands. The runner also drops a line of yours that repeats the
+block, and an `Nicht eingetragen (unklar)` line for an entry that became a task.
 
 Write the state file `000-meta/life-os-state.json` last (merge with its old content):
 

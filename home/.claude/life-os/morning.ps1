@@ -317,6 +317,9 @@ try {
         Write-RunLog ('tasks not moved to todo.md: ' + $_.Exception.Message)
         $extraHints += ('Aufgaben nicht nach todo.md verschoben: ' + $_.Exception.Message)
     }
+    # An entry that became a task is not "unclear" as well.
+    try { Remove-ResolvedUnclearLines -VaultPath $VaultPath -Since $runStart }
+    catch { Write-RunLog ('unclear lines not cleaned: ' + $_.Exception.Message) }
 
     # 4b. the hint block goes in after the agent, also after a failed one (it reads the flag
     # file, so it comes before the flag is consumed): whatever the agent wrote into

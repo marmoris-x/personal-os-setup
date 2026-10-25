@@ -5,7 +5,7 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
-## 3.7.0 (2026-10-25, not tagged yet)
+## 3.7.0 (2026-10-25)
 
 The Life OS inbox task (ADR 0021): everything the owner dictates or types flows in by itself,
 and the morning agent starts only when there is something to order.
@@ -20,6 +20,9 @@ and the morning agent starts only when there is something to order.
 | `vault/AGENTS.md` (area exception, rule 4 `hub_written`, rule 12), `vault/.claude/skills/vault-lint/project_sync.py` and `test_project_sync.py`: a finished hub with a nonexistent `repo:` path is a finding | The old check walked repositories and never saw a hub without one |
 | `morning-checks.ps1` `Update-AreasStale`, `morning.ps1 -ForceWeekly`: on Mondays one line names the areas whose archive holds newer documents than the note | Replaces a `reviewed:` key nobody has to maintain |
 | `morning.ps1`: the vault path must be an existing absolute folder (exit 2) | A hashtable passed as the first argument arrived as the text "System.Collections.Hashtable" and created that folder, with files in it, in the repository |
+| `morning-checks.ps1` (`Save-InboxSeen`, `Get-LastMorningRun`, `Get-TaskKey` use), `morning.ps1` (area snapshot removed after the check), `dev/Projects/CLAUDE.md`, `hub-reminder.ps1`: one seen-list key per file; only an `ok` or `skip` run moves the "last run" mark; a task made only of punctuation is moved, not lost; the hub time is read with `Get-Date -Format s` and written after the last commit | Found by an independent review; each has a test that failed first |
+| `morning-checks.ps1` (`Set-MorgenberichtBlock`, `Remove-ResolvedUnclearLines`), `morning.ps1`, skill steps 3 and 6, `tests/LifeOsMorning.Tests.ps1`, `tests/LifeOsTasks.Tests.ps1`: an agent line that repeats a line of the script's block is dropped; an entry that became a task is no longer also named `Nicht eingetragen (unklar)` | The first live morning report listed the hints twice and the same entry as task and as unclear; red first, then green |
+| `tests/LifeOs*.Tests.ps1`, `tests/HubReminder.Tests.ps1`: skipped outside Windows; `setup/tools/check-language.ps1`: exemptions for the Life OS scripts and tests | These suites run Windows PowerShell 5.1 and German vault paths; CI on Ubuntu failed without the skip |
 | `tests/LifeOsTestVault.ps1`, `tests/Install.Tests.ps1` (149 core files), `tests/Distill.Tests.ps1` (hub exception wording), `setup/tools/verify-all.ps1` check J, `docs/structure.md`, `docs/components.md`, `docs/platforms.md` | One intended-change line per new or changed mirror file; counts re-measured |
 
 ## 3.6.0 (2026-10-23, not tagged yet)

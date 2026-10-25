@@ -623,6 +623,62 @@ function Get-HintLines {
     return @($lines)
 }
 
+function Get-HintLabel([string]$line) {
+    # "Nicht committet seit 4 Tag(en): proj" -> "nicht committet seit # tag(en)". The text after the
+    # first colon is left out, so the same hint with another count or name counts as the same hint.
+    $t = ([string]$line).Trim()
+    $i = $t.IndexOf(':')
+    if ($i -gt 0 -and $i -le 60) { $t = $t.Substring(0, $i) }
+    return ([regex]::Replace($t.ToLowerInvariant(), '\d+', '#'))
+}
+
+function Remove-ResolvedUnclearLines {
+    # An entry that became a task is not "unclear": drops "Nicht eingetragen (unklar): <entry>" from
+    # "## Morgenbericht" of every daily note changed since $Since when the entry holds the wording of
+    # a task in that note's "## Aufgaben" (see Get-TaskKey). Nothing else in the note is touched.
+    param([string]$VaultPath, [datetime]$Since)
+    $arrow = [string][char]0x2192
+    $dailyDir = Join-Path $VaultPath '100-daily'
+    if (-not (Test-Path -LiteralPath $dailyDir)) { return }
+    foreach ($f in (Get-ChildItem -LiteralPath $dailyDir -Filter '*.md' -File)) {
+        if ($f.LastWriteTime -lt $Since) { continue }
+        $text = [IO.File]::ReadAllText($f.FullName)
+        $a = [regex]::Match($text, '(?m)^## Aufgaben[ \t]*\r?$')
+        $m = [regex]::Match($text, '(?m)^## Morgenbericht[ \t]*\r?$')
+        if (-not $a.Success -or -not $m.Success) { continue }
+        $aEnd = $text.Length
+        $aNext = [regex]::Match($text.Substring($a.Index + $a.Length), '(?m)^## ')
+        if ($aNext.Success) { $aEnd = $a.Index + $a.Length + $aNext.Index }
+        $taskKeys = @()
+        foreach ($tm in [regex]::Matches($text.Substring($a.Index + $a.Length, $aEnd - $a.Index - $a.Length), '(?m)^\s*- (.+?) ' + [regex]::Escape($arrow) + ' todo\s*$')) {
+            $k = Get-TaskKey $tm.Groups[1].Value
+            if ($k) { $taskKeys += $k }
+        }
+        if ($taskKeys.Count -eq 0) { continue }
+        $after = $m.Index + $m.Length
+        $end = $text.Length
+        $next = [regex]::Match($text.Substring($after), '(?m)^## ')
+        if ($next.Success) { $end = $after + $next.Index }
+        $section = $text.Substring($after, $end - $after)
+        $nl = "`n"; if ($text.Contains("`r`n")) { $nl = "`r`n" }
+        $changed = $false
+        $kept = @(foreach ($l in ($section -split '\r?\n')) {
+            $um = [regex]::Match([string]$l, '^\s*- Nicht eingetragen \(unklar\): (.+?)\s*$')
+            if ($um.Success) {
+                $ek = ' ' + (Get-TaskKey $um.Groups[1].Value) + ' '
+                $hit = $false
+                foreach ($k in $taskKeys) { if ($ek.Contains(' ' + $k + ' ')) { $hit = $true } }
+                if ($hit) { $changed = $true; continue }
+            }
+            $l
+        })
+        if ($changed) {
+            $new = $text.Substring(0, $after) + ($kept -join $nl) + $text.Substring($end)
+            Write-Utf8 $f.FullName $new
+        }
+    }
+}
+
 function Set-MorgenberichtBlock {
     # Writes (or replaces, or removes) the script's own block at the end of "## Morgenbericht" of
     # one daily note. Nothing else in the note is touched. No lines and no note: nothing is created.
@@ -651,6 +707,16 @@ function Set-MorgenberichtBlock {
         $end = $clean.Length
         if ($next.Success) { $end = $after + $next.Index }
         $section = $clean.Substring($after, $end - $after).TrimEnd()
+        # The block belongs to the script: an agent line that says the same (same text, or the same
+        # label up to the first colon, digits ignored) is dropped, so no hint stands twice.
+        $labels = @{}
+        foreach ($l in $Lines) { $labels[(Get-HintLabel $l)] = $true }
+        $kept = @(foreach ($l in ($section -split '\r?\n')) {
+            $t = ([string]$l).Trim() -replace '^-\s+', ''
+            if ($t -and $labels.ContainsKey((Get-HintLabel $t))) { continue }
+            $l
+        })
+        $section = ($kept -join $nl).TrimEnd()
         $rest = $clean.Substring($end)
         $new = $clean.Substring(0, $after) + $section + $nl + $nl + $block + $nl
         if ($rest) { $new += $nl + $rest }

@@ -152,6 +152,8 @@ $unmanagedExclusions = @(
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-projects\.json$';    reason = 'runtime' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-transcribe\.json$';  reason = 'runtime' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-runs\.log$';         reason = 'runtime' }
+    @{ root = 'VAULT/000-meta';               pattern = '^life-os-areas(-stale)?\.json$'; reason = 'runtime' }  # written by the morning run: area list, Monday hint
+    @{ root = 'VAULT/000-meta';               pattern = '^trash-queue\.txt$';          reason = 'runtime' }     # files waiting for cleanup.ps1
     @{ root = 'VAULT/000-meta';               pattern = '^scripts/build-sidecars\.py$'; reason = 'personal' }
 )
 
