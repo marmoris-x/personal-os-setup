@@ -33,7 +33,7 @@ BeforeAll {
         return $fix
     }
     function Invoke-CheckB([string]$fix) {
-        $out = & pwsh -NoProfile -File $script:VerifyAll -RepoRoot $fix -WorkRoot (Join-Path $script:Work 'log') -Only B 2>&1 | Out-String
+        $out = & pwsh -NoProfile -File $script:VerifyAll -RepoRoot $fix -WorkRoot (Join-Path $script:Work 'log') -Only B -Verbose 4>&1 2>&1 | Out-String
         return [pscustomobject]@{ Out = $out }
     }
 }
@@ -46,13 +46,19 @@ Describe 'verify-all check B and the local PROGRESS.md' {
     It 'passes a clean root' {
         $fix = New-RootFixture 'clean' "/PROGRESS.md`n"
         $r = Invoke-CheckB $fix
-        $r.Out | Should -Match 'PASS\s+root holds exactly the documented entries'
+        # the verdict of the root rule itself: no tool of the acceptance run is needed for it, so CI
+        # (which lacks gh, gitleaks and trufflehog) reads the detail line, not the PASS mark
+        $r.Out | Should -Match 'none untracked'
+        $r.Out | Should -Not -Match 'UNTRACKED ON DISK|UNEXPECTED|MISSING:'
     }
     It 'passes a local PROGRESS.md that git ignores' {
         $fix = New-RootFixture 'local-ignored' "/PROGRESS.md`n"
         [IO.File]::WriteAllText((Join-Path $fix 'PROGRESS.md'), 'local state')
         $r = Invoke-CheckB $fix
-        $r.Out | Should -Match 'PASS\s+root holds exactly the documented entries'
+        # the verdict of the root rule itself: no tool of the acceptance run is needed for it, so CI
+        # (which lacks gh, gitleaks and trufflehog) reads the detail line, not the PASS mark
+        $r.Out | Should -Match 'none untracked'
+        $r.Out | Should -Not -Match 'UNTRACKED ON DISK|UNEXPECTED|MISSING:'
     }
     It 'fails a local PROGRESS.md that git does not ignore' {
         $fix = New-RootFixture 'local-not-ignored' "# nothing ignored`n"
