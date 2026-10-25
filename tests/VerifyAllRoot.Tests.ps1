@@ -98,33 +98,34 @@ Describe 'verify-all check 1: headings are outline, open work is not' {
             $dir = Join-Path $script:Work ('progress-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
             New-Item -ItemType Directory -Force -Path $dir | Out-Null
             [IO.File]::WriteAllText((Join-Path $dir 'PROGRESS.md'), (($lines -join "`n") + "`n"))
-            $out = & pwsh -NoProfile -File $script:VerifyAll -WorkRoot $dir -Only 1 4>&1 2>&1 | Out-String
+            $out = & pwsh -NoProfile -File $script:VerifyAll -WorkRoot $dir -Only 1 -Verbose 4>&1 2>&1 | Out-String
             return $out
         }
     }
     It 'passes a PROGRESS.md whose Next and Open questions headings say none' {
         $out = Invoke-Check1 @('# PROGRESS', '', '## Status', 'Done.', '', '## Next step', '- Nothing open.', '', '## Open questions', 'none')
-        $out | Should -Match '(?m)^ 1  PASS'
+        # the check's own counts, not the PASS mark: a partial run marks FAIL where gh, gitleaks or trufflehog are missing (CI)
+        $out | Should -Match 'unchecked boxes: 0; lines opening with an open-work marker: 0'
     }
     It 'passes headings with a bullet "None." and an empty section' {
         $out = Invoke-Check1 @('## Next', '- None.', '', '## Open questions', '', '## Decisions', '- Kept it small.')
-        $out | Should -Match '(?m)^ 1  PASS'
+        # the check's own counts, not the PASS mark: a partial run marks FAIL where gh, gitleaks or trufflehog are missing (CI)
+        $out | Should -Match 'unchecked boxes: 0; lines opening with an open-work marker: 0'
     }
     It 'fails a real open line under the Next step heading' {
         $out = Invoke-Check1 @('## Status', 'Done.', '', '## Next step', '- Run the acceptance test again.')
-        $out | Should -Match 'CHECK  1:'
-        $out | Should -Match 'Result:  FAIL'
+        $out | Should -Match 'unchecked boxes: [1-9]|open-work marker: [1-9]'
     }
     It 'fails a marker word in the text below a heading' {
         $out = Invoke-Check1 @('## Decisions', '- TODO: decide the name.')
-        $out | Should -Match 'Result:  FAIL'
+        $out | Should -Match 'unchecked boxes: [1-9]|open-work marker: [1-9]'
     }
     It 'fails an unchecked box' {
         $out = Invoke-Check1 @('## Decisions', '- [ ] decide the name')
-        $out | Should -Match 'Result:  FAIL'
+        $out | Should -Match 'unchecked boxes: [1-9]|open-work marker: [1-9]'
     }
     It 'fails prose that opens with Open work' {
         $out = Invoke-Check1 @('## Status', 'Open work: the tests.')
-        $out | Should -Match 'Result:  FAIL'
+        $out | Should -Match 'unchecked boxes: [1-9]|open-work marker: [1-9]'
     }
 }
