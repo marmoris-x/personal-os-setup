@@ -67,6 +67,13 @@ Describe 'verify-all check B and the local PROGRESS.md' {
         $r.Out | Should -Match 'UNTRACKED ON DISK: PROGRESS.md'
         $r.Out | Should -Match 'B\s+root holds exactly the documented entries\s+FAIL'
     }
+    It 'fails a local PROGRESS.md that only .git/info/exclude hides (the repo itself does not ignore it)' {
+        $fix = New-RootFixture 'local-excluded' "# nothing ignored`n"
+        [IO.File]::AppendAllText((Join-Path $fix '.git/info/exclude'), "PROGRESS.md`n")
+        [IO.File]::WriteAllText((Join-Path $fix 'PROGRESS.md'), 'local state')
+        $r = Invoke-CheckB $fix
+        $r.Out | Should -Match 'UNTRACKED ON DISK: PROGRESS.md'
+    }
     It 'still fails a stray notes.txt, also when git ignores it' {
         $fix = New-RootFixture 'stray' "/PROGRESS.md`nnotes.txt`n"
         [IO.File]::WriteAllText((Join-Path $fix 'notes.txt'), 'stray')

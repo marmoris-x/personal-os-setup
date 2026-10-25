@@ -272,7 +272,6 @@ try {
             $isError = [bool]$res.is_error
             $turns = $res.num_turns
             $cost = $res.total_cost_usd
-            $costDs = ''
             try { $costDs = Get-DeepSeekCost -Usage $res.usage -AtUtc ([datetime]::UtcNow) } catch { $costDs = '' }
             if ("$costDs" -ne '') { $costDsText = ' cost_ds=' + ([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.######}', $costDs)) }
             $resultText = [string]$res.result

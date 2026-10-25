@@ -17,6 +17,8 @@ Search tuning after the review of 2026-10-24.
 | `.gitignore`, `setup/tools/verify-all.ps1` (check B), `tests/VerifyAllRoot.Tests.ps1`: a local, git-ignored `PROGRESS.md` is no stray root file; a tracked one or any other untracked file still is | The agent rule writes `PROGRESS.md`, and the acceptance run used to fail on it |
 | `home/.claude/CLAUDE.md`, `home/.claude/docs/agent-tooling.md`, `tests/Distill.Tests.ps1`, `tests/Install.Tests.ps1`: the `/distill` exception names its index line, a rule against bending a file to pass a check, the Exa and Parallel decisions | Parts 1, 5, 6, 7 and 10 of the task |
 
+- Review follow-up: a URL can no longer close the untrusted-marker comment early (whitespace folded, `--` split); check B accepts a local `PROGRESS.md` only when the repo's own `.gitignore` lists it (not `.git/info/exclude`); duplicate `$costDs` assignment removed.
+
 ## 3.7.0 (2026-10-25)
 
 The Life OS inbox task (ADR 0021): everything the owner dictates or types flows in by itself,

@@ -858,10 +858,12 @@ if (Test-Selected 'B') { try {
     # too (it is not in $expectedFiles, so it shows as UNEXPECTED above).
     $allowedLocal = @('PROGRESS.md')
     $localOk = @()
+    # The repo's own .gitignore must list it: a per-clone .git/info/exclude would hide the file on this PC only.
+    $ignoreFile = Join-Path $RepoRoot '.gitignore'
+    $ignoreLines = if (Test-Path -LiteralPath $ignoreFile) { @(Get-Content -LiteralPath $ignoreFile) } else { @() }
     foreach ($name in $allowedLocal) {
         if ($tracked -contains $name) { continue }
-        & git -C $RepoRoot check-ignore -q -- $name
-        if ($LASTEXITCODE -eq 0) { $localOk += $name }
+        if ($ignoreLines | Where-Object { $_.Trim() -eq $name -or $_.Trim() -eq "/$name" }) { $localOk += $name }
     }
     $stray = @($onDisk | Where-Object { ($expectedDirs -notcontains $_) -and ($expectedFiles -notcontains $_) -and ($localOk -notcontains $_) })
     $ok = ($unexpected.Count -eq 0) -and ($missing.Count -eq 0) -and ($stray.Count -eq 0) -and $script:toolsOk
