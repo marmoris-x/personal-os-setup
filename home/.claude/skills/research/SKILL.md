@@ -248,6 +248,7 @@ error. Never edit the text yourself: you would break the checked fragments.
 - A subagent cannot ask the user anything; a run once waited for a language choice that never came -> ask the languages in the main session before the first agent starts.
 - A change that touches more than 20 files was made without asking first (2026-10-19) -> ask the owner before such a change, not after.
 - The writer retyped a quote by one word and `check_article.py` failed the run after two repair rounds (2026-10-19) -> `fix_quotes.py` now replaces a fragment that is at least 90 % the same with the evidence's exact span before the check; the writer's exact-copy rule stays.
+- A key-point bullet said "gesetzlicher" where the fragment E67 read "gesetzlichen" and the run ended with one `check_article.py` error (2026-10-25) -> `fix_quotes.py` declares such a word in `forms`, but only for an ending variant (four shared first letters, one German ending of at most two letters, no digit); never widen it to `common.same_stem`, which also accepts zulässig/unzulässig, ein/kein and 20/120 and would let a reversed statement pass as checked.
 
 ## 9. Save
 

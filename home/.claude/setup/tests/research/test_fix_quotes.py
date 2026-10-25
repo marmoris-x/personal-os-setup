@@ -121,6 +121,32 @@ class FixQuotes(unittest.TestCase):
         self.assertEqual(len(notes), 1)
         self.assertIn("NOTE form declared", notes[0])
 
+    def test_a_word_that_turns_the_statement_around_is_not_a_form(self):
+        # (evidence word, paragraph word): same_stem alone accepts all of them and the letter
+        # similarity of the whole span stays above 0.90, so each would pass as "checked".
+        pairs = [("zulässig", "unzulässig"), ("ein", "kein"), ("eine", "keine"), ("20", "120"),
+                 ("50", "150"), ("steuerfrei", "steuerpflichtig"), ("möglich", "unmöglich"),
+                 ("Anspruch", "Ansprüche")]
+        tail = "bei Fahrten innerhalb von Österreich und gilt auch für das Jahr 2026"
+        for original, used in pairs:
+            with self.subTest(original=original, used=used):
+                fragment = "Das Kilometergeld ist %s %s" % (original, tail)
+                text = draft("Das Kilometergeld ist %s %s. [[E1]]" % (used, tail), [["E1", fragment]])
+                fixed, notes = fix_quotes.fix_text(text, evidence(E1=fragment + "."))
+                self.assertEqual(fixed, text)
+                self.assertEqual(notes, [])
+
+    def test_only_a_german_ending_of_at_most_two_letters_after_four_shared_letters_is_a_form(self):
+        tail = "bei Fahrten innerhalb von Österreich und gilt auch für das Jahr 2026"
+        for original, used in [("gesetzlichen", "gesetzlicher"), ("gesetzliche", "gesetzlichen"),
+                               ("gesetzlich", "gesetzliche"), ("gesetzlichem", "gesetzliches")]:
+            with self.subTest(original=original, used=used):
+                fragment = "Es gibt keinen %s Anspruch %s" % (original, tail)
+                text = draft("Es gibt keinen %s Anspruch %s. [[E1]]" % (used, tail), [["E1", fragment]])
+                fixed, notes = fix_quotes.fix_text(text, evidence(E1=fragment + "."))
+                self.assertEqual(len(notes), 1)
+                self.assertEqual(parse_compose(paragraphs(fixed)[0])["forms"], [["E1", used, original]])
+
     def test_a_different_wording_in_the_paragraph_is_left_alone(self):
         text = draft("Ein Anspruch besteht nach Vertrag. [[E67]]",
                      [["E67", "gesetzlichen Anspruch auf Kilometergeld"]])

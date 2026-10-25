@@ -240,5 +240,8 @@ recorded fragment reads "gesetzlichen") was a gap in the existing system, not in
 copy. `fix_quotes.py` now also repairs that direction: the paragraph keeps its grammatical
 wording, the fragment is rewritten to what the paragraph says, and each changed word is declared in
 `forms` (used, original). A span qualifies when it has the same number of words, every
-differing word passes `same_stem`, and the spans are at least 90 % alike by letters. On run A's
-real draft `check_article.py` goes from 1 error to 0.
+differing word is an ending variant (the same first four letters or more, one German ending
+of at most two letters, no digit) and the spans are at least 90 % alike by letters. `same_stem`
+alone is too wide: it also accepts zulässig/unzulässig, ein/kein, 20/120 and
+steuerfrei/steuerpflichtig, so a reversed statement would pass as checked. On run A's real draft
+`check_article.py` goes from 1 error to 0.

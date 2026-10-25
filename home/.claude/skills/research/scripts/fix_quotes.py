@@ -10,8 +10,11 @@ The other direction is repaired too: when the fragment is the evidence's exact w
 paragraph (a key-point bullet, for example) uses another ending of the same words ("gesetzlicher"
 for "gesetzlichen"), the paragraph keeps its grammatical wording, the fragment is rewritten to
 what the paragraph says, and each changed word is declared in "forms" (used, original). A span
-qualifies when it has the same number of words, every differing word passes common.same_stem,
-and the spans are at least --min-ratio alike by letters (word endings change letters, not words).
+qualifies when it has the same number of words, every differing word pair is an ending variant
+(see ending_variant: the same first letters, only a short German ending differs, no digit), and
+the spans are at least --min-ratio alike by letters. common.same_stem is too wide for this:
+it also accepts zulaessig/unzulaessig, ein/kein, 20/120 and steuerfrei/steuerpflichtig, which
+would let a reversed statement pass as checked.
 
 Usage:
   python fix_quotes.py <draft file> --workdir <work folder> [--min-ratio 0.90]
@@ -30,9 +33,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from common import (COMPOSE_RE, DataError, find_tokens, load_evidence, parse_compose,  # noqa: E402
-                    same_stem, tokens, utf8_output)
+                    tokens, utf8_output)
 
 MIN_RATIO = 0.90
+ENDINGS = {"e", "en", "er", "es", "em", "n", "s", "r", "m"}  # German inflection endings
+MIN_SHARED = 4  # letters two forms of one word must start with
 
 
 def token_spans(text):
@@ -109,6 +114,26 @@ def best_evidence_span(evidence_text, needle, min_ratio=MIN_RATIO):
     return evidence_text[spans[start][1]:spans[start + length - 1][2]], best[0][0]
 
 
+def ending_variant(used, original):
+    """True when two different words are one word in two inflected forms: no digit in either,
+    at least MIN_SHARED letters in common at the start, and the rest of each word is empty or one
+    German inflection ending of at most two letters. An umlaut change (Anspruch/Ansprueche)
+    changes the stem, so it is not a variant and goes to the normal repair round."""
+    a, b = used.casefold(), original.casefold()
+    if a == b:
+        return True
+    if any(ch.isdigit() for ch in a + b):
+        return False
+    shared = 0
+    for x, y in zip(a, b):
+        if x != y:
+            break
+        shared += 1
+    if shared < MIN_SHARED:
+        return False
+    return all(rest == "" or rest in ENDINGS for rest in (a[shared:], b[shared:]))
+
+
 def paragraph_form_span(visible, words, min_ratio=MIN_RATIO):
     """(exact paragraph text, [(used, original)]) for the paragraph span that is the fragment
     with other word endings, or None."""
@@ -119,7 +144,7 @@ def paragraph_form_span(visible, words, min_ratio=MIN_RATIO):
     for start in range(len(spans) - size + 1):
         window = [span[0] for span in spans[start:start + size]]
         pairs = [(used, original) for used, original in zip(window, words) if used != original]
-        if not pairs or not all(same_stem(used, original) for used, original in pairs):
+        if not pairs or not all(ending_variant(used, original) for used, original in pairs):
             continue
         ratio = difflib.SequenceMatcher(
             None, " ".join(word.casefold() for word in window), wanted, autojunk=False).ratio()
