@@ -417,6 +417,44 @@ Describe 'Set-FlagHubStale' -Skip:$script:notWindows {
     }
 }
 
+Describe 'Get-DeepSeekCost' -Skip:$script:notWindows {
+    BeforeAll {
+        # The morning run of 2026-10-24 (a Saturday, so off-peak): Claude Code showed 0.5948 USD
+        # at Anthropic list prices; at the deepseek-flash off-peak prices it cost about 0.013 USD.
+        $script:Usage = [pscustomobject]@{ input_tokens = 33540; output_tokens = 11301; cache_read_input_tokens = 289152; cache_creation_input_tokens = 0 }
+    }
+    It 'prices the 2026-10-24 morning run at the off-peak rates' {
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc ([datetime]::SpecifyKind([datetime]'2026-10-24T05:00:00', 'Utc')) | Should -Be 0.012679
+    }
+    It 'doubles the price inside a peak window (Monday 07:00 UTC)' {
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc ([datetime]::SpecifyKind([datetime]'2026-10-26T07:00:00', 'Utc')) | Should -Be 0.025358
+    }
+    It 'knows both peak windows and their edges' {
+        $at = { param($t) [datetime]::SpecifyKind([datetime]$t, 'Utc') }
+        $peak = 0.025358; $off = 0.012679
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-26T01:00:00') | Should -Be $peak
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-26T03:59:59') | Should -Be $peak
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-26T04:00:00') | Should -Be $off
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-26T05:59:59') | Should -Be $off
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-26T06:00:00') | Should -Be $peak
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-30T09:59:59') | Should -Be $peak
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-30T10:00:00') | Should -Be $off
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-10-31T07:00:00') | Should -Be $off
+        Get-DeepSeekCost -Usage $script:Usage -AtUtc (& $at '2026-11-01T07:00:00') | Should -Be $off
+    }
+    It 'bills cache creation tokens as cache misses' {
+        $u = [pscustomobject]@{ input_tokens = 0; output_tokens = 0; cache_read_input_tokens = 0; cache_creation_input_tokens = 1000000 }
+        Get-DeepSeekCost -Usage $u -AtUtc ([datetime]::SpecifyKind([datetime]'2026-10-24T05:00:00', 'Utc')) | Should -Be 0.15
+    }
+    It 'returns an empty string when the result carries no usage' {
+        Get-DeepSeekCost -Usage $null -AtUtc ([datetime]::SpecifyKind([datetime]'2026-10-24T05:00:00', 'Utc')) | Should -Be ''
+    }
+    It 'keeps the prices in one place, with the source URL and the read date' {
+        $script:DeepSeekPrices.Source | Should -Be 'https://api-docs.deepseek.com/quick_start/pricing'
+        $script:DeepSeekPrices.Read | Should -Match '^\d{4}-\d\d-\d\d$'
+    }
+}
+
 Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('e-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
@@ -456,6 +494,15 @@ Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
         Test-Path -LiteralPath (Join-Path $script:Stub 'called.txt') | Should -BeTrue
         $today = (Get-Date).ToString('yyyy-MM-dd')
         (Get-Content -LiteralPath (Join-Path $script:V "100-daily\$today.md") -Raw -Encoding UTF8) | Should -Match 'Nicht committet.*: proj'
+    }
+
+    It 'writes cost_ds next to cost in the run log, computed from the result usage' {
+        Write-TestFile (Join-Path $script:Stub 'claude.cmd') "@echo off`r`necho {`"is_error`":false,`"subtype`":`"success`",`"num_turns`":1,`"total_cost_usd`":0.5948,`"usage`":{`"input_tokens`":33540,`"cache_creation_input_tokens`":0,`"cache_read_input_tokens`":289152,`"output_tokens`":11301},`"result`":`"stub`"}`r`n"
+        Write-TestFile (Join-Path $script:V 'inbox\audio\a.txt') 'hello'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null
+        $log = Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw
+        # peak or off-peak depends on the clock of the test run: 0.012679 off-peak, 0.025358 peak
+        $log | Should -Match 'morning \| ok \| turns=1 cost=0\.5948 cost_ds=0\.0(12679|25358) \|'
     }
 
     It 'leaves no copy of the area notes in the log folder after the run' {

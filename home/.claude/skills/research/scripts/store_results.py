@@ -24,10 +24,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from common import (COMPOSE_RE, DataError, load_evidence, paragraphs, parse_compose,  # noqa: E402
-                    read_page, utf8_output)
+                    UNTRUSTED_MARKER_RE, read_page, utf8_output)
 
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+){0,5}$")
 IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+
+
+def frontmatter_first(raw):
+    """A saved page opens with the untrusted marker line; the vault copy needs the frontmatter on
+    the very first line, so the marker moves to the line below the frontmatter."""
+    lines = raw.split("\n")
+    if not (lines and UNTRUSTED_MARKER_RE.match(lines[0]) and len(lines) > 1 and lines[1].strip() == "---"):
+        return raw
+    for i in range(2, len(lines)):
+        if lines[i].strip() == "---":
+            return "\n".join(lines[1:i + 1] + [lines[0]] + lines[i + 1:])
+    return raw
 LANG_RE = re.compile(r"^[a-z]{2,3}(?:-[A-Za-z]{2,4})?$")
 LOCAL_COPY_RE = re.compile(r"\]\(([^)\s]*pages/([^)\s/]+\.md))\)")
 REFS_RE = re.compile(r"<!-- references:start -->(.*?)<!-- references:end -->", re.S)
@@ -152,7 +164,7 @@ def store(workdir, article_path, slug, day, answer_lang, source_langs, vault, re
         header, body, _ = read_page(work / "pages" / name)
         raw = (work / "pages" / name).read_text(encoding="utf-8")
         removed += len(IMAGE_RE.findall(raw))
-        (src / "pages" / name).write_text(IMAGE_RE.sub("", raw), encoding="utf-8", newline="\n")
+        (src / "pages" / name).write_text(frontmatter_first(IMAGE_RE.sub("", raw)), encoding="utf-8", newline="\n")
     question = (work / "question.md").read_text(encoding="utf-8").strip().splitlines()[0].lstrip("# ").strip() \
         if (work / "question.md").is_file() else title
     (src / "evidence.md").write_text(evidence_md(question, day, answer_lang, source_langs, used),

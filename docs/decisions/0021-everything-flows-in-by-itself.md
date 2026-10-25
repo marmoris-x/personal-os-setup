@@ -58,6 +58,12 @@ about 0.25 to 0.6 USD; the area step adds about 0.35 USD on a day with area-rele
 (1.23 against 0.88 USD for the same day with the old skill); a hub catch-up is about 0.4 USD.
 A day with nothing to order costs nothing, where it cost 0.25 to 0.59 USD before.
 
+The figures in this section are Claude Code's list-price figures: `total_cost_usd` is computed
+with Anthropic prices (5 / 25 / 0.50 USD per 1M tokens for input, output and cache read), not
+with what DeepSeek bills. The morning run of 2026-10-24 (input 33,540, output 11,301, cache read
+289,152 tokens) shows 0.5948 USD, and at DeepSeek's off-peak price it cost about 0.013 USD. The
+run log therefore carries `cost_ds=` (computed from the result's token counts) next to `cost=`.
+
 ## Consequences
 
 - The morning agent runs on fewer days. The morning report gains script-written lines and loses

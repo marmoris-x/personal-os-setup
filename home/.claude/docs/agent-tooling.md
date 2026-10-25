@@ -110,7 +110,9 @@ allowance), Tavily, Firecrawl, Exa. Keys go through
 into the repository or the chat. The agent can read
 environment variables through the shell; these are free-tier keys, so the risk is limited.
 
-**Not added:** Brave (card required since February 2026); mem0 (a second memory outside the
+**Not added:** Brave (card required since February 2026; planned once the owner has a key, calls
+use `extra_snippets=true`, https://api-dashboard.search.brave.com/app/documentation/web-search/query);
+mem0 (a second memory outside the
 vault breaks "one source of truth"); aggregator servers such as mcp-omnisearch (about 350 stars,
 not proven).
 
@@ -386,6 +388,8 @@ monthly cap)". Both were wrong for the keyless MCP server this setup uses.
 | The 5,000 requests a month belong to the $5 monthly credit, which needs a card | Not valid for the keyless MCP; the budget row now reads "keyless MCP, limits not published" | https://parallel.ai/blog/free-tier-parallel.md |
 | The keyless MCP server publishes no request limit | Confirmed on the MCP page; `CLAUDE.md` now says "free without a key; limits not published" | https://docs.parallel.ai/integrations/mcp/search-mcp |
 | The setup uses the keyless server | Measured: `claude mcp get parallel` under `claude` and `claude-ds`: user scope, type http, URL without query string, no header configured; `PARALLEL_API_KEY` is set in no environment scope | live check 2026-10-24 |
+| Exa `lite` evaluated and not adopted: it "serves content directly from Exa's regularly refreshed search index, without fetching pages at query time", so it is less fresh. The budget fits at `auto` with about 1.4x headroom. Revisit only if the $10 run out before the month ends. Never shorten the `tools=` list of the Exa URLs: it "will replace the defaults" | Decision: stay on `auto`, no change to any Exa call | https://exa.ai/docs/reference/search |
+| A Parallel key with a card bills usage beyond the $5 to the card; no spending limit is documented | Decision: no Parallel key | https://parallel.ai/blog/free-tier-parallel.md |
 
 The row of 2026-09-29 above ("up to 5,000 requests a month free") is kept as history.
 

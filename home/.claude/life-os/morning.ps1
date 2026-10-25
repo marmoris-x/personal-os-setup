@@ -255,7 +255,7 @@ try {
     $resultText = ''
     $isError = $true
     $res = $null
-    $turns = ''; $cost = ''
+    $turns = ''; $cost = ''; $costDs = ''; $costDsText = ''
     if (Test-Path -LiteralPath $outFile) {
         $raw = Get-Content -LiteralPath $outFile -Raw -Encoding UTF8
         $res = $null
@@ -272,9 +272,12 @@ try {
             $isError = [bool]$res.is_error
             $turns = $res.num_turns
             $cost = $res.total_cost_usd
+            $costDs = ''
+            try { $costDs = Get-DeepSeekCost -Usage $res.usage -AtUtc ([datetime]::UtcNow) } catch { $costDs = '' }
+            if ("$costDs" -ne '') { $costDsText = ' cost_ds=' + ([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.######}', $costDs)) }
             $resultText = [string]$res.result
             Write-RunLog ('agent result: is_error=' + $isError + ' subtype=' + $res.subtype +
-                          ' turns=' + $turns + ' cost=' + $cost)
+                          ' turns=' + $turns + ' cost=' + $cost + $costDsText)
         } else {
             Write-RunLog 'agent produced no readable JSON output'
         }
@@ -338,7 +341,7 @@ try {
     $firstLine = ''
     if ($resultText) { $firstLine = (($resultText -split "`r?`n") | Where-Object { $_.Trim() } | Select-Object -First 1) }
     if ($firstLine.Length -gt 150) { $firstLine = $firstLine.Substring(0, 150) }
-    if ($success) { $summary = 'turns=' + $turns + ' cost=' + $cost + ' | ' + $firstLine }
+    if ($success) { $summary = 'turns=' + $turns + ' cost=' + $cost + $costDsText + ' | ' + $firstLine }
     else { $summary = 'FAILED timedOut=' + $timedOut + ' exit=' + $exitText + ' | ' + $firstLine }
 
     # 5. cleanup (only after a successful agent run may recordings leave the inbox)

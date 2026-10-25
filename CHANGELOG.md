@@ -5,6 +5,18 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-10-25)
+
+Search tuning after the review of 2026-10-24.
+
+| What | Why |
+|---|---|
+| `home/.claude/skills/research/scripts/save_pages.py`, `common.py`, `store_results.py` and their tests: every saved page opens with an untrusted-content marker line; `read_page` skips it and the vault copy keeps its frontmatter on line 1 | A cheap marker, no transformation of the page text, so word-for-word verification still holds |
+| `crawl4ai_fetch.py`, `save_pages.py`, `research.workflow.js`, `test_crawl4ai_fetch.py`: a pruned `fit_markdown` reading copy in `pages/fit/` for the extractors; off unless the workflow arg `fit` is `true` | A measurement in ADR 0018 decides whether it stays |
+| `home/.claude/life-os/morning-checks.ps1`, `morning.ps1`, `tests/LifeOsMorning.Tests.ps1`: `cost_ds=` next to `cost=` in the run log; ADR 0021 says the old figures are list-price figures | `total_cost_usd` is computed with Anthropic prices, the agent runs on DeepSeek |
+| `.gitignore`, `setup/tools/verify-all.ps1` (check B), `tests/VerifyAllRoot.Tests.ps1`: a local, git-ignored `PROGRESS.md` is no stray root file; a tracked one or any other untracked file still is | The agent rule writes `PROGRESS.md`, and the acceptance run used to fail on it |
+| `home/.claude/CLAUDE.md`, `home/.claude/docs/agent-tooling.md`, `tests/Distill.Tests.ps1`, `tests/Install.Tests.ps1`: the `/distill` exception names its index line, a rule against bending a file to pass a check, the Exa and Parallel decisions | Parts 1, 5, 6, 7 and 10 of the task |
+
 ## 3.7.0 (2026-10-25)
 
 The Life OS inbox task (ADR 0021): everything the owner dictates or types flows in by itself,

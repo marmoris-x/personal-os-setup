@@ -853,7 +853,17 @@ if (Test-Selected 'B') { try {
     # git ls-files cannot see an untracked file, so the real directory is read too: a stray
     # notes.txt in the root is exactly the mess this check exists for
     $onDisk = @(Get-ChildItem -LiteralPath $RepoRoot -Force | Where-Object { $_.Name -ne '.git' } | ForEach-Object { $_.Name } | Sort-Object)
-    $stray = @($onDisk | Where-Object { ($expectedDirs -notcontains $_) -and ($expectedFiles -notcontains $_) })
+    # PROGRESS.md is local working state (the agent rule in CLAUDE.md writes it; .gitignore lists it): it is no
+    # stray file while git ignores it. Anything else untracked stays a finding, and a tracked PROGRESS.md is one
+    # too (it is not in $expectedFiles, so it shows as UNEXPECTED above).
+    $allowedLocal = @('PROGRESS.md')
+    $localOk = @()
+    foreach ($name in $allowedLocal) {
+        if ($tracked -contains $name) { continue }
+        & git -C $RepoRoot check-ignore -q -- $name
+        if ($LASTEXITCODE -eq 0) { $localOk += $name }
+    }
+    $stray = @($onDisk | Where-Object { ($expectedDirs -notcontains $_) -and ($expectedFiles -notcontains $_) -and ($localOk -notcontains $_) })
     $ok = ($unexpected.Count -eq 0) -and ($missing.Count -eq 0) -and ($stray.Count -eq 0) -and $script:toolsOk
     $detail = 'root: ' + ($top -join ' ') + $(if ($unexpected.Count -gt 0) { '; UNEXPECTED: ' + ($unexpected -join ' ') } else { '' }) + $(if ($missing.Count -gt 0) { '; MISSING: ' + ($missing -join ' ') } else { '' }) + $(if ($stray.Count -gt 0) { '; UNTRACKED ON DISK: ' + ($stray -join ' ') } else { '; ' + $onDisk.Count + ' entries on disk, none untracked' })
     Add-Result 'B' 'root holds exactly the documented entries' 'git ls-files + Get-ChildItem -Force at the root, compared with the list in the task section 3' $detail '0' $ok
@@ -1412,6 +1422,10 @@ if (Test-Selected 'J') { try {
         @{ Path = 'DEV/Projects/CLAUDE.md'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the hub rule - the agent writes the project hub in the vault at the end of every task and commits only that file' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): unit tests for the new project-sync finding (a finished hub whose repo path does not exist)' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): also reports a hub with status done whose repo: path does not exist' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_crawl4ai_fetch.py'; Reason = '2026-10-25 (search tuning, Part 2): tests for the fit_markdown reading copy that crawl4ai_fetch.py now returns next to the raw markdown' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): a copied page keeps its frontmatter on the first line although a saved page now opens with the untrusted marker line' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/common.py'; Reason = '2026-10-25 (search tuning, Part 4): read_page skips the untrusted marker line that save_pages.py writes on top of every saved page' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): the vault copy of a page moves the marker line below the frontmatter, so the frontmatter stays on line 1' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

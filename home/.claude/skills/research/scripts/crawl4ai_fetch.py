@@ -5,16 +5,21 @@ Usage:
 
 Reads a JSON array of URLs, crawls all of them in one browser session with `arun_many` and
 the `MemoryAdaptiveDispatcher`, stealth enabled, and writes one UTF-8 JSON line per URL:
-  {"url": ..., "ok": true, "status": 200, "markdown": ...}
+  {"url": ..., "ok": true, "status": 200, "markdown": ..., "fit_markdown": ...}
   {"url": ..., "ok": false, "status": 403, "error": ...}
+`markdown` is the unfiltered raw_markdown (word-for-word verification reads it); `fit_markdown`
+is the pruned reading copy for the evidence extractors and is left out when the filter gave nothing.
 The page text goes to the file only; the console gets one ASCII summary line. Exit 0 when the
 output file was written, 2 on a usage error.
 
 Source: https://docs.crawl4ai.com/advanced/multi-url-crawling/ @ 2026-10-15 (streaming example)
 Source: https://docs.crawl4ai.com/advanced/undetected-browser/ @ 2026-10-11 (enable_stealth)
+Source: https://docs.crawl4ai.com/core/markdown-generation/ @ 2026-10-25 (fit_markdown, section 6)
 Changed: one output line per requested URL, written as soon as its crawl returns; a per-page
 timeout and an overall deadline; concurrency capped at 5; UTF-8 file output; the optional
 console monitor is left out so stdout stays one summary line.
+Changed (fit_markdown): the docs example's `options={"ignore_links": True}` is left out so the
+raw markdown stays exactly as before; the threshold is the example's 0.6.
 """
 
 import argparse
@@ -33,6 +38,21 @@ def page_text(result):
     return raw if isinstance(raw, str) else str(markdown)
 
 
+def fit_text(result):
+    """The pruned reading copy of a CrawlResult, or "" when the filter gave nothing."""
+    fit = getattr(getattr(result, "markdown", None), "fit_markdown", None)
+    return fit if isinstance(fit, str) and fit.strip() else ""
+
+
+def markdown_generator():
+    """The docs example (Markdown Generation, section 6): a pruning filter next to the default
+    markdown, so every result carries raw_markdown and fit_markdown."""
+    from crawl4ai.markdown_generation_strategy import DefaultMarkdownGenerator
+    from crawl4ai.content_filter_strategy import PruningContentFilterLXML
+
+    return DefaultMarkdownGenerator(content_filter=PruningContentFilterLXML(threshold=0.6))
+
+
 def record_for(url, result):
     """One JSON object for one requested URL."""
     status = getattr(result, "status_code", None)
@@ -40,7 +60,11 @@ def record_for(url, result):
     ok = bool(getattr(result, "success", False)) and status is not None and status < 400 \
         and bool(text.strip())
     if ok:
-        return {"url": url, "ok": True, "status": status, "markdown": text}
+        record = {"url": url, "ok": True, "status": status, "markdown": text}
+        fit = fit_text(result)
+        if fit:
+            record["fit_markdown"] = fit
+        return record
     error = getattr(result, "error_message", None) or (f"HTTP {status}" if status else "no text")
     return {"url": url, "ok": False, "status": status, "error": error}
 
@@ -57,6 +81,7 @@ async def crawl(urls, timeout_s, concurrency, write_result):
     browser_config = BrowserConfig(headless=True, verbose=False, enable_stealth=True)
     run_config = CrawlerRunConfig(
         cache_mode=CacheMode.BYPASS,
+        markdown_generator=markdown_generator(),
         stream=True,
         verbose=False,
         page_timeout=max(1, int(timeout_s * 1000)),

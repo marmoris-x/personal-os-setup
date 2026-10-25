@@ -33,7 +33,8 @@ from urllib.parse import parse_qsl, quote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import DataError, clean_url, normalize, read_jsonl, utf8_output  # noqa: E402
+from common import (DataError, clean_url, normalize, read_jsonl, read_page,  # noqa: E402
+                    untrusted_marker, utf8_output)
 
 MIN_CHARS = 200
 TYPE_RANK = {"primary": 0, "secondary": 1, "experience": 2}
@@ -330,7 +331,8 @@ def fetch_crawl4ai(urls, max_age_hours):
         if record is None:
             out[url] = "crawl4ai: no line for this URL"
         elif record.get("ok") and isinstance(record.get("markdown"), str):
-            out[url] = {"text": record["markdown"], "status": record.get("status")}
+            out[url] = {"text": record["markdown"], "status": record.get("status"),
+                        "fit": record.get("fit_markdown")}
         else:
             out[url] = f"crawl4ai: {record.get('error') or 'HTTP ' + str(record.get('status'))}"
     return out
@@ -478,14 +480,9 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
         if item.get("status") != "saved" or not item.get("file"):
             continue
         try:
-            saved_text = (pages / str(item["file"])).read_text(encoding="utf-8")
+            _header, body, _offset = read_page(pages / str(item["file"]))
         except OSError:
             continue
-        body = saved_text
-        if body.startswith("---"):
-            parts = body.split("\n---\n", 1)
-            if len(parts) == 2:
-                body = parts[1]
         if body.strip():
             hashes[content_hash(body)] = str(item["file"])
     wayback_failures = 0
@@ -526,9 +523,17 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
                   "method": used[url], "chars": len(res["text"]), "type": cand.get("type"),
                   "pass": cand.get("pass"), "archive_url": archive_url, "archive_timestamp": stamp}
         text = res["text"].replace("\r\n", "\n").replace("\x00", "")
-        (pages / name).write_text(header_text(fields) + text.strip("\n") + "\n", encoding="utf-8", newline="\n")
+        head = untrusted_marker(url) + "\n" + header_text(fields)
+        (pages / name).write_text(head + text.strip("\n") + "\n", encoding="utf-8", newline="\n")
+        # The reading copy for the evidence extractors: the pruned text when crawl4ai made one,
+        # else the full text. verify_evidence.py keeps checking against the raw page above.
+        fit = res.get("fit")
+        fit = fit.replace("\r\n", "\n").replace("\x00", "") if isinstance(fit, str) and fit.strip() else text
+        (pages / "fit").mkdir(exist_ok=True)
+        (pages / "fit" / name).write_text(head + fit.strip("\n") + "\n", encoding="utf-8", newline="\n")
         index.append({**entry, "status": "saved", "file": name, "method": used[url],
-                      "chars": len(res["text"]), "title": fields["title"], "archive_url": archive_url})
+                      "chars": len(res["text"]), "title": fields["title"], "archive_url": archive_url,
+                      "fit_file": "fit/" + name, "fit_chars": len(fit)})
     (pages / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n",
                                       encoding="utf-8", newline="\n")
     return index, notes

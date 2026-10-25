@@ -5,3 +5,5 @@ tests/_tmp/
 *.log
 __pycache__/
 *.pyc
+# written by the agent rule in CLAUDE.md: local working state, never committed in this public repo
+/PROGRESS.md

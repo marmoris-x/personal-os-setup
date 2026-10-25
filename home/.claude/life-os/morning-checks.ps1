@@ -13,6 +13,34 @@
 $script:BlockBegin = '<!-- morning.ps1 -->'
 $script:BlockEnd = '<!-- /morning.ps1 -->'
 
+# What the morning run really costs. Claude Code's total_cost_usd uses Anthropic list prices; the
+# agent runs on deepseek-flash, so cost_ds is computed from the result's token counts instead.
+# Prices per 1M tokens, the one place they live. Peak: 01:00-04:00 and 06:00-10:00 UTC, Monday to
+# Friday (Chinese public holidays are not modelled); every other hour is off-peak.
+$script:DeepSeekPrices = @{
+    Source  = 'https://api-docs.deepseek.com/quick_start/pricing'
+    Read    = '2026-10-25'
+    Model   = 'deepseek-flash'
+    OffPeak = @{ Hit = 0.003; Miss = 0.15; Output = 0.60 }
+    Peak    = @{ Hit = 0.006; Miss = 0.30; Output = 1.20 }
+}
+
+function Get-DeepSeekCost($Usage, [datetime]$AtUtc) {
+    # USD rounded to 6 places, or '' when the result carries no usage. A cache hit is
+    # cache_read_input_tokens; everything else sent as input (new and cache-creation tokens) is a miss.
+    if ($null -eq $Usage) { return '' }
+    $t = $AtUtc.ToUniversalTime()
+    $hour = $t.Hour
+    $weekday = $t.DayOfWeek -ne [DayOfWeek]::Saturday -and $t.DayOfWeek -ne [DayOfWeek]::Sunday
+    $peak = $weekday -and (($hour -ge 1 -and $hour -lt 4) -or ($hour -ge 6 -and $hour -lt 10))
+    if ($peak) { $p = $script:DeepSeekPrices.Peak } else { $p = $script:DeepSeekPrices.OffPeak }
+    $hit = [double]$Usage.cache_read_input_tokens
+    $miss = [double]$Usage.input_tokens + [double]$Usage.cache_creation_input_tokens
+    $out = [double]$Usage.output_tokens
+    $usd = ($hit * $p.Hit + $miss * $p.Miss + $out * $p.Output) / 1000000
+    return [math]::Round($usd, 6)
+}
+
 function Read-JsonFile([string]$path) {
     # $null when the file does not exist; an exception when it exists but is not valid JSON.
     if (-not (Test-Path -LiteralPath $path)) { return $null }

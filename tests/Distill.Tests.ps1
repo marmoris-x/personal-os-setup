@@ -100,6 +100,6 @@ Describe 'CLAUDE.md' {
     It 'names /distill and the project hub as the only exceptions to "a project session never writes in the vault"' {
         $line = (Read-Text $script:claudeMd) -split "`n" | Where-Object { $_ -like '*never writes in the vault*' }
         @($line).Count | Should -Be 1
-        $line | Should -BeLike '* Exceptions: when I run /distill, it writes its one page and the log line, nothing else; at the end of every task in a project, you write that project''s hub *'
+        $line | Should -BeLike '* Exceptions: when I run /distill, it writes its one page, its link line in an index and the log line, nothing else; at the end of every task in a project, you write that project''s hub *'
     }
 }
