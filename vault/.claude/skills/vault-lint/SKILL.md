@@ -47,7 +47,8 @@ Follow the vault's AGENTS.md. This is Karpathy's "lint" step: keep the wiki true
 - `python -I -X utf8 .claude/skills/vault-lint/project_sync.py` — every git repository under
   `{{DEV}}\Projects` has exactly one hub note (`200-projects/` while active, `900-inactive/`
   when finished), hub notes carry `repo:`, and an active note may not be more than 30 days
-  behind its repository's last commit (AGENTS.md rule 12). Refresh the note (Timeline,
+  behind its repository's last commit (AGENTS.md rule 12). A hub with `status: done` whose
+  `repo:` path does not exist is a finding too: set `repo: null`. Refresh the note (Timeline,
   status, next step) or record the drift in the report.
 - `python -I -X utf8 .claude/skills/vault-lint/conflicts.py` — files that a sync conflict left
   behind (`*.sync-conflict-*`, from Syncthing). Report them; do not merge them here — the

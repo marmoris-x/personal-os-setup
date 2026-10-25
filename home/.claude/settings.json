@@ -268,6 +268,18 @@
               "{{HOME_FWD}}/.claude/hooks/stop-notify.ps1"
             ],
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/hub-reminder.ps1"
+            ],
+            "timeout": 10
           }
         ]
       }

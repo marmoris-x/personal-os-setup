@@ -18,11 +18,27 @@ param(
     [string]$LockPath = "{{LIFEOS_LOCK}}",
     [string]$Prompt = '/life-os-morning',
     [string]$AllowedTools = '',
-    [switch]$ForceAgent
+    [string]$DevRoot = '{{DEV}}\Projects',
+    [string]$TrackerStatePath = "{{LIFEOS_STATE}}\projects-state.json",
+    [string]$SeenPath = "{{LIFEOS_STATE}}\inbox-seen.json",
+    [switch]$ForceAgent,
+    [switch]$ForceWeekly
 )
 
 $ErrorActionPreference = 'Stop'
+
+# Input check at the edge: the vault must be an existing absolute folder. A value that arrives
+# by mistake (a hashtable handed over as the first argument becomes the text
+# "System.Collections.Hashtable") would otherwise create that folder, with the tracker's and the
+# transcription's files in it, in whatever folder the script was started from.
+if (-not [IO.Path]::IsPathRooted($VaultPath) -or -not (Test-Path -LiteralPath $VaultPath -PathType Container)) {
+    [Console]::Error.WriteLine('morning.ps1: VaultPath is not an existing absolute folder: ' + $VaultPath)
+    exit 2
+}
+
 . "$PSScriptRoot\life-os-common.ps1"
+. "$PSScriptRoot\morning-checks.ps1"
+. "$PSScriptRoot\area-check.ps1"
 
 if (-not $AllowedTools) {
     # Path-scoped write approval for the vault only, in the normalized form Claude Code
@@ -45,30 +61,32 @@ if (-not (Acquire-LifeOsLock $LockPath)) {
 
 $success = $false
 $summary = 'not started'
+$runStart = Get-Date
 try {
     Write-RunLog ('run start (whisper model ' + $Model + ', agent timeout ' + $TimeoutMinutes + ' min)')
 
     # 0. projects: read-only git scan of {{DEV}}\Projects. It writes the flag file only on a
-    # day with changes, attention (uncommitted/unpushed) or a large file; the pre-check below
-    # uses exactly that file. A tracker failure makes the agent run: skipping it would hide
-    # the projects for a whole day.
+    # day with changes, attention (uncommitted/unpushed), a git error or a large file; the hint
+    # lines (step 2b) and the stale-hub check of the pre-check read that file. A tracker failure
+    # becomes a hint line.
     $projectsFlag = Join-Path $VaultPath '000-meta\life-os-projects.json'
-    $projectChanges = $false
+    $extraHints = @()
     $trackerScript = Join-Path $PSScriptRoot 'project-tracker.ps1'
     if (Test-Path -LiteralPath $trackerScript) {
         $prevEA = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         $trackerOut = & {{PWSH_HOST}} -NoProfile -ExecutionPolicy Bypass -File $trackerScript `
-            -VaultPath $VaultPath -LogDir $LogDir 2>&1
+            -VaultPath $VaultPath -DevRoot $DevRoot -StatePath $TrackerStatePath -LogDir $LogDir 2>&1
         $trackerExit = $LASTEXITCODE
         $ErrorActionPreference = $prevEA
         Write-RunLog ('tracker exit ' + $trackerExit)
         foreach ($line in $trackerOut) { Write-RunLog ('  tracker: ' + [string]$line) }
-        $projectChanges = Test-Path -LiteralPath $projectsFlag
-        if ($trackerExit -ne 0) { $projectChanges = $true }
+        # A failed tracker is a hint line, not a reason for the agent: it has no shell and could
+        # not do more than report it.
+        if ($trackerExit -ne 0) { $extraHints += ('Projekt-Tracker fehlgeschlagen (Exit ' + $trackerExit + ')') }
     } else {
-        Write-RunLog 'tracker skipped: project-tracker.ps1 missing - the agent runs'
-        $projectChanges = $true
+        Write-RunLog 'tracker skipped: project-tracker.ps1 missing'
+        $extraHints += 'Projekt-Tracker fehlt (project-tracker.ps1)'
     }
 
     # 1. transcribe (child process: it holds its own exit codes)
@@ -81,6 +99,29 @@ try {
     $ErrorActionPreference = $prevEA
     Write-RunLog ('transcribe exit ' + $transcribeExit)
     foreach ($line in $transcribeOut) { Write-RunLog ('  transcribe: ' + [string]$line) }
+
+    # 1a. loose notes and other files in inbox/ (token-free): written into life-os-inbox.json next
+    # to the transcripts, which the transcriber has just rewritten.
+    try {
+        Update-InboxJson -VaultPath $VaultPath
+        Write-RunLog 'inbox scan ok'
+        # The script copies the notes itself: exact, free, and the agent only orders them.
+        $takenNotes = Add-InboxNotesToRoh -VaultPath $VaultPath
+        Write-RunLog ('loose notes taken into Roh: ' + @($takenNotes).Count)
+    } catch {
+        Write-RunLog ('inbox scan failed: ' + $_.Exception.Message)
+        $extraHints += ('Eingang konnte nicht gelesen werden: ' + $_.Exception.Message)
+    }
+
+    # 1c. the names and aliases of the area notes (no content), for the agent's area step
+    try { Write-AreasJson -VaultPath $VaultPath } catch { Write-RunLog ('areas json failed: ' + $_.Exception.Message) }
+
+    # 1d. Mondays: which area notes are older than the newest document in their archive folder
+    # (file names only, no content). The hint line is written by Write-HintBlock.
+    if ((Get-Date).DayOfWeek -eq 'Monday' -or $ForceWeekly) {
+        try { Update-AreasStale -VaultPath $VaultPath; Write-RunLog 'areas-stale written' }
+        catch { Write-RunLog ('areas-stale failed: ' + $_.Exception.Message) }
+    }
 
     # 1b. expiry (vault-lint): notes whose valid_until is past or within 7 days. The morning
     # skill has no shell on purpose, so the wrapper runs the read-only check and hands the
@@ -113,68 +154,68 @@ try {
         Write-RunLog ('expiry skipped: python or expiry.py missing')
     }
 
-    # 2. pre-check (owner's request 2026-10-08): when there is nothing to do, the agent must
-    # not start - an empty run would cost money for nothing. Nothing to do means, all at once:
-    # no waiting transcript (self-healing stays: a stuck .txt from an earlier failed run
-    # counts), no sync conflict in conflicts.json, no failed file in this run's transcribe
-    # line, no change under 100-daily since the last "morning" line in the run log, no note
-    # expiring within 7 days, and no project flag from the tracker (a quiet day leaves none).
-    # On any doubt (unreadable file, no run log yet, transcription not clean, tracker failed)
-    # the agent runs.
+    # 2. pre-check (owner's request 2026-10-08, narrowed 2026-10-25): the agent starts only when
+    # there is something to ORDER, and the log says what. A hint that a script can write itself
+    # (not committed, not pushed, a note about to expire, a transcription fallback, a failed
+    # run) starts nothing: step 2b writes those lines. Reasons, see Get-AgentReasons: a waiting
+    # transcript (self-healing stays: a stuck .txt from an earlier failed run counts), a sync
+    # conflict, a loose note or other file in the inbox, typed text after the stored anchor, a
+    # changed project whose hub is older than its repository. On any doubt (an unreadable file,
+    # no clean transcription) the agent runs.
     $runsLog = Join-Path $VaultPath '000-meta\life-os-runs.log'
-    $skipAgent = $false
-    $skipReason = ''
-    if ((-not $ForceAgent) -and ($transcribeExit -eq 0)) {
-        $waiting = -1
-        $conflicts = -1
-        $dailyChanged = $true
-        $transcribeClean = $false
-        try {
-            $runsLines = @()
-            if (Test-Path -LiteralPath $runsLog) { $runsLines = @(Get-Content -LiteralPath $runsLog -Encoding UTF8 | Select-Object -Last 15) }
-            $lastRun = $null
-            foreach ($line in $runsLines) {
-                if ($line -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} \| morning \| [a-z]+ \|') { $lastRun = $line.Substring(0, 19) }
-            }
-            $tLine = $null
-            foreach ($line in $runsLines) {
+    $reasons = @()
+    if ($ForceAgent) { $reasons += 'forced' }
+    elseif ($transcribeExit -ne 0) { $reasons += ('transcribe exit ' + $transcribeExit) }
+    else {
+        $tLine = $null
+        if (Test-Path -LiteralPath $runsLog) {
+            foreach ($line in @(Get-Content -LiteralPath $runsLog -Encoding UTF8 | Select-Object -Last 15)) {
                 if ($line -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} \| transcribe \|') { $tLine = $line }
             }
-            if ($tLine -and ($tLine -notmatch 'failed=[1-9]')) { $transcribeClean = $true }
-
-            $inboxPath = Join-Path $VaultPath '000-meta\life-os-inbox.json'
-            if (Test-Path -LiteralPath $inboxPath) {
-                $t = (Get-Content -LiteralPath $inboxPath -Raw -Encoding UTF8 | ConvertFrom-Json).transcripts
-                $waiting = 0
-                if ($t) { $waiting = @($t).Count }
-            } else { $waiting = 0 }
-
-            $conflictPath = Join-Path $VaultPath '000-meta\life-os-conflicts.json'
-            if (Test-Path -LiteralPath $conflictPath) {
-                $c = (Get-Content -LiteralPath $conflictPath -Raw -Encoding UTF8 | ConvertFrom-Json).conflicts
-                $conflicts = 0
-                if ($c) { $conflicts = @($c).Count }
-            } else { $conflicts = 0 }
-
-            if ($lastRun) {
-                $newest = Get-ChildItem -LiteralPath (Join-Path $VaultPath '100-daily') -Filter '*.md' -File -ErrorAction Stop |
-                          Sort-Object LastWriteTime -Descending | Select-Object -First 1
-                $dailyChanged = ($null -ne $newest) -and ($newest.LastWriteTime -gt [datetime]$lastRun)
-            }
-        } catch {
-            Write-RunLog ('pre-check unreadable, the agent runs: ' + $_.Exception.Message)
         }
-        if ($transcribeClean -and $waiting -eq 0 -and $conflicts -eq 0 -and (-not $dailyChanged) -and $expiring -eq 0 -and (-not $projectChanges)) {
-            $skipAgent = $true
-            $skipReason = 'nothing to do (no waiting transcripts, no conflicts, no 100-daily change since ' + $lastRun + ', no note expiring within 7 days, no project changes)'
+        if (-not $tLine -or ($tLine -match 'failed=[1-9]')) { $reasons += 'transcription not clean' }
+        try { $reasons += @(Get-AgentReasons -VaultPath $VaultPath -DevRoot $DevRoot -SeenPath $SeenPath) }
+        catch { $reasons += ('pre-check unreadable: ' + $_.Exception.Message) }
+    }
+
+    # 2b. the hint lines (no language model): written into today's Morgenbericht after the
+    # agent (or instead of it), in a block of their own that the agent never touches.
+    function Write-HintBlock {
+        try {
+            $hints = @(Get-HintLines -VaultPath $VaultPath -Today (Get-Date)) + $extraHints
+            Set-MorgenberichtBlock -VaultPath $VaultPath -Date (Get-Date).ToString('yyyy-MM-dd') -Lines $hints
+            Write-RunLog ('hint lines written: ' + @($hints | Where-Object { $_ }).Count)
+            return $true
+        } catch {
+            Write-RunLog ('hint lines failed: ' + $_.Exception.Message)
+            return $false
         }
     }
-    if ($skipAgent) {
+
+    if ($reasons.Count -eq 0) {
+        $skipReason = 'nothing to order (no transcript, loose note, conflict, typed text or stale project hub); hints are written by the script'
+        $hintsOk = Write-HintBlock
+        # The flag is a signal for this run: with the hints written and no agent needed, it is used up.
+        if ($hintsOk -and (Test-Path -LiteralPath $projectsFlag)) {
+            Remove-Item -LiteralPath $projectsFlag -Force -ErrorAction SilentlyContinue
+            Write-RunLog 'project flag consumed'
+        }
         Write-RunLog ('agent skipped: ' + $skipReason)
         Append-Utf8 $runsLog ((Get-Date).ToString('s') + ' | morning | skip | ' + $skipReason + "`n")
+        Write-RunLog ('vault: ' + (Save-VaultCommit -VaultPath $VaultPath -Message ('chore(morning): daily run ' + (Get-Date).ToString('yyyy-MM-dd'))))
         Write-RunLog 'run end: skip'
         exit 0
     }
+    Write-RunLog ('agent reasons: ' + ($reasons -join '; '))
+    try { Set-FlagHubStale -VaultPath $VaultPath -Reasons $reasons }
+    catch { Write-RunLog ('hub_stale not written: ' + $_.Exception.Message) }
+
+    # The area notes as they stand before the agent: the safety net after the agent compares
+    # with and restores from this copy (area-check.ps1).
+    $areaSnapshot = Join-Path $LogDir 'area-snapshot'
+    $areaSnapshotOk = $false
+    try { New-AreaSnapshot -VaultPath $VaultPath -SnapshotDir $areaSnapshot; $areaSnapshotOk = $true }
+    catch { Write-RunLog ('area snapshot failed (the area step is not checked, so it is not trusted): ' + $_.Exception.Message) }
 
     # 3. the agent
     if (-not (Test-Path -LiteralPath $ClaudeExe)) {
@@ -247,7 +288,43 @@ try {
         }
     }
 
+    # 4-. safety net for 300-areas: restore every area note whose change has no source
+    if ($areaSnapshotOk) {
+        try {
+            $areaResults = @(Invoke-AreaCheck -VaultPath $VaultPath -SnapshotDir $areaSnapshot)
+            foreach ($r in ($areaResults | Where-Object { $_.status -ne 'unchanged' })) {
+                Write-RunLog ('  area-check: ' + $r.status + ' ' + $r.file + ' ' + (@($r.reasons) -join '; '))
+            }
+            $extraHints += @(Format-AreaResultLines $areaResults)
+        } catch {
+            Write-RunLog ('area-check failed: ' + $_.Exception.Message)
+            $extraHints += ('Bereichspr' + [char]0x00FC + 'fung fehlgeschlagen: ' + $_.Exception.Message)
+        }
+    } else {
+        $extraHints += ('Bereichspr' + [char]0x00FC + 'fung nicht m' + [char]0x00F6 + 'glich (kein Stand vor dem Agenten); Bereichsnotizen bitte ansehen')
+    }
+    # The snapshot is a plain copy of the area notes outside the vault; it is not kept.
+    if (Test-Path -LiteralPath $areaSnapshot) {
+        try { Remove-Item -LiteralPath $areaSnapshot -Recurse -Force -ErrorAction Stop }
+        catch { Write-RunLog ('area snapshot not removed: ' + $_.Exception.Message) }
+    }
+
+    # 4a. one task list: tasks the agent wrote into a daily note's "## Aufgaben" move to todo.md
+    try {
+        Move-DailyTasksToTodo -VaultPath $VaultPath -Since $runStart
+        Write-RunLog 'tasks moved to todo.md'
+    } catch {
+        Write-RunLog ('tasks not moved to todo.md: ' + $_.Exception.Message)
+        $extraHints += ('Aufgaben nicht nach todo.md verschoben: ' + $_.Exception.Message)
+    }
+
+    # 4b. the hint block goes in after the agent, also after a failed one (it reads the flag
+    # file, so it comes before the flag is consumed): whatever the agent wrote into
+    # "## Morgenbericht", this block stays the script's own.
+    [void](Write-HintBlock)
+
     $success = (-not $timedOut) -and ($null -ne $res) -and (-not $isError)
+    if ($success) { try { Save-InboxSeen -VaultPath $VaultPath -SeenPath $SeenPath } catch { Write-RunLog ('seen list failed: ' + $_.Exception.Message) } }
     # The flag is a signal, not a log: a successful agent has consumed it. On a failure it
     # stays, so the next morning's pre-check starts the agent again instead of losing the
     # Timeline/Next-step update.
@@ -276,6 +353,13 @@ try {
     $state = 'ok'; if (-not $success) { $state = 'fail' }
     Append-Utf8 (Join-Path $VaultPath '000-meta\life-os-runs.log') `
         ((Get-Date).ToString('s') + ' | morning | ' + $state + ' | ' + $summary + "`n")
+    # one commit for the whole run, after the cleanup (a failure is logged and named in the Morgenbericht)
+    $commitResult = Save-VaultCommit -VaultPath $VaultPath -Message ('chore(morning): daily run ' + (Get-Date).ToString('yyyy-MM-dd'))
+    Write-RunLog ('vault: ' + $commitResult)
+    if ($commitResult -like 'commit failed*') {
+        $extraHints += ('Vault-Commit fehlgeschlagen: ' + $commitResult)
+        [void](Write-HintBlock)
+    }
     Write-RunLog ('run end: ' + $state)
     if ($success) { exit 0 } else { exit 1 }
 } catch {

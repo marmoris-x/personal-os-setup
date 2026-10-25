@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `04d13d25bb4f938f`
+- Manifest checksum: `5bc50f6f3f135949`
 
 ## What each system can do
 
@@ -59,6 +59,7 @@ written next to it. An agent that meets one of these skips the component and say
 | `home-gitleaks-config` | `files` | `files` | `files` |
 | `dev-external-templates` | `files` | `files` | `files` |
 | `dev-external-templates-mirror` | `files` | `files` | `files` |
+| `dev-projects-claude-md` | `files` | `files` | `files` |
 | `dev-dirs` | `dirs` | `dirs` | `dirs` |
 | `pwsh7-profile` | `files` | `files` | `files` |
 | `pwsh51-profile` | `files` | `unsupported: Windows PowerShell 5.1 does not exist on this OS` | `unsupported: Windows PowerShell 5.1 does not exist on this OS` |

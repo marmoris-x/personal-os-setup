@@ -5,6 +5,23 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## 3.7.0 (2026-10-25, not tagged yet)
+
+The Life OS inbox task (ADR 0021): everything the owner dictates or types flows in by itself,
+and the morning agent starts only when there is something to order.
+
+| What | Why |
+|---|---|
+| `home/.claude/life-os/morning-checks.ps1` (new), `morning.ps1`, `project-tracker.ps1`, `tests/LifeOsMorning.Tests.ps1`: the pre-check logs `agent reasons: ...`; hint lines (not committed, not pushed, expiring, fallback, failed run, not processed) are written into the Morgenbericht by the script; the tracker flag is also set for attention | The agent ran on 22 to 25 October at 0.25 to 0.59 USD a day although it reported "nothing to process" |
+| `morning-checks.ps1`, `tests/LifeOsInbox.Tests.ps1`: loose `.md`/`.txt` notes in `inbox/` are copied into `## Roh` by the script; other files are named as not processed | A model copy of a 60,000-character note invented one line and dropped another |
+| `morning-checks.ps1`, `tests/LifeOsTasks.Tests.ps1`: tasks move from the daily note to `## Next` of `todo.md` | No query collected the tasks |
+| `home/.claude/life-os/area-check.ps1` (new), `morning-checks.ps1`, `tests/LifeOsAreas.Tests.ps1`, `home/.claude/skills/life-os-morning/SKILL.md`: the areas update themselves, a token-free check restores unsourced changes, one vault commit per run | Safety from checks and git history, not from asking |
+| `home/.claude/hooks/hub-reminder.ps1` (new), `home/.claude/settings.json` (Stop), `dev/Projects/CLAUDE.md` (new, component `dev-projects-claude-md`), `home/.claude/CLAUDE.md`, `tests/HubReminder.Tests.ps1`, `project-tracker.ps1` (goal and status), skill step 5: the agent writes the project hub at the end of every task; the hook reminds once; the morning run catches up | A hub copied from `PROGRESS.md` goes stale; written again in the agent's own words it does not |
+| `vault/AGENTS.md` (area exception, rule 4 `hub_written`, rule 12), `vault/.claude/skills/vault-lint/project_sync.py` and `test_project_sync.py`: a finished hub with a nonexistent `repo:` path is a finding | The old check walked repositories and never saw a hub without one |
+| `morning-checks.ps1` `Update-AreasStale`, `morning.ps1 -ForceWeekly`: on Mondays one line names the areas whose archive holds newer documents than the note | Replaces a `reviewed:` key nobody has to maintain |
+| `morning.ps1`: the vault path must be an existing absolute folder (exit 2) | A hashtable passed as the first argument arrived as the text "System.Collections.Hashtable" and created that folder, with files in it, in the repository |
+| `tests/LifeOsTestVault.ps1`, `tests/Install.Tests.ps1` (149 core files), `tests/Distill.Tests.ps1` (hub exception wording), `setup/tools/verify-all.ps1` check J, `docs/structure.md`, `docs/components.md`, `docs/platforms.md` | One intended-change line per new or changed mirror file; counts re-measured |
+
 ## 3.6.0 (2026-10-23, not tagged yet)
 
 The ComfyUI task: `/image` for local picture generation, the Context7 fix, the re-measured MCP

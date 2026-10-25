@@ -16,8 +16,9 @@
 # <vault>\200-projects\<name>.md: last_activity, uncommitted, unpushed. It never touches the
 # body or another key. On a quiet day it writes nothing and removes its own stale flag.
 #
-# On any day with changes, attention (uncommitted or unpushed) or a large file, it writes
-# <vault>\000-meta\life-os-projects.json for the morning agent. That file also carries the
+# On any day with changes, attention (uncommitted or unpushed), a git error or a large file, it
+# writes <vault>\000-meta\life-os-projects.json for morning.ps1 (hint lines) and the agent. That
+# file also carries the
 # "Next step" from each changed project's PROGRESS.md, so the agent never reads outside the
 # vault. The safety net lists every file above 1 GB under {{DEV}}\Projects outside media\raw
 # and not ignored by a .kopiaignore, plus the total size of all media\raw folders.
@@ -84,16 +85,16 @@ function Get-DirtyDays($since) {
     try { return [int](([datetime]$today) - ([datetime]$since)).Days } catch { return 0 }
 }
 
-function Get-NextStep([string]$repo) {
+function Get-ProgressSection([string]$repo, [string]$headingPattern) {
     # The agent has no shell and may not read outside the vault, so the tracker carries the
-    # "Next step" from PROGRESS.md in the flag file.
+    # sections of PROGRESS.md that the hub catch-up needs in the flag file.
     $path = Join-Path $repo 'PROGRESS.md'
     if (-not (Test-Path -LiteralPath $path)) { return $null }
     $lines = Get-Content -LiteralPath $path -Encoding UTF8 -ErrorAction SilentlyContinue
     $inside = $false
     $parts = @()
     foreach ($line in $lines) {
-        if ($line -match '^##\s+(Next step|Next steps|Next|N.chster Schritt)\b') { $inside = $true; continue }
+        if ($line -match $headingPattern) { $inside = $true; continue }
         if ($inside -and $line -match '^##\s+') { break }
         if ($inside -and $line.Trim()) { $parts += $line.Trim() }
     }
@@ -101,6 +102,10 @@ function Get-NextStep([string]$repo) {
     $text = ($parts -join ' ')
     if ($text.Length -gt 500) { $text = $text.Substring(0, 500) }
     return $text
+}
+
+function Get-NextStep([string]$repo) {
+    return Get-ProgressSection $repo '^##\s+(Next step|Next steps|Next|N.chster Schritt)\b'
 }
 
 function Update-Frontmatter([string]$path, [string]$lastActivity, [bool]$uncommitted, [int]$unpushed) {
@@ -347,6 +352,8 @@ foreach ($dir in $projectDirs) {
             note           = $note
             note_missing   = $noteMissing
             next_step      = $nextStep
+            progress_goal  = (Get-ProgressSection $dir.FullName '^##\s+(Goal|Ziel)\b')
+            progress_status = (Get-ProgressSection $dir.FullName '^##\s+(Status|Done|Erledigt)\b')
         }
     }
 
@@ -439,9 +446,10 @@ $oldFlag = $null
 if (Test-Path -LiteralPath $flagFile) {
     try { $oldFlag = Get-Content -LiteralPath $flagFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $oldFlag = $null }
 }
-# A git error alone does not start the agent: it keeps the last known state and is printed
-# in the tracker line. It travels in the flag when the flag is written for another reason.
-$newSignal = ($changedProjects.Count -gt 0 -or $missingNew.Count -gt 0 -or $noGitNew.Count -gt 0 -or $largeFiles.Count -gt 0)
+# The flag is also written for attention (uncommitted, unpushed, no upstream) and for a git
+# error: morning.ps1 turns those into Morgenbericht hint lines itself. Its presence no longer
+# starts the agent; only a changed project whose hub is older than its repository does.
+$newSignal = ($changedProjects.Count -gt 0 -or $missingNew.Count -gt 0 -or $noGitNew.Count -gt 0 -or $largeFiles.Count -gt 0 -or $attention.Count -gt 0 -or $gitErrors.Count -gt 0)
 if ($newSignal) {
     $byName = @{}
     if ($oldFlag -and $oldFlag.PSObject.Properties['projects']) {

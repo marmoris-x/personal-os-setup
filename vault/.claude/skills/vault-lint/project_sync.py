@@ -11,6 +11,8 @@ Rules (vault-v3 order, part 3.3):
   - for active projects the note's last update (the latest date in its Timeline,
     else the frontmatter date) is not more than 30 days older than the
     repository's last commit; finished projects are exempt
+  - a hub with `status: done` whose `repo:` path does not exist is a finding
+    (set `repo: null` once the work folder is gone)
 
 Prints one line per project (name, location, dates) plus FINDING lines with the
 reason. Exit 1 when there is at least one finding.
@@ -96,6 +98,22 @@ def main():
         if not FM_REPO_RE.search(text):
             print(f"FINDING {note.name}: note in 200-projects without a repo field")
             findings += 1
+
+    # A finished hub whose repo path points nowhere: the work folder is gone, so the field
+    # should read `repo: null`.
+    for folder in (notes_active, notes_done):
+        for note in sorted(folder.glob("*.md")):
+            text = note.read_text(encoding="utf-8")
+            status_match = FM_STATUS_RE.search(text)
+            repo_match = FM_REPO_RE.search(text)
+            if not status_match or status_match.group(1) != "done" or not repo_match:
+                continue
+            repo_value = repo_match.group(1).strip("'\"")
+            if repo_value.lower() in ("", "null", "~", "none"):
+                continue
+            if not Path(repo_value).exists():
+                print(f"FINDING {note.stem}: hub is done but its repo path does not exist ({repo_value})")
+                findings += 1
 
     print(f"findings: {findings}")
     return 1 if findings else 0

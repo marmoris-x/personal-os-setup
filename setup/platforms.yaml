@@ -196,6 +196,10 @@ components:
     windows: "files"
     macos: "files"
     linux: "files"
+  dev-projects-claude-md:
+    windows: "files"
+    macos: "files"
+    linux: "files"
   dev-dirs:
     windows: "dirs"
     macos: "dirs"

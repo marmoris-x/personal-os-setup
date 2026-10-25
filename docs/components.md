@@ -4,10 +4,10 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `04d13d25bb4f938f` (SHA256, first 16 characters)
+- Manifest checksum: `5bc50f6f3f135949` (SHA256, first 16 characters)
 - Manifest version: 1
 
-## Core (64 of 81)
+## Core (65 of 82)
 
 | ID | Area | Scope | What happens |
 |---|---|---|---|
@@ -36,6 +36,7 @@ file no longer matches the manifest (`-Check`).
 | `home-gitleaks-config` | git | core | skeleton to `HOME/.config/gitleaks/gitleaks.toml` (only when nothing is there) |
 | `dev-external-templates` | dev | core | file/folder to `DEV/External` |
 | `dev-external-templates-mirror` | dev | core | file/folder to `HOME/.claude/setup/external` |
+| `dev-projects-claude-md` | dev | core | file/folder to `DEV/Projects/CLAUDE.md` |
 | `dev-dirs` | dev | core | create folders |
 | `pwsh7-profile` | powershell | core | file/folder to `DOCUMENTS/PowerShell/Microsoft.PowerShell_profile.ps1` |
 | `pwsh51-profile` | powershell | core | file/folder to `DOCUMENTS/WindowsPowerShell/Microsoft.PowerShell_profile.ps1` |

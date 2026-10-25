@@ -46,7 +46,7 @@ is more specific and wins where the two differ. My explicit request in the chat 
 
 ## Media, transcription and the vault boundary
 
-- A session in `{{DEV}}\Projects` never writes in the vault; the morning tracker brings project changes to the vault. A vault session never changes project code. Exception: when I run /distill, it writes its one page and the log line, nothing else.
+- A session in `{{DEV}}\Projects` never writes in the vault; the morning tracker brings project changes to the vault. A vault session never changes project code. Exceptions: when I run /distill, it writes its one page and the log line, nothing else; at the end of every task in a project, you write that project's hub `200-projects/<repo>.md` yourself (rule in `{{DEV}}\Projects\CLAUDE.md`) and commit only that file.
 - Before writing anything in the vault from another folder, read the vault AGENTS.md first.
 - `{{DEV}}\Temp\media` is shared media scratch, not a task folder: never delete it or its files during a task's cleanup.
 - ffmpeg, yt-dlp and deno are on PATH; documents and PDFs run on demand with `uvx`/`uv run --with`, archives via PowerShell and WinRAR; recipes are in the `media-tools` skill. Install nothing new before it is really needed, and never a second copy.
@@ -321,8 +321,10 @@ real lever is clearing at task boundaries.
   `SPEC.md` and propose implementing it in a fresh session. One or two files describable in one
   sentence: no plan. For the method use the Superpowers skills; do not rebuild them.
 - End of every task that changed files, even a small one: write or update `PROGRESS.md` in the
-  project (done / next / decisions with reasons / open questions), then tell me in one sentence
-  whether `/clear` makes sense now.
+  project (done / next / decisions with reasons / open questions); in a project under
+  `{{DEV}}\Projects` then update its hub in the vault by `{{DEV}}\Projects\CLAUDE.md` (after
+  PROGRESS.md, before the final reply); then tell me in one sentence whether `/clear` makes
+  sense now.
 - After two failed corrections of the same problem: stop, write down what you learned, and
   propose a new session with a better prompt. When a path fails, propose `/rewind` instead of
   piling up corrections. Why: failed attempts stay in the conversation and add noise to later

@@ -358,6 +358,19 @@ components:
       - { root: VAULT, to: "{{VAULT}}" }
       - { root: DEV, to: "{{DEV}}" }
 
+  # The hub rule for every session in a project folder (docs/decisions/0021): update the project
+  # hub in the vault at the end of every task. The Stop hook hub-reminder.ps1 is its safety net.
+  - id: dev-projects-claude-md
+    area: dev
+    type: copy
+    core: true
+    source: "{DEV}/Projects/CLAUDE.md"
+    target: "DEV/Projects/CLAUDE.md"
+    replace:
+      - { root: HOME, to: "{{HOME}}" }
+      - { root: VAULT, to: "{{VAULT}}" }
+      - { root: DEV, to: "{{DEV}}" }
+
   - id: dev-dirs
     area: dev
     type: dir

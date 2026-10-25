@@ -1404,8 +1404,14 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/distill/SKILL.md'; Reason = '2026-10-24 (vault-knowledge task, Part 4): the /distill skill - files a finished session back into the vault as one knowledge page, user-invoked only' }
         @{ Path = 'HOME/.agents/skills/distill-portable/SKILL.md'; Reason = '2026-10-24 (Part 4): the portable twin of the /distill skill for OpenCode and Codex, explicit invocation only' }
         @{ Path = 'HOME/.agents/skills/distill-portable/agents/openai.yaml'; Reason = '2026-10-24 (Part 4): Codex policy allow_implicit_invocation false for the portable /distill skill' }
-        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-24 (vault-knowledge task, Parts 1, 2 and 4): the orientation blocks count as the owner''s instructions (Safety exception), Parallel is free without a key with unpublished limits, and /distill is the one exception to "a project session never writes in the vault"' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-24 (vault-knowledge task, Parts 1, 2 and 4): the orientation blocks count as the owner''s instructions (Safety exception), Parallel is free without a key with unpublished limits, and /distill is the one exception to "a project session never writes in the vault"; 2026-10-25: the project hub is the second (ADR 0021)' }
         @{ Path = 'HOME/.claude/profiles-template/deepseek.json'; Reason = '2026-10-23 (Part 8): the DeepSeek profile template carries the SessionStart (startup|clear|compact) and SubagentStart hooks of the orientation file, three parts each; no other profile gets them' }
+        @{ Path = 'HOME/.claude/life-os/morning-checks.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the token-free helpers of the morning run - why the agent starts, the hint lines the script writes itself, loose notes into Roh, tasks into todo.md, the weekly area hint' }
+        @{ Path = 'HOME/.claude/life-os/area-check.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the safety net for the self-updating area notes - compares with a snapshot taken before the agent and restores every change without a source' }
+        @{ Path = 'HOME/.claude/hooks/hub-reminder.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): Stop hook that blocks the end of a turn once when the project hub in the vault is older than the repository; fails open' }
+        @{ Path = 'DEV/Projects/CLAUDE.md'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the hub rule - the agent writes the project hub in the vault at the end of every task and commits only that file' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/test_project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): unit tests for the new project-sync finding (a finished hub whose repo path does not exist)' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): also reports a hub with status done whose repo: path does not exist' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

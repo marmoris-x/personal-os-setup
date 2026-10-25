@@ -259,7 +259,10 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # portable twin are not core.
         # 144 measured 2026-10-24: the /distill skill (SKILL.md) adds one core file; its portable
         # twin is not core, like the other portable skills.
-        $files.Count | Should -BeLessThan 145 -Because 'one intended core file was added on 2026-10-24'
+        # 149 measured 2026-10-25: the Life OS inbox task adds five core files: area-check.ps1,
+        # morning-checks.ps1, the hub-reminder.ps1 hook, dev/Projects/CLAUDE.md and the vault-lint
+        # test_project_sync.py.
+        $files.Count | Should -BeLessThan 150 -Because 'five intended core files were added on 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {
