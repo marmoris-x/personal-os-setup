@@ -294,6 +294,7 @@ home/.claude/setup/tests/research/test_build_references.py
 home/.claude/setup/tests/research/test_check_article.py
 home/.claude/setup/tests/research/test_check_note.py
 home/.claude/setup/tests/research/test_check_services.py
+home/.claude/setup/tests/research/test_crawl4ai_browsers.py
 home/.claude/setup/tests/research/test_fix_quotes.py
 home/.claude/setup/tests/research/test_save_pages.py
 home/.claude/setup/tests/research/test_store_results.py

@@ -204,6 +204,27 @@ function Get-PlatformStateDir {
     return (Join-Path (Join-Path (Get-PlatformHome) '.local/state') 'personal-os-setup')
 }
 
+function Get-PlatformCrawl4AiBrowsersDir {
+    # Crawl4AI's own Playwright browser folder (PLAYWRIGHT_BROWSERS_PATH). Playwright keeps one
+    # shared folder, ms-playwright, and deletes a browser version when no installation needs it
+    # any more, so a second Playwright on the PC can take away the browser Crawl4AI needs
+    # (https://playwright.dev/docs/browsers). The same answer lives in browsers_path() of
+    # crawl4ai_fetch.py; tests/Platforms.Tests.ps1 compares the two. CRAWL4AI_BROWSERS_PATH
+    # replaces it in both.
+    [CmdletBinding()]
+    param([string]$Os = (Get-PlatformId))
+    if ($env:CRAWL4AI_BROWSERS_PATH) { return $env:CRAWL4AI_BROWSERS_PATH }
+    if ($Os -eq 'windows') {
+        $base = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { Join-Path (Get-PlatformHome) 'AppData\Local' }
+        return (Join-Path $base 'crawl4ai-browsers')
+    }
+    if ($Os -eq 'macos') {
+        return (Join-Path (Join-Path (Join-Path (Get-PlatformHome) 'Library') 'Caches') 'crawl4ai-browsers')
+    }
+    $cache = if ($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } else { Join-Path (Get-PlatformHome) '.cache' }
+    return (Join-Path $cache 'crawl4ai-browsers')
+}
+
 function Get-PlatformVenvDir {
     # where the Life OS python environment lives. Both the installer and the installed
     # scripts ask this, so the answer sits in one place ({{LIFEOS_*}} renders to the same
@@ -335,6 +356,27 @@ function Get-PlatformPathSeparator {
     param([string]$Os = (Get-PlatformId))
     if ($Os -eq 'windows') { return '\' }
     return '/'
+}
+
+function Invoke-Crawl4AiBrowserSetup {
+    # Runs crawl4ai-setup with PLAYWRIGHT_BROWSERS_PATH pointing at Crawl4AI's own folder, so the
+    # browser lands there (crawl4ai-setup calls `python -m playwright install --force chromium`
+    # and the patchright twin, and both read the variable). The variable is set for this call
+    # only and put back afterwards: no global user variable. Returns @{ ExitCode; Output; Dir }.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][string]$SetupExe)
+    $dir = Get-PlatformCrawl4AiBrowsersDir
+    $had = Test-Path Env:PLAYWRIGHT_BROWSERS_PATH
+    $before = $env:PLAYWRIGHT_BROWSERS_PATH
+    $env:PLAYWRIGHT_BROWSERS_PATH = $dir
+    try {
+        $out = (& $SetupExe 2>&1 | Out-String)
+        $code = $LASTEXITCODE
+    }
+    finally {
+        if ($had) { $env:PLAYWRIGHT_BROWSERS_PATH = $before } else { Remove-Item Env:PLAYWRIGHT_BROWSERS_PATH -ErrorAction SilentlyContinue }
+    }
+    return [pscustomobject]@{ ExitCode = $code; Output = $out; Dir = $dir }
 }
 
 function Invoke-Crawl4AiSelfTest {

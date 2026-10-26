@@ -700,7 +700,9 @@ Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
         Test-Path -LiteralPath (Join-Path $script:Stub 'called.txt') | Should -BeFalse
         $today = (Get-Date).ToString('yyyy-MM-dd')
         $note = Get-Content -LiteralPath (Join-Path $script:V "100-daily\$today.md") -Raw -Encoding UTF8
-        $note | Should -Match "(?m)^- Crawl4AI defekt: Error: BrowserType\.launch: Executable doesn't exist at X - Abhilfe: crawl4ai-setup\s*$"
+        # the remedy names Crawl4AI's own browser folder: a bare crawl4ai-setup would fill ms-playwright
+        $note | Should -Match "(?m)^- Crawl4AI defekt: Error: BrowserType\.launch: Executable doesn't exist at X - Abhilfe: \`$env:PLAYWRIGHT_BROWSERS_PATH='[^']*crawl4ai-browsers'; crawl4ai-setup\s*$"
+        $note | Should -Not -Match 'ms-playwright'
         @([regex]::Matches($note, 'Crawl4AI defekt')).Count | Should -Be 1
         (Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw) | Should -Match 'morning \| skip \|.*crawl4ai=fail'
     }

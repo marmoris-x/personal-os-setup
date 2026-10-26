@@ -245,3 +245,33 @@ of at most two letters, no digit) and the spans are at least 90 % alike by lette
 alone is too wide: it also accepts the pairs permissible/impermissible, a/no, 20/120 and
 tax-free/taxable (German originals in `test_fix_quotes.py`), so a reversed statement would pass as checked. On run A's real draft
 `check_article.py` goes from 1 error to 0.
+
+## Crawl4AI keeps its own browser folder (Crawl4AI watch, 2026-10-26)
+
+Context: from 2026-10-23 to 2026-10-25 Crawl4AI could not start its browser and every page went
+to the paid services unseen. The watch (`crawl4ai-selftest.ps1`, the `crawl4ai_ok` flag in
+`pages/index.json`, the warning in `save_pages.py`) makes such an outage visible the same
+morning. The likely cause, not proven: Playwright keeps one browser folder for all its
+installations (`%USERPROFILE%\AppData\Local\ms-playwright`) and "When there are no more clients
+that require a particular version of the browser, that version is deleted from the system"
+(https://playwright.dev/docs/browsers), so another Playwright installation on the PC can delete
+the browser Crawl4AI needs.
+
+Decision: Crawl4AI gets a folder of its own through `PLAYWRIGHT_BROWSERS_PATH`, set in exactly
+the places that start Crawl4AI or install its browser, and never as a global user variable:
+`main()` of `crawl4ai_fetch.py` (which `save_pages.py` and the self-test both run), and the
+install stage, which runs `crawl4ai-setup` through `Invoke-Crawl4AiBrowserSetup` with the variable
+set for that call only. The self-test sets nothing itself: it runs `crawl4ai_fetch.py`, so it
+proves the setting the research runs really use. The folder on Windows is
+`%LOCALAPPDATA%\crawl4ai-browsers`, chosen by the owner because no program manages it and it is
+outside the backup; on macOS and Linux it sits where Playwright's own default sits
+(`~/Library/Caches`, `~/.cache`), a derived default. `browsers_path()` in `crawl4ai_fetch.py` and
+`Get-PlatformCrawl4AiBrowsersDir` in `setup/lib/platform.ps1` give the same answer, which
+`tests/Platforms.Tests.ps1` compares; `CRAWL4AI_BROWSERS_PATH` replaces both.
+
+Consequence: a bare `crawl4ai-setup` fills the shared folder and does not help; the remedy in
+the Morgenbericht line and in the install notes names the variable (or `install.ps1 -Resume`).
+Measured on 2026-10-26: with the new folder still empty the self-test failed with
+`Executable doesn't exist at ...\crawl4ai-browsers\...`, although `ms-playwright` held the
+browser; after the install into the new folder it printed `crawl4ai=ok`, and it still did with
+`ms-playwright` renamed for the test.

@@ -15,13 +15,40 @@ Source: https://docs.crawl4ai.com/advanced/undetected-browser/ @ 2026-10-11 (ena
 Changed: one output line per requested URL, written as soon as its crawl returns; a per-page
 timeout and an overall deadline; concurrency capped at 5; UTF-8 file output; the optional
 console monitor is left out so stdout stays one summary line.
+
+The browser folder: Playwright keeps ONE folder (ms-playwright) for every installation on the
+PC and deletes a browser version when no client needs it any more
+(https://playwright.dev/docs/browsers, "When there are no more clients that require a particular
+version of the browser, that version is deleted from the system"). main() therefore points
+PLAYWRIGHT_BROWSERS_PATH at a folder of Crawl4AI's own before the browser starts; the setup
+installs the browser into the same folder (platform.ps1, Get-PlatformCrawl4AiBrowsersDir).
 """
 
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
+
+
+def browsers_path():
+    """Crawl4AI's own browser folder. CRAWL4AI_BROWSERS_PATH replaces it (tests, odd layouts).
+
+    The default sits where Playwright's own default sits, under another name: the Windows local
+    app data, macOS Caches, the Linux cache folder.
+    """
+    override = os.environ.get("CRAWL4AI_BROWSERS_PATH")
+    if override:
+        return override
+    home = Path.home()
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
+        return str(Path(base) / "crawl4ai-browsers")
+    if sys.platform == "darwin":
+        return str(home / "Library" / "Caches" / "crawl4ai-browsers")
+    base = os.environ.get("XDG_CACHE_HOME") or str(home / ".cache")
+    return str(Path(base) / "crawl4ai-browsers")
 
 
 def page_text(result):
@@ -90,6 +117,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    # set for this process only (the browser driver inherits it); a value from outside is
+    # replaced on purpose, because the point is that no other Playwright install shares it
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = browsers_path()
     try:
         urls = json.loads(Path(args.urls).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:

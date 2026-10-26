@@ -178,7 +178,13 @@ try {
         else { $c4Reason = 'self-test gave no result (exit ' + $stExit + ')' }
     }
     Write-RunLog ('crawl4ai self-test: ' + $c4State + $(if ($c4Reason) { ' - ' + $c4Reason } else { '' }))
-    if ($c4State -ne 'ok') { $extraHints += ('Crawl4AI defekt: ' + $c4Reason + ' - Abhilfe: crawl4ai-setup') }
+    if ($c4State -ne 'ok') {
+        # The browser lives in Crawl4AI's own folder (crawl4ai_fetch.py sets PLAYWRIGHT_BROWSERS_PATH);
+        # a bare crawl4ai-setup would fill Playwright's shared ms-playwright folder instead.
+        $c4Dir = $env:CRAWL4AI_BROWSERS_PATH
+        if (-not $c4Dir) { $c4Dir = Join-Path $env:LOCALAPPDATA 'crawl4ai-browsers' }
+        $extraHints += ('Crawl4AI defekt: ' + $c4Reason + ' - Abhilfe: $env:PLAYWRIGHT_BROWSERS_PATH=''' + $c4Dir + '''; crawl4ai-setup')
+    }
 
     # 2. pre-check (owner's request 2026-10-08, narrowed 2026-10-25): the agent starts only when
     # there is something to ORDER, and the log says what. A hint that a script can write itself

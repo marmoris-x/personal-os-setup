@@ -611,3 +611,97 @@ Describe 'Invoke-Crawl4AiSelfTest' {
         $r.Line | Should -Match 'crawl4ai-selftest\.ps1 was not found'
     }
 }
+
+Describe 'the own browser folder of Crawl4AI' {
+    # Playwright shares ms-playwright between all installations and deletes a browser version when
+    # no client needs it any more; Crawl4AI therefore gets a folder of its own (small-fixes, Part 1).
+    BeforeAll {
+        $script:fetchDir = Join-Path (Split-Path -Parent $PSScriptRoot) 'home/.claude/skills/research/scripts'
+        function Use-Env([hashtable]$set, [scriptblock]$body) {
+            $old = @{}
+            foreach ($k in $set.Keys) { $old[$k] = [Environment]::GetEnvironmentVariable($k); [Environment]::SetEnvironmentVariable($k, $set[$k]) }
+            try { & $body } finally { foreach ($k in $old.Keys) { [Environment]::SetEnvironmentVariable($k, $old[$k]) } }
+        }
+    }
+    It 'is crawl4ai-browsers under the local app data on Windows' {
+        Use-Env @{ LOCALAPPDATA = (Join-Path ([IO.Path]::GetTempPath()) 'lad'); CRAWL4AI_BROWSERS_PATH = $null } {
+            (Get-PlatformCrawl4AiBrowsersDir -Os 'windows') | Should -Be (Join-Path (Join-Path ([IO.Path]::GetTempPath()) 'lad') 'crawl4ai-browsers')
+        }
+    }
+    It 'sits in Caches on macOS and in the cache folder on Linux' {
+        Use-Env @{ CRAWL4AI_BROWSERS_PATH = $null; XDG_CACHE_HOME = $null } {
+            (Get-PlatformCrawl4AiBrowsersDir -Os 'macos') | Should -Be (Join-Path (Join-Path (Join-Path (Get-PlatformHome) 'Library') 'Caches') 'crawl4ai-browsers')
+            (Get-PlatformCrawl4AiBrowsersDir -Os 'linux') | Should -Be (Join-Path (Join-Path (Get-PlatformHome) '.cache') 'crawl4ai-browsers')
+        }
+    }
+    It 'is never the shared ms-playwright folder, on any system' {
+        foreach ($os in $script:oses) { (Get-PlatformCrawl4AiBrowsersDir -Os $os) | Should -Not -Match 'ms-playwright' }
+    }
+    It 'takes CRAWL4AI_BROWSERS_PATH as the one override, like the helper does' {
+        Use-Env @{ CRAWL4AI_BROWSERS_PATH = (Join-Path ([IO.Path]::GetTempPath()) 'elsewhere') } {
+            (Get-PlatformCrawl4AiBrowsersDir) | Should -Be (Join-Path ([IO.Path]::GetTempPath()) 'elsewhere')
+        }
+    }
+    It 'names the same folder as crawl4ai_fetch.py on this system' -Skip:(-not (Get-Command python3, python, py -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+        $py = (Get-Command python3, python, py -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+        $snippet = 'import sys; sys.path.insert(0, sys.argv[1]); import crawl4ai_fetch; print(crawl4ai_fetch.browsers_path())'
+        Use-Env @{ CRAWL4AI_BROWSERS_PATH = $null } {
+            $fromPython = (& $py -I -c $snippet $script:fetchDir | Out-String).Trim()
+            $fromPython | Should -Be (Get-PlatformCrawl4AiBrowsersDir)
+        }
+    }
+}
+
+Describe 'Invoke-Crawl4AiBrowserSetup' {
+    # crawl4ai-setup runs `python -m playwright install --force chromium` and the patchright twin; both
+    # read PLAYWRIGHT_BROWSERS_PATH, so the variable must reach the setup program - and only it.
+    BeforeAll {
+        $script:setupDir = Join-Path ([IO.Path]::GetTempPath()) ('c4-setup-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        New-Item -ItemType Directory -Force -Path $script:setupDir | Out-Null
+        $script:seenFile = Join-Path $script:setupDir 'seen.txt'
+        if ((Get-PlatformId) -eq 'windows') {
+            $script:fakeSetup = Join-Path $script:setupDir 'crawl4ai-setup.cmd'
+            [IO.File]::WriteAllText($script:fakeSetup, "@echo off`r`necho %PLAYWRIGHT_BROWSERS_PATH%> `"$script:seenFile`"`r`nexit /b %FAKE_EXIT%`r`n")
+        }
+        else {
+            $script:fakeSetup = Join-Path $script:setupDir 'crawl4ai-setup'
+            [IO.File]::WriteAllText($script:fakeSetup, "#!/bin/sh`necho `"`$PLAYWRIGHT_BROWSERS_PATH`" > '$script:seenFile'`nexit `${FAKE_EXIT:-0}`n")
+            & chmod +x $script:fakeSetup
+        }
+    }
+    AfterAll { Remove-Item -LiteralPath $script:setupDir -Recurse -Force -ErrorAction SilentlyContinue }
+    BeforeEach {
+        $env:FAKE_EXIT = '0'
+        $env:CRAWL4AI_BROWSERS_PATH = Join-Path $script:setupDir 'own'
+        $script:outerBefore = $env:PLAYWRIGHT_BROWSERS_PATH
+        Remove-Item -LiteralPath $script:seenFile -ErrorAction SilentlyContinue
+    }
+    AfterEach {
+        Remove-Item Env:FAKE_EXIT, Env:CRAWL4AI_BROWSERS_PATH -ErrorAction SilentlyContinue
+        $env:PLAYWRIGHT_BROWSERS_PATH = $script:outerBefore
+        if ($null -eq $script:outerBefore) { Remove-Item Env:PLAYWRIGHT_BROWSERS_PATH -ErrorAction SilentlyContinue }
+    }
+    It 'hands the own folder to the setup program as PLAYWRIGHT_BROWSERS_PATH' {
+        $r = Invoke-Crawl4AiBrowserSetup -SetupExe $script:fakeSetup
+        $r.ExitCode | Should -Be 0
+        (Get-Content -LiteralPath $script:seenFile -Raw).Trim() | Should -Be (Join-Path $script:setupDir 'own')
+        $r.Dir | Should -Be (Join-Path $script:setupDir 'own')
+    }
+    It 'replaces a shared folder that is set outside' {
+        $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $script:setupDir 'ms-playwright'
+        $null = Invoke-Crawl4AiBrowserSetup -SetupExe $script:fakeSetup
+        (Get-Content -LiteralPath $script:seenFile -Raw).Trim() | Should -Be (Join-Path $script:setupDir 'own')
+    }
+    It 'leaves the variable of the calling session as it was (no global setting)' {
+        $env:PLAYWRIGHT_BROWSERS_PATH = 'outer-value'
+        $null = Invoke-Crawl4AiBrowserSetup -SetupExe $script:fakeSetup
+        $env:PLAYWRIGHT_BROWSERS_PATH | Should -Be 'outer-value'
+        Remove-Item Env:PLAYWRIGHT_BROWSERS_PATH
+        $null = Invoke-Crawl4AiBrowserSetup -SetupExe $script:fakeSetup
+        $env:PLAYWRIGHT_BROWSERS_PATH | Should -BeNullOrEmpty
+    }
+    It 'returns the exit code of the setup program' {
+        $env:FAKE_EXIT = '3'
+        (Invoke-Crawl4AiBrowserSetup -SetupExe $script:fakeSetup).ExitCode | Should -Be 3
+    }
+}

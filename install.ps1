@@ -922,19 +922,23 @@ try {
                         }
                         else {
                             # the browser is a one-time download; a second attempt covers a
-                            # flaky network without turning the stage into a loop
+                            # flaky network without turning the stage into a loop. The browser goes
+                            # into Crawl4AI's own folder (PLAYWRIGHT_BROWSERS_PATH for this call
+                            # only): Playwright's shared ms-playwright folder loses a browser when
+                            # another Playwright installation no longer needs that version.
                             $setupOk = $false
                             $setupTail = ''
                             for ($attempt = 1; $attempt -le 2; $attempt++) {
-                                $setupOut = (& $setupExe 2>&1 | Out-String)
-                                if ($LASTEXITCODE -eq 0) { $setupOk = $true; break }
+                                $setupRun = Invoke-Crawl4AiBrowserSetup -SetupExe $setupExe
+                                $setupOut = $setupRun.Output
+                                if ($setupRun.ExitCode -eq 0) { $setupOk = $true; break }
                                 $setupTail = (@($setupOut -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -Last 3) -join ' | ')
                                 if ($setupTail.Length -gt 300) { $setupTail = $setupTail.Substring(0, 300) + '...' }
                                 if ($attempt -lt 2) { Start-Sleep -Seconds 10 }
                             }
                             if (-not $setupOk) {
                                 Add-Result 'crawl4ai' 'WARN' ('the browser setup failed: ' + $setupTail)
-                                Add-Manual 'run `crawl4ai-setup`, then `crawl4ai-doctor`, then install.ps1 -Resume'
+                                Add-Manual ('run install.ps1 -Resume (it runs crawl4ai-setup with PLAYWRIGHT_BROWSERS_PATH=' + $setupRun.Dir + '; a bare crawl4ai-setup would fill the shared ms-playwright folder instead)')
                             }
                             else {
                                 # The exit code of crawl4ai-setup does not prove a browser can
@@ -944,7 +948,7 @@ try {
                                 $selfTest = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path (Get-PlatformHome) '.claude/life-os/crawl4ai-selftest.ps1')
                                 if (-not $selfTest.Ok) {
                                     Add-Result 'crawl4ai' 'ERROR' ('installed, but Crawl4AI does not work: ' + $selfTest.Line)
-                                    Add-Manual 'run `crawl4ai-setup`, then install.ps1 -Resume (the self-test must print crawl4ai=ok)'
+                                    Add-Manual ('run install.ps1 -Resume (crawl4ai-setup with PLAYWRIGHT_BROWSERS_PATH=' + $setupRun.Dir + '; the self-test must print crawl4ai=ok)')
                                 }
                                 else {
                                     $ver = ((& $crwl --version 2>&1 | Out-String) -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
@@ -963,7 +967,7 @@ try {
             }
             catch {
                 Add-Result 'crawl4ai' 'WARN' ('the stage threw: ' + $_.Exception.Message)
-                Add-Manual 'run `uv tool install crawl4ai` and `crawl4ai-setup` by hand, then install.ps1 -Resume'
+                Add-Manual 'run `uv tool install crawl4ai`, then install.ps1 -Resume (it runs crawl4ai-setup with Crawl4AI''s own browser folder)'
             }
         }
     }
