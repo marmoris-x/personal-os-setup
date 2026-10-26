@@ -598,6 +598,21 @@ Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
         (Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw) | Should -Match 'morning \| skip'
     }
 
+    It 'runs the cleanup on a quiet day too: trash queue emptied, own cleanup line in the run log' {
+        # 2026-10-26: the skip path wrote no cleanup line because cleanup.ps1 ran only after the agent.
+        Write-TestFile (Join-Path $script:V 'notes\old.md') "x`n"
+        Write-TestFile (Join-Path $script:V '000-meta\trash-queue.txt') "notes/old.md`n"
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null
+        Test-Path -LiteralPath (Join-Path $script:Stub 'called.txt') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:V 'notes\old.md') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:V 'trash\old.md') | Should -BeTrue
+        $log = Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw
+        $log | Should -Match '(?m)\| cleanup \| ok \| skip-inbox moved=0 trashed=1 '
+        $log | Should -Match 'morning \| skip'
+        $run = Get-Content -LiteralPath (Join-Path $script:Stub ('logs\morning-' + (Get-Date).ToString('yyyy-MM-dd') + '.log')) -Raw
+        $run | Should -Match 'cleanup exit 0'
+    }
+
     It 'starts the agent when a transcript waits, and still writes the hints after it' {
         Write-TestFile (Join-Path $script:V 'inbox\audio\a.txt') 'hello'
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null

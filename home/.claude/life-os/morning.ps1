@@ -218,6 +218,22 @@ try {
         }
     }
 
+    # 5 (shared). cleanup.ps1: trash queue, log rotation, and with $SkipInbox false the finished
+    # recordings. Both ends of the run call it, so a quiet day also writes its own cleanup line
+    # (2026-10-26: the skip path ended before it, and that morning wrote no cleanup line).
+    function Invoke-CleanupStep([bool]$SkipInboxStep) {
+        $cleanArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+                       (Join-Path $PSScriptRoot 'cleanup.ps1'), '-VaultPath', $VaultPath, '-LogDir', $LogDir)
+        if ($SkipInboxStep) { $cleanArgs += '-SkipInbox' }
+        $prevEA = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $cleanOut = & {{PWSH_HOST}} @cleanArgs 2>&1
+        $cleanExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEA
+        Write-RunLog ('cleanup exit ' + $cleanExit)
+        foreach ($line in $cleanOut) { Write-RunLog ('  cleanup: ' + [string]$line) }
+    }
+
     if ($reasons.Count -eq 0) {
         $skipReason = 'nothing to order (no transcript, loose note, conflict, typed text or stale project hub); hints are written by the script'
         $hintsOk = Write-HintBlock
@@ -227,6 +243,8 @@ try {
             Write-RunLog 'project flag consumed'
         }
         Write-RunLog ('agent skipped: ' + $skipReason)
+        # No agent ran, so no recording may leave the inbox; the trash queue and the logs still go.
+        Invoke-CleanupStep $true
         Append-Utf8 $runsLog ((Get-Date).ToString('s') + ' | morning | skip | ' + $skipReason + ' | crawl4ai=' + $c4State + "`n")
         Write-RunLog ('vault: ' + (Save-VaultCommit -VaultPath $VaultPath -Message ('chore(morning): daily run ' + (Get-Date).ToString('yyyy-MM-dd'))))
         Write-RunLog 'run end: skip'
@@ -371,16 +389,7 @@ try {
     else { $summary = 'FAILED timedOut=' + $timedOut + ' exit=' + $exitText + ' crawl4ai=' + $c4State + ' | ' + $firstLine }
 
     # 5. cleanup (only after a successful agent run may recordings leave the inbox)
-    $cleanArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
-                   (Join-Path $PSScriptRoot 'cleanup.ps1'), '-VaultPath', $VaultPath, '-LogDir', $LogDir)
-    if (-not $success) { $cleanArgs += '-SkipInbox' }
-    $prevEA = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $cleanOut = & {{PWSH_HOST}} @cleanArgs 2>&1
-    $cleanExit = $LASTEXITCODE
-    $ErrorActionPreference = $prevEA
-    Write-RunLog ('cleanup exit ' + $cleanExit)
-    foreach ($line in $cleanOut) { Write-RunLog ('  cleanup: ' + [string]$line) }
+    Invoke-CleanupStep (-not $success)
 
     $state = 'ok'; if (-not $success) { $state = 'fail' }
     Append-Utf8 (Join-Path $VaultPath '000-meta\life-os-runs.log') `
