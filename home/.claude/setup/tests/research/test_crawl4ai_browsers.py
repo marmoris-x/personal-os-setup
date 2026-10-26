@@ -5,6 +5,8 @@ Playwright installation on the PC, and Playwright deletes a browser version when
 needs it any more. The helper now points PLAYWRIGHT_BROWSERS_PATH at a folder of its own.
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -38,6 +40,16 @@ class BrowsersPath(unittest.TestCase):
     def test_an_explicit_override_wins(self):
         with mock.patch.dict(os.environ, {"CRAWL4AI_BROWSERS_PATH": "/some/where"}):
             self.assertEqual(crawl4ai_fetch.browsers_path(), "/some/where")
+
+    def test_the_print_flag_names_the_folder_and_starts_nothing(self):
+        """The repair script asks the helper for the folder, so the rule lives in one place."""
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, {"CRAWL4AI_BROWSERS_PATH": "/some/where"}), \
+                mock.patch.object(crawl4ai_fetch, "crawl", side_effect=AssertionError("crawl started")), \
+                contextlib.redirect_stdout(out):
+            code = crawl4ai_fetch.main(["--print-browsers-path"])
+        self.assertEqual(code, 0)
+        self.assertEqual(out.getvalue().strip(), "/some/where")
 
 
 class ChildEnvironment(unittest.TestCase):

@@ -126,7 +126,7 @@ by hand and check each fragment against the fetched page.
 
 If `pages/index.json` says `crawl4ai_ok: false` (save_pages printed `WARNING crawl4ai
 unavailable: <reason>`), the first lines of your report say "Crawl4AI ausgefallen: <Grund>" with
-the repair `crawl4ai-setup`.
+the repair `~/.claude/life-os/crawl4ai-repair.ps1`.
 
 You never write the text to a file. If the user wants it kept, the caller saves it as a
 knowledge page in the vault's `400-knowledge/research/`, with these sources named. A text is our
@@ -137,6 +137,7 @@ own work, so it never goes into `500-sources/`, which holds only text that other
 - The writer detached every compose comment from its paragraph with a blank line, and the checks read comment and paragraph as one broken block (90, 133 and 144 false problems) -> write the compose comment directly under its paragraph, no blank line; the writer file says so and no check can attach it for you.
 - The store step let `[1](url) [1]` on 73 links into the vault -> `store_results.py` refuses bare reference numbers outside quotes, comments and the reference list; if it refuses, fix the text, never bypass it.
 - Crawl4AI died with `'charmap' codec can't encode characters` and save_pages fell back to Exa -> run the crawl through `crawl4ai_fetch.py`, which sets `PYTHONUTF8`/`PYTHONIOENCODING` and writes a file, never a pipe.
-- Crawl4AI was dead for two days and nobody saw it (2026-10-25, empty Playwright browser folder) -> `save_pages.py` prints `WARNING crawl4ai unavailable: <reason>` and sets `crawl4ai_ok: false` in `pages/index.json`; name it in the first lines of the report; fix: `crawl4ai-setup`.
+- Crawl4AI was dead for two days and nobody saw it (2026-10-25, empty Playwright browser folder) -> `save_pages.py` prints `WARNING crawl4ai unavailable: <reason>` and sets `crawl4ai_ok: false` in `pages/index.json`; name it in the first lines of the report; fix: `~/.claude/life-os/crawl4ai-repair.ps1`.
+- Playwright shares one browser folder (`ms-playwright`) between all installations and deletes a browser version no client needs any more, the likely cause of that outage -> Crawl4AI has its own folder (`PLAYWRIGHT_BROWSERS_PATH`, set by `crawl4ai_fetch.py`, never globally); repair only with `~/.claude/life-os/crawl4ai-repair.ps1`, never a bare `crawl4ai-setup`, which fills the shared folder and does not help.
 - `save_pages.py` deduplicated five subpages of one doc to a single file because navigation and intro are identical -> `fetch_page.py` passes `dedupe=False`; when subpages of one doc share a header, check `pages/index.json` for collapsed pages.
 - A subagent cannot ask the user anything; a run once waited for a language choice that never came -> ask the languages in the main session before the first agent starts.

@@ -271,6 +271,8 @@ Describe 'morning.ps1 with loose files' -Skip:$script:notWindows {
             TrackerStatePath = (Join-Path $script:Stub 'tracker-state.json'); SeenPath = (Join-Path $script:Stub 'seen.json')
             SettingsPath = (Join-Path $script:Stub 'none.json')
         }
+        $c4 = Get-HermeticCrawl4AiArgs (Join-Path $script:Stub 'c4')
+        foreach ($k in $c4.Keys) { $script:MArgs[$k] = $c4[$k] }
         Write-TestFile (Join-Path $script:V '000-meta\life-os-runs.log') "2026-10-24T07:01:15 | morning | ok | done`n"
     }
 

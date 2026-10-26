@@ -253,6 +253,7 @@ home/.claude/hooks/trifecta-guard.ps1
 home/.claude/kopiaignore
 home/.claude/life-os/area-check.ps1
 home/.claude/life-os/cleanup.ps1
+home/.claude/life-os/crawl4ai-repair.ps1
 home/.claude/life-os/crawl4ai-selftest.ps1
 home/.claude/life-os/groq_worker.py
 home/.claude/life-os/life-os-common.ps1

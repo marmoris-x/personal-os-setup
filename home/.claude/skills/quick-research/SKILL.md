@@ -80,7 +80,7 @@ the question and stop with that report (no text from memory).
 ## 6. Answer
 
 If Crawl4AI was unavailable (the warning above, or `crawl4ai_ok: false` in `pages\index.json`),
-the first line says "Crawl4AI ausgefallen: <Grund> - Abhilfe: crawl4ai-setup". Then five to
+the first line says "Crawl4AI ausgefallen: <Grund> - Abhilfe: ~/.claude/life-os/crawl4ai-repair.ps1". Then five to
 fifteen lines in German. Every statement names its source as a link, taken from the
 verified item's `url` and the page it sits on. Say plainly what the sources do not answer. No
 numbered reference list, no vault commit, no article checker: that is the `research` skill.

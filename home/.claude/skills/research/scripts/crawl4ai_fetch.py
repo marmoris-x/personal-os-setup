@@ -109,6 +109,11 @@ async def crawl(urls, timeout_s, concurrency, write_result):
 
 
 def main(argv=None):
+    # `crawl4ai_fetch.py --print-browsers-path`: the one place that knows the folder tells the
+    # repair script (crawl4ai-repair.ps1) where to install the browser; nothing is started
+    if list(sys.argv[1:] if argv is None else argv) == ["--print-browsers-path"]:
+        print(browsers_path())
+        return 0
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("urls")
     parser.add_argument("out")

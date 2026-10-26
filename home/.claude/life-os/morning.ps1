@@ -23,6 +23,8 @@ param(
     [string]$SeenPath = "{{LIFEOS_STATE}}\inbox-seen.json",
     [string]$Crawl4AiVenvPython = '',
     [string]$Crawl4AiFetchScript = '',
+    [string]$Crawl4AiSetupExe = '',
+    [string]$Crawl4AiRepairScript = '',
     [switch]$ForceAgent,
     [switch]$ForceWeekly
 )
@@ -179,11 +181,31 @@ try {
     }
     Write-RunLog ('crawl4ai self-test: ' + $c4State + $(if ($c4Reason) { ' - ' + $c4Reason } else { '' }))
     if ($c4State -ne 'ok') {
-        # The browser lives in Crawl4AI's own folder (crawl4ai_fetch.py sets PLAYWRIGHT_BROWSERS_PATH);
-        # a bare crawl4ai-setup would fill Playwright's shared ms-playwright folder instead.
-        $c4Dir = $env:CRAWL4AI_BROWSERS_PATH
-        if (-not $c4Dir) { $c4Dir = Join-Path $env:LOCALAPPDATA 'crawl4ai-browsers' }
-        $extraHints += ('Crawl4AI defekt: ' + $c4Reason + ' - Abhilfe: $env:PLAYWRIGHT_BROWSERS_PATH=''' + $c4Dir + '''; crawl4ai-setup')
+        # 1f. one repair attempt (owner's rule 2026-10-26, 10 minute limit inside the script): the
+        # repair script installs the browser into Crawl4AI's own folder and runs the self-test again;
+        # a bare crawl4ai-setup would fill Playwright's shared ms-playwright folder instead. No
+        # language model is started for it.
+        $repairScript = $Crawl4AiRepairScript
+        if (-not $repairScript) { $repairScript = Join-Path $PSScriptRoot 'crawl4ai-repair.ps1' }
+        $repairFail = 'crawl4ai-repair.ps1 is missing'
+        if (Test-Path -LiteralPath $repairScript) {
+            $rpArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $repairScript, '-TimeoutSeconds', '600')
+            if ($Crawl4AiVenvPython) { $rpArgs += @('-VenvPython', $Crawl4AiVenvPython) }
+            if ($Crawl4AiFetchScript) { $rpArgs += @('-FetchScript', $Crawl4AiFetchScript) }
+            if ($Crawl4AiSetupExe) { $rpArgs += @('-SetupExe', $Crawl4AiSetupExe) }
+            $prevEA = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            $rpOut = @(& {{PWSH_HOST}} @rpArgs 2>&1 | ForEach-Object { [string]$_ })
+            $rpExit = $LASTEXITCODE
+            $ErrorActionPreference = $prevEA
+            $rpLine = ($rpOut | Where-Object { $_ -match '^crawl4ai-repair=' } | Select-Object -Last 1)
+            if ($rpExit -eq 0 -and $rpLine -eq 'crawl4ai-repair=ok') { $repairFail = '' }
+            elseif ($rpLine -match '^crawl4ai-repair=fail: (.*)$') { $repairFail = $Matches[1] }
+            else { $repairFail = 'repair gave no result (exit ' + $rpExit + ')' }
+        }
+        Write-RunLog ('crawl4ai repair: ' + $(if ($repairFail) { 'fail - ' + $repairFail } else { 'ok' }))
+        if ($repairFail) { $extraHints += ('Crawl4AI defekt, Reparatur fehlgeschlagen: ' + $repairFail) }
+        else { $c4State = 'repaired'; $extraHints += 'Crawl4AI war defekt, automatisch repariert' }
     }
 
     # 2. pre-check (owner's request 2026-10-08, narrowed 2026-10-25): the agent starts only when

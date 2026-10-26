@@ -1,4 +1,4 @@
 [
-  {"conclusion":"success","createdAt":"2026-10-26T09:04:20Z","databaseId":40296759884,"event":"push","headSha":"cc69f350e2f39ab9cf22b2b1e292fb2f8f307e9e","startedAt":"2026-10-26T09:04:20Z","status":"completed"},
-  {"conclusion":"success","createdAt":"2026-10-26T09:04:20Z","databaseId":40296759900,"event":"workflow_dispatch","headSha":"cc69f350e2f39ab9cf22b2b1e292fb2f8f307e9e","startedAt":"2026-10-26T09:04:20Z","status":"completed"}
+  {"conclusion":"success","createdAt":"2026-10-26T09:04:20Z","databaseId":40296759900,"event":"push","headSha":"cc69f350e2f39ab9cf22b2b1e292fb2f8f307e9e","startedAt":"2026-10-26T09:04:20Z","status":"completed"},
+  {"conclusion":"success","createdAt":"2026-10-26T09:04:20Z","databaseId":40296759884,"event":"workflow_dispatch","headSha":"cc69f350e2f39ab9cf22b2b1e292fb2f8f307e9e","startedAt":"2026-10-26T09:04:20Z","status":"completed"}
 ]

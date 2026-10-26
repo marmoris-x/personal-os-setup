@@ -225,7 +225,8 @@ Describe 'morning.ps1 area flow (Windows PowerShell 5.1)' -Skip:$script:notWindo
 "@
         Write-TestFile (Join-Path $stub 'agent.ps1') $agent
         Write-TestFile (Join-Path $stub 'claude.cmd') "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0agent.ps1`"`r`necho {`"is_error`":false,`"subtype`":`"success`",`"num_turns`":1,`"total_cost_usd`":0,`"result`":`"stub`"}`r`n"
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') -ForceAgent | Out-Null
+        $c4 = Get-HermeticCrawl4AiArgs (Join-Path $stub 'c4')
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') @c4 -ForceAgent | Out-Null
         (Get-Content -LiteralPath $good -Raw -Encoding UTF8) | Should -Match 'Folgeantrag genehmigt'
         (Get-Content -LiteralPath $bad -Raw -Encoding UTF8) | Should -Not -Match 'Erfundenes'
         (Get-Content -LiteralPath (Join-Path $v "100-daily\$today.md") -Raw -Encoding UTF8) | Should -Match ('Bereich zur' + [char]0x00FC + 'ckgesetzt: oegk')

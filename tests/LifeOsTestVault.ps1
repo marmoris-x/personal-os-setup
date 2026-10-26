@@ -77,3 +77,50 @@ function New-RenderedMirror {
     }
     return $Dest
 }
+
+# A stand-in for the Crawl4AI venv python: crawl4ai-selftest.ps1 runs it as
+# "<stub> <fetch script> <urls.json> <out.jsonl> --timeout N --concurrency 1". Nothing real is
+# started, nothing real is deleted (owner's rule 2026-10-26: simulate the failure).
+function New-Crawl4AiStub([string]$dir, [string]$mode) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $body = switch ($mode) {
+        'ok'   { "echo {`"url`":`"https://example.com/`",`"ok`":true,`"status`":200,`"markdown`":`"Example Domain`"}> %3`r`n" }
+        'fail' { "echo {`"url`":`"https://example.com/`",`"ok`":false,`"status`":null,`"error`":`"Error: BrowserType.launch: Executable doesn't exist at X`"}> %3`r`n" }
+        'slow' { "ping -n 40 127.0.0.1 >nul`r`n" }
+        'empty' { "exit /b 3`r`n" }
+        # fails until the stand-in setup program (New-Crawl4AiSetupStub, same folder) has run;
+        # `--print-browsers-path` answers like crawl4ai_fetch.py does
+        'repairable' { "if `"%2`"==`"--print-browsers-path`" (echo %~dp0own& exit /b 0)`r`nif exist `"%~dp0repaired.marker`" (echo {`"url`":`"https://example.com/`",`"ok`":true,`"status`":200,`"markdown`":`"Example Domain`"}> %3) else (echo {`"url`":`"https://example.com/`",`"ok`":false,`"status`":null,`"error`":`"Error: BrowserType.launch: Executable doesn't exist at X`"}> %3)`r`n" }
+    }
+    $stub = Join-Path $dir ($mode + '.cmd')
+    Write-TestFile $stub ("@echo off`r`n" + $body)
+    $fetch = Join-Path $dir 'crawl4ai_fetch.py'
+    Write-TestFile $fetch "# stand-in`n"
+    return [pscustomobject]@{ Python = $stub; Fetch = $fetch }
+}
+
+# A stand-in for crawl4ai-setup. It records the PLAYWRIGHT_BROWSERS_PATH it was given in seen.txt
+# and, when it works, leaves the marker that the 'repairable' python stub waits for. The real
+# crawl4ai-setup must never run from a test (it would fill the owner's real browser folder).
+function New-Crawl4AiSetupStub([string]$dir, [string]$mode) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $body = switch ($mode) {
+        'ok'   { "echo %PLAYWRIGHT_BROWSERS_PATH%> `"%~dp0seen.txt`"`r`necho x> `"%~dp0repaired.marker`"`r`nexit /b 0`r`n" }
+        'fail' { "echo %PLAYWRIGHT_BROWSERS_PATH%> `"%~dp0seen.txt`"`r`necho boom 1>&2`r`nexit /b 1`r`n" }
+        # works, but fixes nothing: the self-test stays red afterwards
+        'nomarker' { "echo %PLAYWRIGHT_BROWSERS_PATH%> `"%~dp0seen.txt`"`r`nexit /b 0`r`n" }
+        'slow' { "ping -n 40 127.0.0.1 >nul`r`n" }
+    }
+    $stub = Join-Path $dir ('setup-' + $mode + '.cmd')
+    Write-TestFile $stub ("@echo off`r`n" + $body)
+    return $stub
+}
+
+# The three morning.ps1 parameters that keep a test away from the real Crawl4AI: a venv python
+# whose self-test passes, its fetch script, and a setup program that fails. Every test that runs
+# morning.ps1 merges these into its arguments (tests/LifeOsMorning.Tests.ps1 checks that it does):
+# without them the real self-test runs, and when it fails the real crawl4ai-repair.ps1 runs.
+function Get-HermeticCrawl4AiArgs([string]$dir) {
+    $c4 = New-Crawl4AiStub $dir 'ok'
+    return @{ Crawl4AiVenvPython = $c4.Python; Crawl4AiFetchScript = $c4.Fetch; Crawl4AiSetupExe = (New-Crawl4AiSetupStub $dir 'fail') }
+}

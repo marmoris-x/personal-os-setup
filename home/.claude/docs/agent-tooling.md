@@ -59,7 +59,7 @@ index is measured below.
 | Tavily | — | 1,000 credits/month (basic search 1, extract 1 per 5 URLs) | extra search capacity, cheap extraction |
 | Firecrawl | search, scrape, parse (rate-limited) | 1,000 credits/month (search 2, refund 1 via feedback; page 1); crawl, map, interact | JavaScript pages, whole sites |
 | Jina Reader | 20 pages/minute | not needed | free fallback reader |
-| crawl4ai | local, unlimited | — | **first** page reader since 2026-10-17: installed by the setup (`uv tool install crawl4ai` + `crawl4ai-setup`), no quota and no provider sees the URL. Since 2026-10-26 it cannot fail silently: save_pages.py warns and sets `crawl4ai_ok: false` in `pages/index.json`, `morning.ps1` self-tests it daily, install and verify run the same self-test (2026-10-25: the browser folder was empty for two days; fix `crawl4ai-setup`) |
+| crawl4ai | local, unlimited | — | **first** page reader since 2026-10-17: installed by the setup (`uv tool install crawl4ai` + `crawl4ai-setup`), no quota and no provider sees the URL. Since 2026-10-26 it cannot fail silently: save_pages.py warns and sets `crawl4ai_ok: false` in `pages/index.json`, `morning.ps1` self-tests it daily, install and verify run the same self-test (2026-10-25: the browser folder was empty for two days). Its browser lives in a folder of its own (`PLAYWRIGHT_BROWSERS_PATH`, Windows `%LOCALAPPDATA%\crawl4ai-browsers`), and the one repair is `~/.claude/life-os/crawl4ai-repair.ps1`, which `morning.ps1` also runs once by itself when the self-test fails |
 
 ## Budget for 90 runs a month (2026-10-17)
 

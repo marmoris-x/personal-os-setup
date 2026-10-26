@@ -18,7 +18,7 @@ BeforeAll {
 Describe 'Select-CiRunWithMacOs' {
     It 'takes the manual run with the macOS job when a push run without it starts in the same second' {
         $r = Select-From 'same-second'
-        $r.Run.databaseId | Should -Be 40296759900
+        $r.Run.databaseId | Should -Be 40296759884
         $r.HasMacOs | Should -BeTrue
         @($r.Jobs | Where-Object { $_.name -like 'macos*' }).Count | Should -Be 1
     }
@@ -27,13 +27,16 @@ Describe 'Select-CiRunWithMacOs' {
         [array]::Reverse($runs)
         $jobs = Read-Fixture 'same-second.jobs.json'
         $r = Select-CiRunWithMacOs -Runs $runs -GetJobs { param($id) @($jobs.([string]$id).jobs) }.GetNewClosure()
-        $r.Run.databaseId | Should -Be 40296759900
+        $r.Run.databaseId | Should -Be 40296759884
     }
     It 'falls back to the newest run, flagged without macOS, when no run has the job' {
         $r = Select-From 'push-only'
         $r.Run.databaseId | Should -Be 40226928538
         $r.HasMacOs | Should -BeFalse
         @($r.Jobs).Count | Should -Be 2
+    }
+    It 'lets an error of the job lookup through: a run that cannot be read is an error, not "no macOS job"' {
+        { Select-CiRunWithMacOs -Runs @(Read-Fixture 'same-second.runs.json') -GetJobs { throw 'gh: HTTP 404' } } | Should -Throw '*HTTP 404*'
     }
     It 'returns nothing for an empty run list' {
         Select-CiRunWithMacOs -Runs @() -GetJobs { throw 'must not be called' } | Should -BeNullOrEmpty

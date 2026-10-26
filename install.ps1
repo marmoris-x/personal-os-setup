@@ -938,7 +938,7 @@ try {
                             }
                             if (-not $setupOk) {
                                 Add-Result 'crawl4ai' 'WARN' ('the browser setup failed: ' + $setupTail)
-                                Add-Manual ('run install.ps1 -Resume (it runs crawl4ai-setup with PLAYWRIGHT_BROWSERS_PATH=' + $setupRun.Dir + '; a bare crawl4ai-setup would fill the shared ms-playwright folder instead)')
+                                Add-Manual 'run ~/.claude/life-os/crawl4ai-repair.ps1, then install.ps1 -Resume (a bare crawl4ai-setup would fill the shared ms-playwright folder instead)'
                             }
                             else {
                                 # The exit code of crawl4ai-setup does not prove a browser can
@@ -948,7 +948,7 @@ try {
                                 $selfTest = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path (Get-PlatformHome) '.claude/life-os/crawl4ai-selftest.ps1')
                                 if (-not $selfTest.Ok) {
                                     Add-Result 'crawl4ai' 'ERROR' ('installed, but Crawl4AI does not work: ' + $selfTest.Line)
-                                    Add-Manual ('run install.ps1 -Resume (crawl4ai-setup with PLAYWRIGHT_BROWSERS_PATH=' + $setupRun.Dir + '; the self-test must print crawl4ai=ok)')
+                                    Add-Manual 'run ~/.claude/life-os/crawl4ai-repair.ps1 (it must print crawl4ai-repair=ok), then install.ps1 -Resume'
                                 }
                                 else {
                                     $ver = ((& $crwl --version 2>&1 | Out-String) -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)

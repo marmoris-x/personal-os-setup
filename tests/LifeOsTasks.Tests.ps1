@@ -144,7 +144,8 @@ Describe 'morning.ps1 moves tasks after the agent (Windows PowerShell 5.1)' -Ski
         Write-TestFile (Join-Path $stub 'claude.cmd') "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0agent.ps1`"`r`necho {`"is_error`":false,`"subtype`":`"success`",`"num_turns`":1,`"total_cost_usd`":0,`"result`":`"stub`"}`r`n"
         $null = New-Daily $v $today "- **08:00** Ich muss Milch kaufen."
         Write-TestFile (Join-Path $v '000-meta\life-os-runs.log') "2026-10-24T07:01:15 | morning | ok | done`n"
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') | Out-Null
+        $c4 = Get-HermeticCrawl4AiArgs (Join-Path $stub 'c4')
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') @c4 | Out-Null
         (Get-Todo $v) | Should -Match "- \[ \] Milch kaufen \(\[\[100-daily/$today\]\]\)"
         (Get-Content -LiteralPath $note -Raw -Encoding UTF8) | Should -Match "- Milch kaufen $script:Arrow todo"
     }
@@ -164,7 +165,8 @@ Describe 'morning.ps1 moves tasks after the agent (Windows PowerShell 5.1)' -Ski
         Write-TestFile (Join-Path $stub 'claude.cmd') "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0agent.ps1`"`r`necho {`"is_error`":false,`"subtype`":`"success`",`"num_turns`":1,`"total_cost_usd`":0,`"result`":`"stub`"}`r`n"
         $null = New-Daily $v $today "- **08:00** Ich muss Milch kaufen."
         Write-TestFile (Join-Path $v '000-meta\life-os-runs.log') "2026-10-24T07:01:15 | morning | ok | done`n"
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') | Out-Null
+        $c4 = Get-HermeticCrawl4AiArgs (Join-Path $stub 'c4')
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') -VaultPath $v -DevRoot $d -ClaudeExe (Join-Path $stub 'claude.cmd') -LogDir (Join-Path $stub 'logs') -LockPath (Join-Path $stub 'l.lock') -TrackerStatePath (Join-Path $stub 'ts.json') -SeenPath (Join-Path $stub 's.json') -SettingsPath (Join-Path $stub 'none.json') @c4 | Out-Null
         $text = Get-Content -LiteralPath $note -Raw -Encoding UTF8
         $text | Should -Not -Match 'unklar\): Ich muss Milch'
         $text | Should -Match 'unklar\): Vielleicht Urlaub planen'

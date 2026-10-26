@@ -25,23 +25,6 @@ BeforeAll {
     function Write-RunsLog([string]$vault, [string[]]$lines) {
         Write-TestFile (Join-Path $vault '000-meta\life-os-runs.log') (($lines -join "`n") + "`n")
     }
-    # A stand-in for the Crawl4AI venv python: crawl4ai-selftest.ps1 runs it as
-    # "<stub> <fetch script> <urls.json> <out.jsonl> --timeout N --concurrency 1". Nothing real is
-    # started, nothing real is deleted (owner's rule 2026-10-26: simulate the failure).
-    function New-Crawl4AiStub([string]$dir, [string]$mode) {
-        New-Item -ItemType Directory -Force -Path $dir | Out-Null
-        $body = switch ($mode) {
-            'ok'   { "echo {`"url`":`"https://example.com/`",`"ok`":true,`"status`":200,`"markdown`":`"Example Domain`"}> %3`r`n" }
-            'fail' { "echo {`"url`":`"https://example.com/`",`"ok`":false,`"status`":null,`"error`":`"Error: BrowserType.launch: Executable doesn't exist at X`"}> %3`r`n" }
-            'slow' { "ping -n 40 127.0.0.1 >nul`r`n" }
-            'empty' { "exit /b 3`r`n" }
-        }
-        $stub = Join-Path $dir ($mode + '.cmd')
-        Write-TestFile $stub ("@echo off`r`n" + $body)
-        $fetch = Join-Path $dir 'crawl4ai_fetch.py'
-        Write-TestFile $fetch "# stand-in`n"
-        return [pscustomobject]@{ Python = $stub; Fetch = $fetch }
-    }
     function Write-State([string]$vault, [hashtable]$notes) {
         $n = @{}; foreach ($k in $notes.Keys) { $n[$k] = @{ roh_anchor = $notes[$k] } }
         Write-TestFile (Join-Path $vault '000-meta\life-os-state.json') (ConvertTo-Json @{ version = 1; notes = $n; last_run = '2026-10-24T07:00:00' } -Depth 5)
@@ -562,6 +545,64 @@ Describe 'crawl4ai-selftest.ps1' -Skip:$script:notWindows {
     }
 }
 
+Describe 'crawl4ai-repair.ps1' -Skip:$script:notWindows {
+    # One command repairs Crawl4AI: PLAYWRIGHT_BROWSERS_PATH to the own folder (asked from the helper),
+    # crawl4ai-setup, then the self-test. Exit 0 only when the self-test passes. Stand-ins only.
+    BeforeAll {
+        $script:Repair = Join-Path $script:Src 'crawl4ai-repair.ps1'
+        $script:SelfTestScript = Join-Path $script:Src 'crawl4ai-selftest.ps1'
+        function Invoke-Repair([string]$pyMode, [string]$setupMode, [int]$timeout = 600) {
+            $dir = Join-Path $script:Work ('rp-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+            $py = New-Crawl4AiStub $dir $pyMode
+            $setup = New-Crawl4AiSetupStub $dir $setupMode
+            $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:Repair -SetupExe $setup -VenvPython $py.Python -FetchScript $py.Fetch -SelfTestScript $script:SelfTestScript -TimeoutSeconds $timeout 2>&1
+            return [pscustomobject]@{ Code = $LASTEXITCODE; Text = (@($out) -join "`n").Trim(); Dir = $dir }
+        }
+    }
+    It 'runs the setup with the own folder, then the self-test, and says ok when the self-test passes' {
+        $r = Invoke-Repair 'repairable' 'ok'
+        $r.Text | Should -Be 'crawl4ai-repair=ok'
+        $r.Code | Should -Be 0
+        (Get-Content -LiteralPath (Join-Path $r.Dir 'seen.txt') -Raw).Trim() | Should -Be (Join-Path $r.Dir 'own')
+    }
+    It 'fails with the setup error and exit 1 when the setup fails' {
+        $r = Invoke-Repair 'repairable' 'fail'
+        $r.Code | Should -Be 1
+        $r.Text | Should -Match '^crawl4ai-repair=fail: the browser setup failed \(exit 1\).*boom'
+    }
+    It 'fails and exits 1 when the setup works but the self-test still fails' {
+        $r = Invoke-Repair 'repairable' 'nomarker'
+        $r.Code | Should -Be 1
+        $r.Text | Should -Match "^crawl4ai-repair=fail: Error: BrowserType\.launch"
+    }
+    It 'stops a setup that runs past the limit and says so' {
+        $r = Invoke-Repair 'repairable' 'slow' 62
+        $r.Code | Should -Be 1
+        $r.Text | Should -Match '^crawl4ai-repair=fail: the browser setup timed out after 2 s'
+    }
+    It 'fails when the setup program is not there' {
+        $dir = Join-Path $script:Work ('rp-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+        $py = New-Crawl4AiStub $dir 'repairable'
+        $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:Repair -SetupExe (Join-Path $dir 'gone.cmd') -VenvPython $py.Python -FetchScript $py.Fetch -SelfTestScript $script:SelfTestScript 2>&1
+        $LASTEXITCODE | Should -Be 1
+        (@($out) -join ' ') | Should -Match '^crawl4ai-repair=fail: crawl4ai-setup was not found'
+    }
+}
+
+# Found 2026-10-26: three test files ran morning.ps1 without Crawl4AI stand-ins, the real
+# self-test failed under load, and the real crawl4ai-repair.ps1 started the real crawl4ai-setup.
+Describe 'every test that runs morning.ps1 is hermetic' -Skip:$script:notWindows {
+    It 'passes the Crawl4AI stand-ins in <_>' -ForEach @(
+        Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.Tests.ps1' |
+            Where-Object { (Get-Content -LiteralPath $_.FullName -Raw) -match "-File \(Join-Path \`$script:Src 'morning\.ps1'\)" } |
+            ForEach-Object { $_.Name }
+    ) {
+        $text = Get-Content -LiteralPath (Join-Path $PSScriptRoot $_) -Raw
+        $text | Should -Match 'Crawl4AiSetupExe|Get-HermeticCrawl4AiArgs'
+        $text | Should -Match 'Crawl4AiVenvPython|Get-HermeticCrawl4AiArgs'
+    }
+}
+
 Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
     BeforeEach {
         $script:V = New-TestVault (Join-Path $script:Work ('e-' + [guid]::NewGuid().ToString('N').Substring(0, 6)))
@@ -579,6 +620,8 @@ Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
         $c4 = New-Crawl4AiStub (Join-Path $script:Stub 'c4') 'ok'
         $script:MArgs.Crawl4AiVenvPython = $c4.Python
         $script:MArgs.Crawl4AiFetchScript = $c4.Fetch
+        # a stand-in that fails: a test whose self-test fails must never reach the real crawl4ai-setup
+        $script:MArgs.Crawl4AiSetupExe = New-Crawl4AiSetupStub (Join-Path $script:Stub 'c4') 'fail'
         Write-RunsLog $script:V @('2026-10-24T07:00:10 | transcribe | ok | files=0', '2026-10-24T07:01:15 | morning | ok | turns=3 cost=0.1 | done')
         # one earlier tracker run, so the repo is known and unchanged
         $null = New-TestRepo $script:D 'proj' -Dirty
@@ -693,18 +736,39 @@ Describe 'morning.ps1 end to end' -Skip:$script:notWindows {
         (Get-Content -LiteralPath (Join-Path $script:V "100-daily\$today.md") -Raw -Encoding UTF8) | Should -Not -Match 'Crawl4AI defekt'
     }
 
-    It 'writes one Crawl4AI defekt line and logs crawl4ai=fail when the self-test fails, and starts no agent by itself' {
-        $bad = New-Crawl4AiStub (Join-Path $script:Stub 'c4bad') 'fail'
+    It 'repairs Crawl4AI once when the self-test fails, names the failed repair in one line, and starts no agent by itself' {
+        # owner's rule 2026-10-26: the morning run calls the repair script once; the setup stand-in fails here
+        $bad = New-Crawl4AiStub (Join-Path $script:Stub 'c4') 'repairable'
         $script:MArgs.Crawl4AiVenvPython = $bad.Python
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null
         Test-Path -LiteralPath (Join-Path $script:Stub 'called.txt') | Should -BeFalse
         $today = (Get-Date).ToString('yyyy-MM-dd')
         $note = Get-Content -LiteralPath (Join-Path $script:V "100-daily\$today.md") -Raw -Encoding UTF8
-        # the remedy names Crawl4AI's own browser folder: a bare crawl4ai-setup would fill ms-playwright
-        $note | Should -Match "(?m)^- Crawl4AI defekt: Error: BrowserType\.launch: Executable doesn't exist at X - Abhilfe: \`$env:PLAYWRIGHT_BROWSERS_PATH='[^']*crawl4ai-browsers'; crawl4ai-setup\s*$"
-        $note | Should -Not -Match 'ms-playwright'
+        $note | Should -Match "(?m)^- Crawl4AI defekt, Reparatur fehlgeschlagen: .*boom\s*$"
+        $note | Should -Not -Match 'automatisch repariert'
         @([regex]::Matches($note, 'Crawl4AI defekt')).Count | Should -Be 1
+        (Get-Content -LiteralPath (Join-Path $script:Stub 'c4\seen.txt') -Raw).Trim() | Should -Be (Join-Path $script:Stub 'c4\own')
         (Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw) | Should -Match 'morning \| skip \|.*crawl4ai=fail'
+    }
+
+    It 'repairs Crawl4AI by itself when the self-test fails and the repair works: one line, crawl4ai=repaired, no agent' {
+        $c4 = New-Crawl4AiStub (Join-Path $script:Stub 'c4') 'repairable'
+        $script:MArgs.Crawl4AiVenvPython = $c4.Python
+        $script:MArgs.Crawl4AiSetupExe = New-Crawl4AiSetupStub (Join-Path $script:Stub 'c4') 'ok'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null
+        Test-Path -LiteralPath (Join-Path $script:Stub 'called.txt') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:Stub 'c4\repaired.marker') | Should -BeTrue
+        $today = (Get-Date).ToString('yyyy-MM-dd')
+        $note = Get-Content -LiteralPath (Join-Path $script:V "100-daily\$today.md") -Raw -Encoding UTF8
+        $note | Should -Match "(?m)^- Crawl4AI war defekt, automatisch repariert\s*$"
+        $note | Should -Not -Match 'Crawl4AI defekt'
+        (Get-Content -LiteralPath (Join-Path $script:Stub 'c4\seen.txt') -Raw).Trim() | Should -Be (Join-Path $script:Stub 'c4\own')
+        (Get-Content -LiteralPath (Join-Path $script:V '000-meta\life-os-runs.log') -Raw) | Should -Match 'morning \| skip \|.*crawl4ai=repaired'
+    }
+
+    It 'does not call the repair when the self-test passes' {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $script:Src 'morning.ps1') @script:MArgs | Out-Null
+        Test-Path -LiteralPath (Join-Path $script:Stub 'c4\seen.txt') | Should -BeFalse
     }
 
     It 'also logs crawl4ai in the line of a run that started the agent' {

@@ -391,7 +391,7 @@ foreach ($e in @($manifest.components)) {
                             # folder was empty for two days). The self-test reads one real page.
                             $selfTest = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path (Get-PlatformHome) '.claude/life-os/crawl4ai-selftest.ps1')
                             if ($selfTest.Ok) { Add-Check $id 'OK' ('crwl ready (' + $crwlPath + '); self-test ok') }
-                            else { Add-Check $id 'FAIL' ('crwl is installed but Crawl4AI does not work: ' + $selfTest.Line + ' - run crawl4ai-setup') }
+                            else { Add-Check $id 'FAIL' ('crwl is installed but Crawl4AI does not work: ' + $selfTest.Line + ' - run ~/.claude/life-os/crawl4ai-repair.ps1') }
                         }
                     }
                 }

@@ -97,7 +97,7 @@ the question and stop with that report (no text from memory).
 
 If `pages/index.json` says `crawl4ai_ok: false` (save_pages printed `WARNING crawl4ai
 unavailable: <reason>`), the first line says "Crawl4AI ausgefallen: <Grund> - Abhilfe:
-crawl4ai-setup". Then five to fifteen lines in German. Every statement names its source as a link, taken from the
+~/.claude/life-os/crawl4ai-repair.ps1". Then five to fifteen lines in German. Every statement names its source as a link, taken from the
 verified item's `url`. Say plainly what the sources do not answer. No numbered reference list,
 no vault commit, no article checker: that is the `web-research` skill.
 
