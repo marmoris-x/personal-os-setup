@@ -90,6 +90,13 @@ function New-Crawl4AiStub([string]$dir, [string]$mode) {
         'empty' { "exit /b 3`r`n" }
         # fails until the stand-in setup program (New-Crawl4AiSetupStub, same folder) has run;
         # `--print-browsers-path` answers like crawl4ai_fetch.py does
+        # answers `--print-browsers-path` with a path that holds u-umlaut, encoded like the real Python
+        # does: UTF-8 when PYTHONUTF8=1 is set for it, else the ANSI code page (1252)
+        'umlaut' {
+            $ps = '$p = ''C:\Users\J'' + [char]0xFC + ''rgen\own''; if ($env:PYTHONUTF8 -eq ''1'') { $e = [Text.Encoding]::UTF8 } else { $e = [Text.Encoding]::GetEncoding(1252) }; $b = $e.GetBytes($p + [char]13 + [char]10); $o = [Console]::OpenStandardOutput(); $o.Write($b, 0, $b.Length)'
+            ('if not "%2"=="--print-browsers-path" goto json' + "`r`n" + 'powershell.exe -NoProfile -Command "' + $ps + '"' + "`r`nexit /b 0`r`n:json`r`n" +
+                "echo {`"url`":`"https://example.com/`",`"ok`":true,`"status`":200,`"markdown`":`"Example Domain`"}> %3`r`n")
+        }
         'repairable' { "if `"%2`"==`"--print-browsers-path`" (echo %~dp0own& exit /b 0)`r`nif exist `"%~dp0repaired.marker`" (echo {`"url`":`"https://example.com/`",`"ok`":true,`"status`":200,`"markdown`":`"Example Domain`"}> %3) else (echo {`"url`":`"https://example.com/`",`"ok`":false,`"status`":null,`"error`":`"Error: BrowserType.launch: Executable doesn't exist at X`"}> %3)`r`n" }
     }
     $stub = Join-Path $dir ($mode + '.cmd')
@@ -110,6 +117,8 @@ function New-Crawl4AiSetupStub([string]$dir, [string]$mode) {
         # works, but fixes nothing: the self-test stays red afterwards
         'nomarker' { "echo %PLAYWRIGHT_BROWSERS_PATH%> `"%~dp0seen.txt`"`r`nexit /b 0`r`n" }
         'slow' { "ping -n 40 127.0.0.1 >nul`r`n" }
+        # records the variable as UTF-8 (a cmd echo would mangle the umlaut)
+        'utf8' { "powershell.exe -NoProfile -Command `"[IO.File]::WriteAllText('%~dp0seen-utf8.txt', `$env:PLAYWRIGHT_BROWSERS_PATH, (New-Object Text.UTF8Encoding(`$false)))`"`r`nexit /b 0`r`n" }
     }
     $stub = Join-Path $dir ('setup-' + $mode + '.cmd')
     Write-TestFile $stub ("@echo off`r`n" + $body)

@@ -81,26 +81,43 @@ try {
         Write-Result $false 'crawl4ai-setup was not found (uv tool install crawl4ai)'
     }
 
-    # 1. the folder, from the one place that knows it
-    $dir = ''
-    try {
-        $dir = [string](@(& $VenvPython $FetchScript '--print-browsers-path' 2>$null) | Where-Object { ([string]$_).Trim() } | Select-Object -First 1)
-    } catch { $dir = '' }
-    $dir = $dir.Trim()
-    if (-not $dir -or -not [IO.Path]::IsPathRooted($dir)) {
-        Write-Result $false 'crawl4ai_fetch.py did not name a browser folder'
-    }
-
     $tmp = Join-Path ([IO.Path]::GetTempPath()) ('crawl4ai-repair-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     try {
+        # 1. the folder, from the one place that knows it. Python writes it as UTF-8 (PYTHONUTF8) into a
+        # file that is read back as UTF-8: through a pipe, Windows PowerShell 5.1 would decode it with
+        # the OEM code page and a profile folder with an umlaut would come out wrong.
+        $env:PYTHONUTF8 = '1'
+        $env:PYTHONIOENCODING = 'utf-8'
+        $dirOut = Join-Path $tmp 'dir-out.txt'
+        $dirArgs = @{ FilePath = $VenvPython; PassThru = $true
+                      ArgumentList = ('"' + $FetchScript + '" --print-browsers-path')
+                      RedirectStandardOutput = $dirOut; RedirectStandardError = (Join-Path $tmp 'dir-err.txt') }
+        if ($env:OS -eq 'Windows_NT') { $dirArgs.WindowStyle = 'Hidden' }
+        $dir = ''
+        try {
+            $dirProc = Start-Process @dirArgs
+            $null = $dirProc.Handle
+            $null = Wait-Process -Id $dirProc.Id -Timeout 60 -ErrorAction SilentlyContinue
+            $dirProc.Refresh()
+            if ($dirProc.HasExited) {
+                $dir = [string](@([IO.File]::ReadAllLines($dirOut, [Text.Encoding]::UTF8) | Where-Object { $_.Trim() }) | Select-Object -First 1)
+            } else {
+                # our own child only
+                if ($env:OS -eq 'Windows_NT') { & taskkill.exe /PID $dirProc.Id /T /F 2>&1 | Out-Null }
+                else { Stop-Process -Id $dirProc.Id -Force -ErrorAction SilentlyContinue }
+            }
+        } catch { $dir = '' }
+        $dir = $dir.Trim()
+        if (-not $dir -or -not [IO.Path]::IsPathRooted($dir)) {
+            Write-Result $false 'crawl4ai_fetch.py did not name a browser folder'
+        }
+
         # 2. crawl4ai-setup, with the variable for this process (the child inherits it)
         $setupOut = Join-Path $tmp 'setup-out.txt'
         $setupErr = Join-Path $tmp 'setup-err.txt'
         $setupLimit = [Math]::Max(1, $TimeoutSeconds - 60)
         $env:PLAYWRIGHT_BROWSERS_PATH = $dir
-        $env:PYTHONUTF8 = '1'
-        $env:PYTHONIOENCODING = 'utf-8'
         $startArgs = @{ FilePath = $SetupExe; PassThru = $true
                         RedirectStandardOutput = $setupOut; RedirectStandardError = $setupErr }
         if ($env:OS -eq 'Windows_NT') { $startArgs.WindowStyle = 'Hidden' }

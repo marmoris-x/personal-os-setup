@@ -565,6 +565,13 @@ Describe 'crawl4ai-repair.ps1' -Skip:$script:notWindows {
         $r.Code | Should -Be 0
         (Get-Content -LiteralPath (Join-Path $r.Dir 'seen.txt') -Raw).Trim() | Should -Be (Join-Path $r.Dir 'own')
     }
+    It 'hands a folder with an umlaut to the setup unchanged' {
+        # Python writes the path in the ANSI code page unless PYTHONUTF8=1 is set for it; the repair
+        # must read what Python wrote, or the setup fills a folder the research runs never look in
+        $r = Invoke-Repair 'umlaut' 'utf8'
+        $r.Text | Should -Be 'crawl4ai-repair=ok'
+        [IO.File]::ReadAllText((Join-Path $r.Dir 'seen-utf8.txt'), [Text.Encoding]::UTF8) | Should -Be ('C:\Users\J' + [char]0xFC + 'rgen\own')
+    }
     It 'fails with the setup error and exit 1 when the setup fails' {
         $r = Invoke-Repair 'repairable' 'fail'
         $r.Code | Should -Be 1
