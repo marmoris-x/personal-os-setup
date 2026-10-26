@@ -1,0 +1,10 @@
+{
+  "40296759884": {"jobs":[
+    {"name":"checks (windows-latest)","conclusion":"success"},
+    {"name":"checks (ubuntu-latest)","conclusion":"success"}]},
+  "40296759900": {"jobs":[
+    {"name":"checks (windows-latest)","conclusion":"success"},
+    {"name":"checks (ubuntu-latest)","conclusion":"success"},
+    {"name":"macos","conclusion":"success"},
+    {"name":"full-setup (windows-latest)","conclusion":"success"},{"name":"full-setup (macos-latest)","conclusion":"success"}]}
+}

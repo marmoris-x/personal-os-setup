@@ -56,7 +56,8 @@ exactly "VERIFY-ALL: ALL CHECKS PASSED".
      README has a "Start from zero" section for all three systems
   N  the CI matrix is defined for windows, ubuntu and macOS, and the newest run on windows and
      ubuntu (and on macOS when it ran) is green for the newest commit that changed code - the
-     same commit 7 uses, so a documentation-only commit on top needs no run
+     same commit 7 uses, so a documentation-only commit on top needs no run; of several runs of
+     that commit it judges the newest one that has the macOS job, found by job name
   O  every CI job ran the idempotency step ("second install changes nothing") and it passed
   P  a live dry run of install.ps1 reaches the summary, so the code paths that only a real
      machine uses (the OS stages and the summary) are exercised too
@@ -1230,7 +1231,7 @@ if (Test-Selected 'I') { try {
         'install.ps1', 'bootstrap.ps1',
         'setup/export.ps1', 'setup/verify.ps1', 'setup/restore.ps1',
         'setup/lib/manifest.ps1', 'setup/lib/platform.ps1', 'setup/lib/placeholders.ps1',
-        'setup/lib/releases.ps1',
+        'setup/lib/releases.ps1', 'setup/lib/ci-runs.ps1',
         'setup/tools/check.ps1', 'setup/tools/check-structure.ps1', 'setup/tools/check-language.ps1',
         'setup/tools/privacy-scan.ps1', 'setup/tools/drift-check.ps1', 'setup/tools/generate-docs.ps1',
         'setup/tools/install-fingerprint.ps1', 'setup/tools/ci-smoke.ps1',
@@ -1701,17 +1702,24 @@ if (Test-Selected 'N') { try {
     $code = Get-LastCodeCommit
     # the run FOR the newest code commit (check 7 states why), so a documentation-only commit on
     # top with a run of its own does not make this red
-    $runJson = (& gh run list --workflow ci --commit $code --limit 1 --json headSha,status,conclusion,databaseId 2>&1 | Out-String)
+    # Several runs can belong to one commit (push, manual, schedule), and two that start in the same
+    # second have no promised order. The run judged is the newest one that HAS the macOS job, picked
+    # by job name (setup/lib/ci-runs.ps1); without any, the newest run, which then fails on "no macOS job".
+    . (Join-Path $RepoRoot 'setup/lib/ci-runs.ps1')
+    $runJson = (& gh run list --workflow ci --commit $code --limit 20 --json headSha,status,conclusion,databaseId 2>&1 | Out-String)
     Pop-Location
-    $run = @($runJson | ConvertFrom-Json)[0]
+    $picked = Select-CiRunWithMacOs -Runs @($runJson | ConvertFrom-Json) -GetJobs {
+        param($id)
+        Push-Location $RepoRoot
+        try { $jj = (& gh run view $id --json jobs 2>&1 | Out-String) } finally { Pop-Location }
+        return @(($jj | ConvertFrom-Json).jobs)
+    }
     $bad = New-Object System.Collections.Generic.List[string]
-    if (-not $run) { throw 'gh returned no run of the ci workflow for the newest code commit ' + $code.Substring(0, 7) }
+    if (-not $picked) { throw 'gh returned no run of the ci workflow for the newest code commit ' + $code.Substring(0, 7) }
+    $run = $picked.Run
     if ($run.status -ne 'completed') { $bad.Add('the run for the newest code commit is still ' + $run.status) }
     elseif ($run.conclusion -ne 'success') { $bad.Add('the newest run concluded ' + $run.conclusion) }
-    Push-Location $RepoRoot
-    $jobsJson = (& gh run view $run.databaseId --json jobs 2>&1 | Out-String)
-    Pop-Location
-    $jobs = @(($jobsJson | ConvertFrom-Json).jobs)
+    $jobs = @($picked.Jobs)
     $matrix = @($jobs | Where-Object { $_.name -like 'checks*' })
     $mac = @($jobs | Where-Object { $_.name -like 'macos*' })
     $matrixOk = 0
@@ -1732,7 +1740,7 @@ if (Test-Selected 'N') { try {
               '; macOS job: ' + $macState +
               '; ci.yml defines windows-latest and ubuntu-latest for every push, macos-latest for tags, the weekly schedule and manual dispatch' +
               $(if ($bad.Count -gt 0) { '; PROBLEMS: ' + ($bad -join ' | ') } else { '' })
-    Add-Result 'N' 'CI matrix green on windows, ubuntu and macOS' 'gh run list --workflow ci --limit 1 --json headSha,status,conclusion; gh run view <id> --json jobs; the workflow file' $detail '0' $ok
+    Add-Result 'N' 'CI matrix green on windows, ubuntu and macOS' 'gh run list --workflow ci --commit <newest code commit> --limit 20 --json headSha,status,conclusion,databaseId; gh run view <id> --json jobs for each run until one has the macOS job; the workflow file' $detail '0' $ok
 } catch { Add-Result 'N' 'CI matrix green on windows, ubuntu and macOS' 'read the CI runs' $_.Exception.Message '2' $false } }
 
 # --------------------------------------------------------- O idempotent ---

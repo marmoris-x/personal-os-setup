@@ -357,6 +357,7 @@ setup/config/secrets.example.md
 setup/export.ps1
 setup/githooks/pre-commit
 setup/githooks/pre-push
+setup/lib/ci-runs.ps1
 setup/lib/harness.ps1
 setup/lib/manifest.ps1
 setup/lib/personal.ps1
@@ -385,8 +386,13 @@ setup/tools/privacy-scan.ps1
 setup/tools/verify-all.ps1
 setup/verify.ps1
 tests/AgentFileBudget.Tests.ps1
+tests/CiRuns.Tests.ps1
 tests/Distill.Tests.ps1
 tests/Export.Tests.ps1
+tests/fixtures/ci-runs/push-only.jobs.json
+tests/fixtures/ci-runs/push-only.runs.json
+tests/fixtures/ci-runs/same-second.jobs.json
+tests/fixtures/ci-runs/same-second.runs.json
 tests/fixtures/image-template-minimal.json
 tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
