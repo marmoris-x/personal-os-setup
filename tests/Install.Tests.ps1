@@ -264,7 +264,8 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # test_project_sync.py.
         # 150 measured 2026-10-25: the search-tuning task adds one core file, the research test
         # test_crawl4ai_fetch.py.
-        $files.Count | Should -BeLessThan 151 -Because 'six intended core files were added on 2026-10-25'
+        # 151 measured 2026-10-26: the crawl4ai-watch task adds one core file, crawl4ai-selftest.ps1.
+        $files.Count | Should -BeLessThan 152 -Because 'seven intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

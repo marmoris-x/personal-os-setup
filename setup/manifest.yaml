@@ -746,7 +746,7 @@ components:
     area: research
     type: generated
     core: false
-    note: "uv tool install crawl4ai + crawl4ai-setup (browser); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it"
+    note: "uv tool install crawl4ai + crawl4ai-setup (browser), then the self-test crawl4ai-selftest.ps1 reads one page (a browser that does not start is an ERROR, not a pass); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it"
 
   - id: comfy-cli
     area: research

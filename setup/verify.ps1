@@ -385,8 +385,14 @@ foreach ($e in @($manifest.components)) {
                                 if ($found) { $crwlPath = $found.FullName; break }
                             }
                         }
-                        if ($crwlPath) { Add-Check $id 'OK' ('crwl ready (' + $crwlPath + ')') }
-                        else { Add-Check $id 'FAIL' 'crwl not found - run install.ps1 -Resume (the crawler is the first page fetcher)' }
+                        if (-not $crwlPath) { Add-Check $id 'FAIL' 'crwl not found - run install.ps1 -Resume (the crawler is the first page fetcher)' }
+                        else {
+                            # An entry point is not a working browser (2026-10-25: the browser
+                            # folder was empty for two days). The self-test reads one real page.
+                            $selfTest = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path (Get-PlatformHome) '.claude/life-os/crawl4ai-selftest.ps1')
+                            if ($selfTest.Ok) { Add-Check $id 'OK' ('crwl ready (' + $crwlPath + '); self-test ok') }
+                            else { Add-Check $id 'FAIL' ('crwl is installed but Crawl4AI does not work: ' + $selfTest.Line + ' - run crawl4ai-setup') }
+                        }
                     }
                 }
                 'own-tools' {

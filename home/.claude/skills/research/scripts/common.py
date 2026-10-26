@@ -148,6 +148,29 @@ def clean_url(url):
 
 # ---------- files ----------
 
+def load_index(path):
+    """(pages, crawl4ai_ok, crawl4ai_reason) of a pages/index.json.
+
+    The file is an object {"crawl4ai_ok", "crawl4ai_reason", "pages": [...]}; runs before
+    2026-10-26 wrote the bare list, which still reads (flag unknown). A missing or broken
+    file reads as no pages and an unknown flag. crawl4ai_ok is True, False or None (the
+    run never asked Crawl4AI)."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], None, None
+    if isinstance(data, list):
+        return data, None, None
+    if not isinstance(data, dict):
+        return [], None, None
+    pages = data.get("pages")
+    ok = data.get("crawl4ai_ok")
+    reason = data.get("crawl4ai_reason")
+    return (pages if isinstance(pages, list) else [],
+            ok if isinstance(ok, bool) else None,
+            reason if isinstance(reason, str) else None)
+
+
 def read_jsonl(path):
     items = []
     with open(path, encoding="utf-8") as fh:

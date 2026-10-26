@@ -1437,6 +1437,8 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/.claude/skills/vault-lint/project_sync.py'; Reason = '2026-10-25 (Life OS inbox task): also reports a hub with status done whose repo: path does not exist' }
         @{ Path = 'HOME/.claude/setup/tests/research/test_store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): a copied page keeps its frontmatter on the first line although a saved page now opens with the untrusted marker line' }
         @{ Path = 'HOME/.claude/skills/research/scripts/common.py'; Reason = '2026-10-25 (search tuning, Part 4): read_page skips the untrusted marker line that save_pages.py writes on top of every saved page' }
+        @{ Path = 'HOME/.claude/life-os/crawl4ai-selftest.ps1'; Reason = '2026-10-26 (crawl4ai-watch, Part 3): the token-free Crawl4AI self-test - one small page through crawl4ai_fetch.py with a 60 s limit, prints crawl4ai=ok or crawl4ai=fail: <reason>; morning.ps1, install.ps1 and verify.ps1 call it. On 2026-10-25 the browser folder had been empty for two days and nothing said so' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_build_references.py'; Reason = '2026-10-26 (crawl4ai-watch, Part 2): one test - pages/index.json is read in its new object form {crawl4ai_ok, crawl4ai_reason, pages} as well as the old list' }
         @{ Path = 'HOME/.claude/skills/research/scripts/store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): the vault copy of a page moves the marker line below the frontmatter, so the frontmatter stays on line 1' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))

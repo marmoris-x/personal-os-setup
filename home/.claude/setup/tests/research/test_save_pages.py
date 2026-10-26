@@ -94,8 +94,15 @@ class SavePages(unittest.TestCase):
             code = save_pages.main([str(self.work.path), *extra])
         return code, out.getvalue()
 
-    def index(self):
+    def index_file(self):
         return json.loads((self.work.path / "pages" / "index.json").read_text(encoding="utf-8"))
+
+    def index(self):
+        return self.index_file()["pages"]
+
+    def meta(self):
+        data = self.index_file()
+        return data["crawl4ai_ok"], data["crawl4ai_reason"]
 
     # --- URLs
 
@@ -267,6 +274,138 @@ class SavePages(unittest.TestCase):
         code, out = self.run_script()
         self.assertEqual(code, 0, out)
         self.assertIn("crawl4ai: the Crawl4AI venv python was not found, skipped", out)
+
+    # --- Crawl4AI must never fail silently (2026-10-25: its browser folder was empty for two days)
+
+    BROWSER_MISSING = ("Error: BrowserType.launch: Executable doesn't exist at "
+                       "C:\\x\\ms-playwright\\chromium_headless_shell-1248\\chrome-headless-shell.exe\n"
+                       "+----------------+\n| playwright install |")
+
+    def test_a_missing_browser_is_a_loud_warning_and_a_flag_in_the_index(self):
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/b"})
+        fake = self.helper([
+            {"url": "https://example.org/a", "ok": False, "error": self.BROWSER_MISSING},
+            {"url": "https://example.org/b", "ok": False, "error": self.BROWSER_MISSING}])
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG + " A"),
+                              ("https://example.org/b", "B", LONG + " B"))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)  # the services took over, the run itself works
+        warnings = [line for line in out.splitlines() if line.startswith("WARNING crawl4ai unavailable: ")]
+        self.assertEqual(len(warnings), 1, out)
+        self.assertIn("BrowserType.launch: Executable doesn't exist", warnings[0])
+        self.assertNotIn("playwright install", warnings[0])  # one line: the first line of the error only
+        ok, reason = self.meta()
+        self.assertIs(ok, False)
+        self.assertIn("Executable doesn't exist", reason)
+        self.assertEqual({i["method"] for i in self.index()}, {"exa"})
+
+    def test_a_missing_venv_is_the_same_loud_warning(self):
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        code, out = self.run_script()  # setUp: find_crawl4ai_python returns None
+        self.assertEqual(code, 0, out)
+        self.assertIn("WARNING crawl4ai unavailable: the Crawl4AI venv python was not found", out)
+        self.assertIs(self.meta()[0], False)
+
+    def test_a_working_crawl4ai_prints_no_warning_and_the_flag_is_true(self):
+        self.candidates({"url": "https://example.org/a"})
+        fake = self.helper([{"url": "https://example.org/a", "ok": True, "status": 200, "markdown": LONG}])
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("WARNING", out)
+        self.assertEqual(self.meta(), (True, None))
+
+    def test_pages_that_fail_one_by_one_are_not_a_crawl4ai_outage(self):
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/b"})
+        fake = self.helper([
+            {"url": "https://example.org/a", "ok": True, "status": 200, "markdown": LONG},
+            {"url": "https://example.org/b", "ok": False, "status": 403, "error": "HTTP 403"}])
+        self.net.exa = exa_ok(("https://example.org/b", "B", LONG + " B"))
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("WARNING", out)
+        self.assertEqual(self.meta(), (True, None))
+
+    def test_a_page_crawl4ai_read_but_that_became_a_duplicate_is_not_an_outage(self):
+        # Crawl4AI returned the text; the page was dropped as a copy of an earlier one. The
+        # reader worked, so the flag must not turn false and no warning may appear.
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG + " same body"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        (self.work.path / "candidates" / "p1.jsonl").unlink()
+        self.candidates({"url": "https://mirror.example.org/a"})
+        fake = self.helper([{"url": "https://mirror.example.org/a", "ok": True, "status": 200,
+                             "markdown": LONG + " same body"}])
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertEqual({i["status"] for i in self.index()}, {"saved", "duplicate"})
+        self.assertEqual(self.meta(), (True, None))
+        self.assertNotIn("WARNING crawl4ai", out)
+
+    def test_a_run_that_never_asked_crawl4ai_leaves_the_flag_unknown(self):
+        # only Reddit URLs: the browser is not used for them, so nothing is known about it
+        self.candidates({"url": "https://www.reddit.com/r/x/comments/y/z"})
+        self.net.exa = exa_ok(("https://www.reddit.com/r/x/comments/y/z", "R", LONG))
+        fake = self.helper([])
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("WARNING", out)
+        self.assertEqual(self.meta(), (None, None))
+
+    def test_a_second_call_that_asks_for_nothing_new_keeps_the_flag(self):
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        self.run_script()  # no venv: flag false
+        self.assertIs(self.meta()[0], False)
+        code, out = self.run_script()  # same candidates, all saved: nothing is fetched
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.meta()[0], False)
+        self.assertEqual(len(self.index()), 1)
+
+    def test_a_second_call_with_new_urls_that_never_ask_crawl4ai_keeps_the_flag(self):
+        # the gap pass brings only a Reddit URL: the browser is not asked, the earlier verdict stays
+        self.candidates({"url": "https://example.org/a"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG))
+        self.run_script()  # no venv: flag false, with its reason
+        first = self.meta()
+        self.assertIs(first[0], False)
+        (self.work.path / "candidates" / "p1.jsonl").unlink()
+        self.candidates({"url": "https://www.reddit.com/r/x/comments/y/z"})
+        self.net.exa = exa_ok(("https://www.reddit.com/r/x/comments/y/z", "R", LONG + " R"))
+        fake = self.helper([])
+        with mock.patch.object(save_pages, "find_crawl4ai_python", return_value="python"), \
+                mock.patch.object(save_pages.subprocess, "run", fake):
+            code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(len(self.index()), 2)
+        self.assertEqual(self.meta(), first)
+        self.assertIn("WARNING crawl4ai unavailable", out)
+
+    def test_an_index_in_the_old_list_form_is_still_read(self):
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/b"})
+        self.net.exa = exa_ok(("https://example.org/a", "A", LONG + " A"),
+                              ("https://example.org/b", "B", LONG + " B"))
+        self.run_script()
+        legacy = self.index()
+        (self.work.path / "pages" / "index.json").write_text(json.dumps(legacy), encoding="utf-8")
+        (self.work.path / "candidates" / "p1.jsonl").unlink()
+        self.candidates({"url": "https://example.org/a"}, {"url": "https://example.org/c"})
+        self.net.exa = exa_ok(("https://example.org/c", "C", LONG + " C"))
+        code, out = self.run_script()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(sorted(i["url"] for i in self.index()),
+                         ["https://example.org/a", "https://example.org/b", "https://example.org/c"])
 
     def test_exa_page_is_saved_with_header_and_index(self):
         self.candidates({"url": "https://example.org/wien", "title": "Wien"})

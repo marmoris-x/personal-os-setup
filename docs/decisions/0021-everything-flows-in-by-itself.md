@@ -58,11 +58,17 @@ about 0.25 to 0.6 USD; the area step adds about 0.35 USD on a day with area-rele
 (1.23 against 0.88 USD for the same day with the old skill); a hub catch-up is about 0.4 USD.
 A day with nothing to order costs nothing, where it cost 0.25 to 0.59 USD before.
 
-The figures in this section are Claude Code's list-price figures: `total_cost_usd` is computed
-with Anthropic prices (5 / 25 / 0.50 USD per 1M tokens for input, output and cache read), not
-with what DeepSeek bills. The morning run of 2026-10-24 (input 33,540, output 11,301, cache read
-289,152 tokens) shows 0.5948 USD, and at DeepSeek's off-peak price it cost about 0.013 USD. The
-run log therefore carries `cost_ds=` (computed from the result's token counts) next to `cost=`.
+The figures in this section are Claude Code's list-price figures, an estimate and not the exact
+cost: `cost=` in the run log is `total_cost_usd`, which Claude Code computes with Anthropic prices
+(5 / 25 / 0.50 USD per 1M tokens for input, output and cache read), not with what DeepSeek bills.
+The morning run of 2026-10-24 (input 33,540, output 11,301, cache read 289,152 tokens) shows
+0.5948 USD, and at DeepSeek's off-peak price it cost about 0.013 USD. The run log therefore
+carries `cost_ds=` next to `cost=`. `cost_ds=` is computed from the `modelUsage` of the result
+JSON, one entry per model, each model with its own DeepSeek rates (`deepseek-flash` and
+`deepseek-v4-pro`, https://api-docs.deepseek.com/quick_start/pricing, read 2026-10-26; the table
+lives in `morning-checks.ps1`). A model without a known price gives `cost_ds=unknown`, never a
+guess. The peak or off-peak rate is the one at the end of the run, so a run that crosses a
+window boundary is priced slightly off; it is still an estimate.
 
 ## Consequences
 

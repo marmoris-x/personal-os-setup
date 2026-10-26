@@ -176,8 +176,10 @@ them.
 most 40 (primary sources first, passes interleaved), downloads each page as
 Markdown into `pages\NNN-<domain>.md` with a header, and
 writes `pages\index.json`. It prints `saved N of M ...` and one `FAILED` line per page it could
-not read (Reddit that no service returns is reported as not readable, never scraped). If fewer
-than five pages were saved, run one more search pass with new queries (P4 style) before you go on.
+not read (Reddit that no service returns is reported as not readable, never scraped). When
+Crawl4AI was asked and saved no page it also prints `WARNING crawl4ai unavailable: <reason>` and
+writes `crawl4ai_ok: false` with that reason into `pages\index.json` (the check in step 11 reads
+it). If fewer than five pages were saved, run one more search pass with new queries (P4 style) before you go on.
 
 ## 5. Extract evidence
 
@@ -247,6 +249,7 @@ error. Never edit the text yourself: you would break the checked fragments.
 - `save_pages.py` deduplicated five subpages of one doc to a single file because navigation and intro are identical -> `fetch_page.py` passes `dedupe=False`; when subpages of one doc share a header, check `pages/index.json` for collapsed pages.
 - A subagent cannot ask the user anything; a run once waited for a language choice that never came -> ask the languages in the main session before the first agent starts.
 - A change that touches more than 20 files was made without asking first (2026-10-19) -> ask the owner before such a change, not after.
+- Crawl4AI had been dead for two days (2026-10-25: the Playwright browser folder `ms-playwright` was empty) and every page silently went to the paid services -> `save_pages.py` now prints `WARNING crawl4ai unavailable: <reason>` and writes `crawl4ai_ok: false` into `pages/index.json`; the report names it in its first lines; the fix is `crawl4ai-setup`, and `morning.ps1` self-tests Crawl4AI every day.
 - The writer retyped a quote by one word and `check_article.py` failed the run after two repair rounds (2026-10-19) -> `fix_quotes.py` now replaces a fragment that is at least 90 % the same with the evidence's exact span before the check; the writer's exact-copy rule stays.
 - A key-point bullet said "gesetzlicher" where the fragment E67 read "gesetzlichen" and the run ended with one `check_article.py` error (2026-10-25) -> `fix_quotes.py` declares such a word in `forms`, but only for an ending variant (four shared first letters, one German ending of at most two letters, no digit); never widen it to `common.same_stem`, which also accepts zulässig/unzulässig, ein/kein and 20/120 and would let a reversed statement pass as checked.
 
@@ -274,7 +277,11 @@ check once more. Errors that stay, and the warnings, go into the report.
 
 ## 11. Report (chat, in the answer language, short)
 
-The path of the text; the languages used; the number of sources read and cited; where sources
+First, before anything else: if `pages\index.json` has `crawl4ai_ok: false` (or save_pages printed
+`WARNING crawl4ai unavailable`), the first lines say "Crawl4AI ausgefallen: <Grund>" (in an
+English answer "Crawl4AI unavailable: <reason>") with the reason from the file and the repair
+`crawl4ai-setup`. `check_services.py --workdir "<work folder>"` prints the same state as a line
+(`crawl4ai ok` / `crawl4ai UNAVAILABLE: <reason>`). Then: the path of the text; the languages used; the number of sources read and cited; where sources
 disagree; services that failed, needed the extra pass, or stayed missing (the call log decides);
 pages that could not be read; and one to three statements the user should check at the original
 if it matters (money, health, law, authorities: always say it). Name warnings that remained, the

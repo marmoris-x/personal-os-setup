@@ -937,14 +937,25 @@ try {
                                 Add-Manual 'run `crawl4ai-setup`, then `crawl4ai-doctor`, then install.ps1 -Resume'
                             }
                             else {
-                                $ver = ((& $crwl --version 2>&1 | Out-String) -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
-                                Add-Result 'crawl4ai' 'OK' ('crwl ready: ' + $ver + ' (' + $crwl + ')')
-                                # install resolves the file in <home>/.local/bin even when a
-                                # non-login PATH does not; a fresh shell still needs the dir.
-                                if (-not (Get-Command crwl -ErrorAction SilentlyContinue)) {
-                                    Add-Manual ('add ' + (Split-Path -Parent $crwl) + ' to PATH so a new shell finds crwl')
+                                # The exit code of crawl4ai-setup does not prove a browser can
+                                # start (2026-10-25: the browser folder was found empty after two
+                                # silent days). The self-test reads one real page; a failure stops
+                                # this step, and the journal stays open so -Resume runs it again.
+                                $selfTest = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path (Get-PlatformHome) '.claude/life-os/crawl4ai-selftest.ps1')
+                                if (-not $selfTest.Ok) {
+                                    Add-Result 'crawl4ai' 'ERROR' ('installed, but Crawl4AI does not work: ' + $selfTest.Line)
+                                    Add-Manual 'run `crawl4ai-setup`, then install.ps1 -Resume (the self-test must print crawl4ai=ok)'
                                 }
-                                Save-Journal 'crawl4ai'
+                                else {
+                                    $ver = ((& $crwl --version 2>&1 | Out-String) -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
+                                    Add-Result 'crawl4ai' 'OK' ('crwl ready: ' + $ver + ' (' + $crwl + '); self-test ok')
+                                    # install resolves the file in <home>/.local/bin even when a
+                                    # non-login PATH does not; a fresh shell still needs the dir.
+                                    if (-not (Get-Command crwl -ErrorAction SilentlyContinue)) {
+                                        Add-Manual ('add ' + (Split-Path -Parent $crwl) + ' to PATH so a new shell finds crwl')
+                                    }
+                                    Save-Journal 'crawl4ai'
+                                }
                             }
                         }
                     }

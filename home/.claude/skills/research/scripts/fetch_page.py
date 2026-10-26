@@ -408,7 +408,9 @@ def main(argv=None):
                 results[url] = text
                 remember(cache, url, path, method, chars)
         if pages:
-            for url, value in fetch_pages(pages, work).items():
+            fetched = fetch_pages(pages, work)
+            save_pages.print_crawl4ai_warning(work / "pages" / "index.json")
+            for url, value in fetched.items():
                 if isinstance(value, tuple):
                     text, info = value
                     path, method, chars = info

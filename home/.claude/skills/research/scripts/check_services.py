@@ -1,6 +1,7 @@
 """Count, from the harness transcripts, which of the nine search services a research run used.
 
 Usage: check_services.py [--keys] [--session-id ID] [--projects-dir DIR] [--transcript-dir DIR ...]
+                         [--workdir DIR ...]
 
 With --keys it lists each key the skill needs as "set" or "MISSING" and exits 0 only when
 all six are set. The research skill runs that at the start: a key that was added to the user
@@ -19,6 +20,12 @@ supposed to be called, so it is not missing. Serper is the reserve and is report
 "reserve": a run that does not need it is correct. Exit 0 when no callable service is
 missing, 1 when one is (the caller starts a small extra pass for it), 2 on input trouble.
 
+--workdir adds the Crawl4AI line, read from <DIR>/pages/index.json (written by save_pages.py):
+"crawl4ai ok", "crawl4ai UNAVAILABLE: <reason>" (it was asked and saved no page; the exit code
+is 1 only when --workdir is the sole input, because the search services' exit code means
+"start an extra pass", which cannot repair a browser), or "crawl4ai unknown" (the run never
+asked it, or the index is from before 2026-10-26). --workdir alone works without a session id.
+
 Tool call patterns: mcp__<server>__* for exa, exa-key, parallel, tavily, firecrawl,
 you-free and you; shell commands hitting api.search.tinyfish.ai or google.serper.dev
 for tinyfish and serper. A '-balance' tool call counts as no use. exa needs no key
@@ -31,6 +38,10 @@ import json
 import os
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from common import load_index  # noqa: E402
 
 SERVICES = ["exa", "parallel", "serper", "exa-key", "tavily", "you-free", "firecrawl",
             "tinyfish", "you"]
@@ -105,6 +116,21 @@ def find_files(projects_dir, session_id, transcript_dirs=()):
     return list(dict.fromkeys(files))
 
 
+def crawl4ai_lines(workdirs):
+    """(lines, any_unavailable) for the Crawl4AI report of the given work folders."""
+    lines, bad = [], False
+    for directory in workdirs:
+        _pages, ok, reason = load_index(Path(directory) / "pages" / "index.json")
+        if ok is True:
+            lines.append("crawl4ai ok")
+        elif ok is False:
+            lines.append(f"crawl4ai UNAVAILABLE: {reason}")
+            bad = True
+        else:
+            lines.append("crawl4ai unknown (no flag in pages/index.json)")
+    return lines, bad
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=(__doc__ or "").split("\n\n")[0])
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
@@ -112,6 +138,8 @@ def main(argv=None):
                         default=str(Path.home() / ".claude" / "projects"))
     parser.add_argument("--transcript-dir", action="append", default=[],
                         help="a Workflow run's transcriptDir (repeatable); its agent-*.jsonl files count too")
+    parser.add_argument("--workdir", action="append", default=[],
+                        help="a research work folder (repeatable); its pages/index.json gives the Crawl4AI line")
     parser.add_argument("--keys", action="store_true",
                         help="list each research key as set or MISSING and exit")
     args = parser.parse_args(argv)
@@ -124,6 +152,10 @@ def main(argv=None):
                 print(f"{name} MISSING")
                 missing.append(name)
         return 0 if not missing else 1
+    c4_lines, c4_bad = crawl4ai_lines(args.workdir)
+    if args.workdir and not args.session_id and not args.transcript_dir:
+        print("\n".join(c4_lines))
+        return 1 if c4_bad else 0
     if not args.session_id and not args.transcript_dir:
         print("ERROR no session id (pass --session-id or set CLAUDE_CODE_SESSION_ID, or --transcript-dir)")
         return 2
@@ -148,6 +180,8 @@ def main(argv=None):
     for service in SERVICES:
         label = "" if status[service] == "missing" else f" ({status[service]})"
         print(f"{service} {counts[service]}{label}")
+    for line in c4_lines:
+        print(line)
     missing = [service for service in SERVICES if status[service] == "missing"]
     if missing:
         print("missing: " + " ".join(missing))

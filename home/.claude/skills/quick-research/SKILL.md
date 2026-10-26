@@ -54,7 +54,9 @@ once more with fewer queries; if it fails again, say so and offer `research`.
 ## 3. Save the pages
 
 Run `python -I -X utf8 "${CLAUDE_SKILL_DIR}/../research/scripts/save_pages.py" "<work folder>"
---max-pages 15 --no-wayback`. Crawl4AI reads first; the services catch what it cannot. Never
+--max-pages 15 --no-wayback`. Crawl4AI reads first; the services catch what it cannot. If it
+prints `WARNING crawl4ai unavailable: <reason>` (also stored as `crawl4ai_ok: false` in
+`pages\index.json`), keep the reason: the answer names it in its first line (step 6). Never
 read a page yourself. A single page outside this batch goes through
 `fetch_page.py` (same scripts folder), never WebFetch or an MCP page reader; the fetch guard
 denies them. If fewer than 3 pages were saved, say so in one line and offer `research`.
@@ -77,7 +79,9 @@ the question and stop with that report (no text from memory).
 
 ## 6. Answer
 
-Five to fifteen lines in German. Every statement names its source as a link, taken from the
+If Crawl4AI was unavailable (the warning above, or `crawl4ai_ok: false` in `pages\index.json`),
+the first line says "Crawl4AI ausgefallen: <Grund> - Abhilfe: crawl4ai-setup". Then five to
+fifteen lines in German. Every statement names its source as a link, taken from the
 verified item's `url` and the page it sits on. Say plainly what the sources do not answer. No
 numbered reference list, no vault commit, no article checker: that is the `research` skill.
 
@@ -94,4 +98,5 @@ budget are what keeps a quick run cheap (arithmetic: `~/.claude/docs/agent-tooli
 
 - The skill promised "one fetch" but its Jina fallback was a second call -> say "one page"; a fallback of the same page is not a second fetch.
 - Measured runs took 2 to 7 minutes, not the 3 to 6 the skill stated -> do not promise a tighter range than the measurement; the budget is the limit, not a stopwatch.
+- Crawl4AI was dead for two days and nobody saw it (2026-10-25, empty Playwright browser folder) -> the first line of the answer names "Crawl4AI ausgefallen: <Grund>" whenever `pages/index.json` says `crawl4ai_ok: false`.
 - The old version was a two-search, one-page lookup and missed multi-source answers -> one search pass, 10 to 15 saved pages, one evidence extractor; never answer from memory.

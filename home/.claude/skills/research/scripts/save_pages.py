@@ -33,8 +33,8 @@ from urllib.parse import parse_qsl, quote, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import (DataError, clean_url, normalize, read_jsonl, read_page,  # noqa: E402
-                    untrusted_marker, utf8_output)
+from common import (DataError, clean_url, load_index, normalize, read_jsonl,  # noqa: E402
+                    read_page, untrusted_marker, utf8_output)
 
 MIN_CHARS = 200
 TYPE_RANK = {"primary": 0, "secondary": 1, "experience": 2}
@@ -401,19 +401,14 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
     # A URL that FAILED before is retried: its old index entry is replaced, never duplicated.
     previous, saved_urls, listed = [], set(), set()
     index_file = pages / "index.json"
-    if index_file.is_file():
-        try:
-            loaded = json.loads(index_file.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            loaded = None
-        if isinstance(loaded, list):
-            for item in loaded:
-                if isinstance(item, dict) and item.get("url"):
-                    previous.append(item)
-                    url = clean_url(str(item["url"])) or str(item["url"])
-                    listed.add(url)
-                    if item.get("status") == "saved":
-                        saved_urls.add(url)
+    loaded, previous_ok, previous_reason = load_index(index_file)
+    for item in loaded:
+        if isinstance(item, dict) and item.get("url"):
+            previous.append(item)
+            url = clean_url(str(item["url"])) or str(item["url"])
+            listed.add(url)
+            if item.get("status") == "saved":
+                saved_urls.add(url)
     fresh, retried = [], set()
     for cand in candidates:
         if cand["url"] in saved_urls:
@@ -432,12 +427,14 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
     errors = {u: [] for u in info}
     results, used = {}, {}
     dead = set()
+    crawl4ai_asked, venv_missing = False, False
     for name in ORDER:
         if name in KEYS and not _key(name):
             notes.append(f"{name}: no key in the environment, skipped")
             continue
         if name == "crawl4ai" and not find_crawl4ai_python():
             notes.append("crawl4ai: the Crawl4AI venv python was not found, skipped - install it with the setup")
+            crawl4ai_asked = venv_missing = True
             continue
         todo = [u for u in info if u not in results
                 and not (name not in PROVIDERS and is_reddit(u))]
@@ -445,6 +442,8 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
             todo = todo[:PAGE_CAP[name]]
         if not todo or name in dead:
             continue
+        if name == "crawl4ai":
+            crawl4ai_asked = True
         try:
             got = FETCHERS[name](todo, max_age_hours)
         except ServiceDown as exc:
@@ -526,9 +525,43 @@ def run(workdir, candidates_dir, max_pages, max_age_hours, ask_wayback=True, ded
         (pages / name).write_text(head + text.strip("\n") + "\n", encoding="utf-8", newline="\n")
         index.append({**entry, "status": "saved", "file": name, "method": used[url],
                       "chars": len(res["text"]), "title": fields["title"], "archive_url": archive_url})
-    (pages / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n",
+    # Crawl4AI must never fail silently (2026-10-25: its browser folder was empty for two days
+    # and every page went to the paid services). The flag is false when it was asked in this
+    # call and no page of the whole index came from it; one working page keeps it true. A page
+    # Crawl4AI returned that was then dropped as a duplicate still proves the reader works.
+    if any(i.get("status") == "saved" and i.get("method") == "crawl4ai" for i in index) \
+            or any(used.get(u) == "crawl4ai" for u in results):
+        crawl4ai_ok, crawl4ai_reason = True, None
+    elif crawl4ai_asked:
+        crawl4ai_ok = False
+        crawl4ai_reason = ("the Crawl4AI venv python was not found" if venv_missing
+                           else first_crawl4ai_error(errors.values()))
+    else:
+        crawl4ai_ok, crawl4ai_reason = previous_ok, previous_reason
+    document = {"crawl4ai_ok": crawl4ai_ok, "crawl4ai_reason": crawl4ai_reason, "pages": index}
+    (pages / "index.json").write_text(json.dumps(document, ensure_ascii=False, indent=1) + "\n",
                                       encoding="utf-8", newline="\n")
     return index, notes
+
+
+def first_crawl4ai_error(error_lists):
+    """The first Crawl4AI error text of a run as one short line (a Playwright error is a box of
+    several lines; the first line names the cause)."""
+    for attempts in error_lists:
+        for attempt in attempts:
+            if attempt.startswith("crawl4ai:"):
+                text = attempt.removeprefix("crawl4ai:").strip()
+                first = text.splitlines()[0].strip() if text else ""
+                return (first or "no reason given")[:200]
+    return "no reason given"
+
+
+def print_crawl4ai_warning(index_file):
+    """One line when the index says Crawl4AI was asked and gave no page. Returns True then."""
+    _pages, ok, reason = load_index(index_file)
+    if ok is False:
+        print(f"WARNING crawl4ai unavailable: {reason}")
+    return ok is False
 
 
 def main(argv=None):
@@ -548,6 +581,7 @@ def main(argv=None):
         return 1
     for note in notes:
         print("NOTE", note)
+    print_crawl4ai_warning(Path(args.workdir) / "pages" / "index.json")
     saved = [i for i in index if i["status"] == "saved"]
     for item in index:
         if item["status"] == "failed":

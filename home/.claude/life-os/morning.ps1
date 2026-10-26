@@ -21,6 +21,8 @@ param(
     [string]$DevRoot = '{{DEV}}\Projects',
     [string]$TrackerStatePath = "{{LIFEOS_STATE}}\projects-state.json",
     [string]$SeenPath = "{{LIFEOS_STATE}}\inbox-seen.json",
+    [string]$Crawl4AiVenvPython = '',
+    [string]$Crawl4AiFetchScript = '',
     [switch]$ForceAgent,
     [switch]$ForceWeekly
 )
@@ -154,6 +156,30 @@ try {
         Write-RunLog ('expiry skipped: python or expiry.py missing')
     }
 
+    # 1e. Crawl4AI self-test (token-free, 60 s limit): one small stable page through the same
+    # helper the research runs use. On 2026-10-25 its browser folder was found empty after two
+    # silent days; now a defect is a Morgenbericht line the same morning. The script writes the
+    # line itself and never starts the agent for it: the agent could not repair a browser.
+    $c4State = 'fail'
+    $selfTest = Join-Path $PSScriptRoot 'crawl4ai-selftest.ps1'
+    $c4Reason = 'crawl4ai-selftest.ps1 is missing'
+    if (Test-Path -LiteralPath $selfTest) {
+        $stArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $selfTest, '-TimeoutSeconds', '60')
+        if ($Crawl4AiVenvPython) { $stArgs += @('-VenvPython', $Crawl4AiVenvPython) }
+        if ($Crawl4AiFetchScript) { $stArgs += @('-FetchScript', $Crawl4AiFetchScript) }
+        $prevEA = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $stOut = @(& {{PWSH_HOST}} @stArgs 2>&1 | ForEach-Object { [string]$_ })
+        $stExit = $LASTEXITCODE
+        $ErrorActionPreference = $prevEA
+        $stLine = ($stOut | Where-Object { $_ -match '^crawl4ai=' } | Select-Object -Last 1)
+        if ($stExit -eq 0 -and $stLine -eq 'crawl4ai=ok') { $c4State = 'ok'; $c4Reason = '' }
+        elseif ($stLine -match '^crawl4ai=fail: (.*)$') { $c4Reason = $Matches[1] }
+        else { $c4Reason = 'self-test gave no result (exit ' + $stExit + ')' }
+    }
+    Write-RunLog ('crawl4ai self-test: ' + $c4State + $(if ($c4Reason) { ' - ' + $c4Reason } else { '' }))
+    if ($c4State -ne 'ok') { $extraHints += ('Crawl4AI defekt: ' + $c4Reason + ' - Abhilfe: crawl4ai-setup') }
+
     # 2. pre-check (owner's request 2026-10-08, narrowed 2026-10-25): the agent starts only when
     # there is something to ORDER, and the log says what. A hint that a script can write itself
     # (not committed, not pushed, a note about to expire, a transcription fallback, a failed
@@ -201,7 +227,7 @@ try {
             Write-RunLog 'project flag consumed'
         }
         Write-RunLog ('agent skipped: ' + $skipReason)
-        Append-Utf8 $runsLog ((Get-Date).ToString('s') + ' | morning | skip | ' + $skipReason + "`n")
+        Append-Utf8 $runsLog ((Get-Date).ToString('s') + ' | morning | skip | ' + $skipReason + ' | crawl4ai=' + $c4State + "`n")
         Write-RunLog ('vault: ' + (Save-VaultCommit -VaultPath $VaultPath -Message ('chore(morning): daily run ' + (Get-Date).ToString('yyyy-MM-dd'))))
         Write-RunLog 'run end: skip'
         exit 0
@@ -272,8 +298,9 @@ try {
             $isError = [bool]$res.is_error
             $turns = $res.num_turns
             $cost = $res.total_cost_usd
-            try { $costDs = Get-DeepSeekCost -Usage $res.usage -AtUtc ([datetime]::UtcNow) } catch { $costDs = '' }
-            if ("$costDs" -ne '') { $costDsText = ' cost_ds=' + ([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.######}', $costDs)) }
+            try { $costDs = Get-DeepSeekCost -ModelUsage $res.modelUsage -AtUtc ([datetime]::UtcNow) } catch { $costDs = '' }
+            if ("$costDs" -eq 'unknown') { $costDsText = ' cost_ds=unknown' }
+            elseif ("$costDs" -ne '') { $costDsText = ' cost_ds=' + ([string]::Format([Globalization.CultureInfo]::InvariantCulture, '{0:0.######}', $costDs)) }
             $resultText = [string]$res.result
             Write-RunLog ('agent result: is_error=' + $isError + ' subtype=' + $res.subtype +
                           ' turns=' + $turns + ' cost=' + $cost + $costDsText)
@@ -340,8 +367,8 @@ try {
     $firstLine = ''
     if ($resultText) { $firstLine = (($resultText -split "`r?`n") | Where-Object { $_.Trim() } | Select-Object -First 1) }
     if ($firstLine.Length -gt 150) { $firstLine = $firstLine.Substring(0, 150) }
-    if ($success) { $summary = 'turns=' + $turns + ' cost=' + $cost + $costDsText + ' | ' + $firstLine }
-    else { $summary = 'FAILED timedOut=' + $timedOut + ' exit=' + $exitText + ' | ' + $firstLine }
+    if ($success) { $summary = 'turns=' + $turns + ' cost=' + $cost + $costDsText + ' crawl4ai=' + $c4State + ' | ' + $firstLine }
+    else { $summary = 'FAILED timedOut=' + $timedOut + ' exit=' + $exitText + ' crawl4ai=' + $c4State + ' | ' + $firstLine }
 
     # 5. cleanup (only after a successful agent run may recordings leave the inbox)
     $cleanArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',

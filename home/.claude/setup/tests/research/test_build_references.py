@@ -178,6 +178,21 @@ class BuildReferences(unittest.TestCase):
         self.assertIn("Quellenart: Primärquelle.", article.split("<!-- references:start -->")[1])
         self.assertNotIn("no source type", out)
 
+    def test_source_type_is_read_from_the_index_in_object_form_too(self):
+        # since 2026-10-26 pages/index.json is {"crawl4ai_ok", "crawl4ai_reason", "pages": [...]}
+        page = self.work.path / "pages" / "001-example.org.md"
+        page.write_text("\n".join(line for line in page.read_text(encoding="utf-8").split("\n")
+                                  if not line.startswith("type:")), encoding="utf-8")
+        self.work.verified([{**E1, "type": ""}, {**E2, "type": ""}, {**E4, "type": ""}])
+        self.work.write("pages/index.json", json.dumps(
+            {"crawl4ai_ok": True, "crawl4ai_reason": None,
+             "pages": [{"url": "https://example.org/wien", "file": "001-example.org.md", "type": "primary"}]},
+            ensure_ascii=False) + "\n")
+        code, out, article = self.build()
+        self.assertEqual(code, 0, out)
+        self.assertIn("Quellenart: Primärquelle.", article.split("<!-- references:start -->")[1])
+        self.assertNotIn("no source type", out)
+
     def test_no_source_type_anywhere_warns_and_leaves_the_label_out(self):
         page = self.work.path / "pages" / "001-example.org.md"
         page.write_text("\n".join(line for line in page.read_text(encoding="utf-8").split("\n")

@@ -337,6 +337,27 @@ function Get-PlatformPathSeparator {
     return '/'
 }
 
+function Invoke-Crawl4AiSelfTest {
+    # Runs crawl4ai-selftest.ps1 (token-free: one small page through the Crawl4AI helper, 60 s
+    # limit) and returns @{ Ok; Line }. Line is the script's one output line, "crawl4ai=ok" or
+    # "crawl4ai=fail: <reason>". Why the install stage asks it: the exit code of crawl4ai-setup
+    # does not prove that a browser can start (2026-10-25: the browser folder was empty for two
+    # days and nothing said so). ExtraArgs reach the script, so a test can hand it a stand-in.
+    [CmdletBinding()]
+    param([string]$ScriptPath, [string[]]$ExtraArgs = @())
+    if (-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)) {
+        return [pscustomobject]@{ Ok = $false; Line = ('crawl4ai-selftest.ps1 was not found at ' + $ScriptPath) }
+    }
+    $shell = (Get-Process -Id $PID).Path
+    $shellArgs = @('-NoProfile')
+    if ((Get-PlatformId) -eq 'windows') { $shellArgs += @('-ExecutionPolicy', 'Bypass') }
+    $out = @(& $shell @shellArgs -File $ScriptPath @ExtraArgs 2>&1 | ForEach-Object { [string]$_ })
+    $code = $LASTEXITCODE
+    $line = [string](@($out | Where-Object { $_ -match '^crawl4ai=' }) | Select-Object -Last 1)
+    if (-not $line) { $line = 'crawl4ai=fail: the self-test printed no result (exit ' + $code + ')' }
+    return [pscustomobject]@{ Ok = (($code -eq 0) -and ($line -eq 'crawl4ai=ok')); Line = $line }
+}
+
 function Get-PlatformToolDirs {
     # Where an install puts programs that no package manager owns, and where a login session has
     # them on PATH while a CI step does not:

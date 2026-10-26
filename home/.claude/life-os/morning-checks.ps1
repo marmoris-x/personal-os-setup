@@ -13,31 +13,58 @@
 $script:BlockBegin = '<!-- morning.ps1 -->'
 $script:BlockEnd = '<!-- /morning.ps1 -->'
 
-# What the morning run really costs. Claude Code's total_cost_usd uses Anthropic list prices; the
-# agent runs on deepseek-flash, so cost_ds is computed from the result's token counts instead.
-# Prices per 1M tokens, the one place they live. Peak: 01:00-04:00 and 06:00-10:00 UTC, Monday to
-# Friday (Chinese public holidays are not modelled); every other hour is off-peak.
+# What the morning run really costs. Claude Code's total_cost_usd (the run log's cost=) is NOT
+# what DeepSeek bills: it prices the tokens at Anthropic list prices. cost_ds is computed from the
+# result's modelUsage instead, one entry per model, each model with its own DeepSeek rates.
+# Prices per 1M tokens, the one place they live (read 2026-10-26 from Source). Peak: 01:00-04:00
+# and 06:00-10:00 UTC, Monday to Friday (Chinese public holidays are not modelled); every other
+# hour is off-peak. Models and Aliases: a model name that is in neither has no known price.
 $script:DeepSeekPrices = @{
     Source  = 'https://api-docs.deepseek.com/quick_start/pricing'
-    Read    = '2026-10-25'
-    Model   = 'deepseek-flash'
-    OffPeak = @{ Hit = 0.003; Miss = 0.15; Output = 0.60 }
-    Peak    = @{ Hit = 0.006; Miss = 0.30; Output = 1.20 }
+    Read    = '2026-10-26'
+    Models  = @{
+        'deepseek-flash'  = @{
+            OffPeak = @{ Hit = 0.003; Miss = 0.15; Output = 0.60 }
+            Peak    = @{ Hit = 0.006; Miss = 0.30; Output = 1.20 }
+        }
+        'deepseek-v4-pro' = @{
+            OffPeak = @{ Hit = 0.022; Miss = 0.66; Output = 1.98 }
+            Peak    = @{ Hit = 0.044; Miss = 1.32; Output = 3.96 }
+        }
+    }
+    # retired names that DeepSeek still accepts and bills at the Flash price (footnote 1 of the page)
+    Aliases = @{
+        'deepseek-v4-flash'              = 'deepseek-flash'
+        'deepseek-v4-flash-vision-exp'   = 'deepseek-flash'
+    }
 }
 
-function Get-DeepSeekCost($Usage, [datetime]$AtUtc) {
-    # USD rounded to 6 places, or '' when the result carries no usage. A cache hit is
-    # cache_read_input_tokens; everything else sent as input (new and cache-creation tokens) is a miss.
-    if ($null -eq $Usage) { return '' }
+function Get-DeepSeekCost($ModelUsage, [datetime]$AtUtc) {
+    # USD rounded to 6 places for the whole run; '' when the result has no modelUsage; 'unknown'
+    # when any model in it has no known price (never a guess, never a partial sum). A cache hit is
+    # cacheReadInputTokens; everything else sent as input (new and cache-creation tokens) is a miss.
+    # The model key may carry a context tag ("deepseek-flash[1m]"), which is not part of the name.
+    # The rate (peak or off-peak) is the one of $AtUtc, the end of the run.
+    if ($null -eq $ModelUsage) { return '' }
+    $entries = @($ModelUsage.PSObject.Properties)
+    if ($entries.Count -eq 0) { return '' }
     $t = $AtUtc.ToUniversalTime()
     $hour = $t.Hour
     $weekday = $t.DayOfWeek -ne [DayOfWeek]::Saturday -and $t.DayOfWeek -ne [DayOfWeek]::Sunday
     $peak = $weekday -and (($hour -ge 1 -and $hour -lt 4) -or ($hour -ge 6 -and $hour -lt 10))
-    if ($peak) { $p = $script:DeepSeekPrices.Peak } else { $p = $script:DeepSeekPrices.OffPeak }
-    $hit = [double]$Usage.cache_read_input_tokens
-    $miss = [double]$Usage.input_tokens + [double]$Usage.cache_creation_input_tokens
-    $out = [double]$Usage.output_tokens
-    $usd = ($hit * $p.Hit + $miss * $p.Miss + $out * $p.Output) / 1000000
+    $usd = 0.0
+    foreach ($entry in $entries) {
+        $name = ([regex]::Replace([string]$entry.Name, '\[[^\]]*\]\s*$', '')).Trim().ToLowerInvariant()
+        if ($script:DeepSeekPrices.Aliases.ContainsKey($name)) { $name = $script:DeepSeekPrices.Aliases[$name] }
+        if (-not $script:DeepSeekPrices.Models.ContainsKey($name)) { return 'unknown' }
+        $model = $script:DeepSeekPrices.Models[$name]
+        if ($peak) { $p = $model.Peak } else { $p = $model.OffPeak }
+        $u = $entry.Value
+        $hit = [double]$u.cacheReadInputTokens
+        $miss = [double]$u.inputTokens + [double]$u.cacheCreationInputTokens
+        $out = [double]$u.outputTokens
+        $usd += ($hit * $p.Hit + $miss * $p.Miss + $out * $p.Output) / 1000000
+    }
     return [math]::Round($usd, 6)
 }
 

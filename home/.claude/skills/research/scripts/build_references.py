@@ -25,8 +25,8 @@ from urllib.parse import quote, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import (MARKER_RE, DataError, clean_url, load_evidence, normalize,  # noqa: E402
-                    plain_markdown, read_page, strip_tracking, utf8_output)
+from common import (MARKER_RE, DataError, clean_url, load_evidence, load_index,  # noqa: E402
+                    normalize, plain_markdown, read_page, strip_tracking, utf8_output)
 
 LABELS = {
     "en": {"title": "References", "no_date": "no date", "accessed": "Accessed", "archive": "Archive",
@@ -209,11 +209,9 @@ def page_types(work, labels):
     by_file, by_url = {}, {}
     index = work / "pages" / "index.json"
     if index.exists():
-        try:
-            data = json.loads(index.read_text(encoding="utf-8"))
-        except (ValueError, OSError):
-            data = []
-        for entry in data if isinstance(data, list) else []:
+        for entry in load_index(index)[0]:
+            if not isinstance(entry, dict):
+                continue
             kind = entry.get("type")
             kind = kind.strip().casefold() if isinstance(kind, str) else ""
             if kind in labels:

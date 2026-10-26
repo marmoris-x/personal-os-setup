@@ -125,6 +125,50 @@ class CheckServices(unittest.TestCase):
         self.assertEqual(code, 1, out)
         self.assertIn("you 0", out)
 
+    # --- Crawl4AI is reported like a service, read from pages/index.json of the work folder
+
+    def run_check_with_workdir(self, index_text):
+        work = Path(self._tmp.name) / "work"
+        (work / "pages").mkdir(parents=True, exist_ok=True)
+        if index_text is not None:
+            (work / "pages" / "index.json").write_text(index_text, encoding="utf-8")
+        env = dict(self.env)
+        env.update(ALL_KEYS)
+        self.main.write_text(tool_line("mcp__exa__web_search_exa") + "\n", encoding="utf-8")
+        return run_script("check_services.py", "--session-id", self.session,
+                          "--projects-dir", str(self.projects), "--workdir", work, env=env)
+
+    def test_crawl4ai_ok_is_reported_from_the_index(self):
+        code, out = self.run_check_with_workdir(json.dumps({"crawl4ai_ok": True, "crawl4ai_reason": None, "pages": []}))
+        self.assertIn("crawl4ai ok", out.splitlines())
+        self.assertNotIn("UNAVAILABLE", out)
+
+    def test_crawl4ai_unavailable_is_reported_with_its_reason_and_goes_red(self):
+        index = json.dumps({"crawl4ai_ok": False, "crawl4ai_reason": "Executable doesn't exist", "pages": []})
+        code, out = self.run_check_with_workdir(index)
+        self.assertIn("crawl4ai UNAVAILABLE: Executable doesn't exist", out.splitlines())
+        self.assertEqual(code, 1, out)  # the search services missing are also red here, so look at the line
+
+    def test_crawl4ai_alone_is_red_exactly_when_unavailable(self):
+        work = Path(self._tmp.name) / "only"
+        (work / "pages").mkdir(parents=True)
+        index = work / "pages" / "index.json"
+        for payload, want_code, want_line in (
+                ({"crawl4ai_ok": False, "crawl4ai_reason": "boom", "pages": []}, 1, "crawl4ai UNAVAILABLE: boom"),
+                ({"crawl4ai_ok": True, "crawl4ai_reason": None, "pages": []}, 0, "crawl4ai ok"),
+                ({"crawl4ai_ok": None, "crawl4ai_reason": None, "pages": []}, 0, "crawl4ai unknown"),
+                ([], 0, "crawl4ai unknown")):  # an index of an older run has no flag
+            index.write_text(json.dumps(payload), encoding="utf-8")
+            env = {k: v for k, v in self.env.items() if k != "CLAUDE_CODE_SESSION_ID"}
+            code, out = run_script("check_services.py", "--workdir", work, env=env)
+            first = out.strip().splitlines()[0]
+            self.assertEqual(code, want_code, out)
+            self.assertTrue(first == want_line or first.startswith(want_line + " ("), out)
+
+    def test_crawl4ai_without_an_index_is_unknown_not_ok(self):
+        code, out = self.run_check_with_workdir(None)
+        self.assertTrue(any(line.startswith("crawl4ai unknown") for line in out.splitlines()), out)
+
     def test_keys_mode_lists_each_key_as_set(self):
         # The research skill calls this at the start: a missing key must be visible there,
         # not only at the end when a pass silently skipped a service.

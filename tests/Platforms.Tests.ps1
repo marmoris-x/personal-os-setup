@@ -560,3 +560,54 @@ Describe 'the Life OS python resolver (Get-PlatformLifeOsPython)' {
         if (Test-Path -LiteralPath $script:fakeDir) { Remove-Item -LiteralPath $script:fakeDir -Recurse -Force }
     }
 }
+
+# The install stage of Crawl4AI proves the result with crawl4ai-selftest.ps1 (2026-10-26: the
+# browser folder was found empty after two silent days). The helper is the part install.ps1
+# calls; the stand-ins below play the Crawl4AI venv python, so nothing real is started.
+Describe 'Invoke-Crawl4AiSelfTest' {
+    BeforeAll {
+        $script:selfTest = Join-Path $repoRoot 'home/.claude/life-os/crawl4ai-selftest.ps1'
+        $script:stubDir = Join-Path ([IO.Path]::GetTempPath()) ('c4-stub-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        New-Item -ItemType Directory -Force -Path $script:stubDir | Out-Null
+        $script:stubFetch = Join-Path $script:stubDir 'crawl4ai_fetch.py'
+        [IO.File]::WriteAllText($script:stubFetch, "# stand-in`n")
+        function New-StubPython([string]$name, [string]$json) {
+            # Called as "<stub> <fetch script> <urls.json> <out.jsonl> --timeout N ...": the third argument is the output file.
+            if ((Get-PlatformId) -eq 'windows') {
+                $p = Join-Path $script:stubDir ($name + '.cmd')
+                [IO.File]::WriteAllText($p, "@echo off`r`necho $json> %3`r`n")
+            } else {
+                $p = Join-Path $script:stubDir ($name + '.sh')
+                [IO.File]::WriteAllText($p, "#!/bin/sh`necho '$json' > `"`$3`"`n")
+                & chmod +x $p
+            }
+            return $p
+        }
+        $script:okPython = New-StubPython 'ok' '{"url":"https://example.com/","ok":true,"status":200,"markdown":"Example Domain"}'
+        $script:badPython = New-StubPython 'bad' '{"url":"https://example.com/","ok":false,"status":null,"error":"Error: browser missing"}'
+    }
+    AfterAll {
+        if ($script:stubDir -and (Test-Path -LiteralPath $script:stubDir)) { Remove-Item -LiteralPath $script:stubDir -Recurse -Force }
+    }
+
+    It 'is Ok when the self-test reads the page' {
+        $r = Invoke-Crawl4AiSelfTest -ScriptPath $script:selfTest -ExtraArgs @('-VenvPython', $script:okPython, '-FetchScript', $script:stubFetch)
+        $r.Ok | Should -BeTrue -Because $r.Line
+        $r.Line | Should -BeExactly 'crawl4ai=ok'
+    }
+    It 'is not Ok, and carries the reason, when the browser does not work' {
+        $r = Invoke-Crawl4AiSelfTest -ScriptPath $script:selfTest -ExtraArgs @('-VenvPython', $script:badPython, '-FetchScript', $script:stubFetch)
+        $r.Ok | Should -BeFalse
+        $r.Line | Should -BeExactly 'crawl4ai=fail: Error: browser missing'
+    }
+    It 'is not Ok when the venv python path is wrong (nothing is deleted to simulate it)' {
+        $r = Invoke-Crawl4AiSelfTest -ScriptPath $script:selfTest -ExtraArgs @('-VenvPython', (Join-Path $script:stubDir 'no-such-python'), '-FetchScript', $script:stubFetch)
+        $r.Ok | Should -BeFalse
+        $r.Line | Should -Match '^crawl4ai=fail: the Crawl4AI venv python was not found'
+    }
+    It 'is not Ok when the self-test script itself is missing' {
+        $r = Invoke-Crawl4AiSelfTest -ScriptPath (Join-Path $script:stubDir 'gone.ps1')
+        $r.Ok | Should -BeFalse
+        $r.Line | Should -Match 'crawl4ai-selftest\.ps1 was not found'
+    }
+}
