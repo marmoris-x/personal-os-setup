@@ -269,8 +269,12 @@ outside the backup; on macOS and Linux it sits where Playwright's own default si
 `Get-PlatformCrawl4AiBrowsersDir` in `setup/lib/platform.ps1` give the same answer, which
 `tests/Platforms.Tests.ps1` compares; `CRAWL4AI_BROWSERS_PATH` replaces both.
 
-Consequence: a bare `crawl4ai-setup` fills the shared folder and does not help; the remedy in
-the Morgenbericht line and in the install notes names the variable (or `install.ps1 -Resume`).
+Consequence: a bare `crawl4ai-setup` fills the shared folder and does not help. Every remedy text
+(skills, `verify.ps1`, the install notes, the morning report line) therefore names one command,
+`~/.claude/life-os/crawl4ai-repair.ps1`: it sets the variable for the setup call, runs the
+self-test and exits 0 only when the self-test passes. The morning run calls it once by itself
+when the self-test fails (10 minute limit) and reports the result; the agent does not start for
+it.
 Measured on 2026-10-26: with the new folder still empty the self-test failed with
 `Executable doesn't exist at ...\crawl4ai-browsers\...`, although `ms-playwright` held the
 browser; after the install into the new folder it printed `crawl4ai=ok`, and it still did with
