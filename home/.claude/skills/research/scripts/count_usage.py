@@ -18,22 +18,28 @@ Prior art: ccusage keeps the most complete line per key
 the deduplicated sum, so the difference stays visible. Every measurement uses this script.
 
 Cache misses are split into three kinds, per transcript file and model in time order (a model
-switch inside one file starts a new cold cache). A miss is the
-uncached part of a prompt (input + cache_write). cold_start: the first request of a file or model,
-the cache is empty. prefix_break: a later request whose cache_read is below 90 % of the previous
-request's whole prompt; the shortfall (at most its misses) is the break. new_content: every
-other miss, text that was appended since the previous request.
+switch inside one file starts a new chain). A miss is the uncached part of a prompt
+(input + cache_write). cold_start: the first request of a chain; its prompt is not cached
+yet (a shared prefix such as the system prompt may still be read from the cache, so only the
+miss tokens count). prefix_break: a later request whose cache_read is below 90 % of the
+previous request's whole prompt; the shortfall (at most its misses) is the break. It has no
+time criterion: a cache that expired during a pause is a break too, so read it as "the cache
+did not carry over", not as "the prefix changed". new_content: every other miss, text that
+was appended since the previous request.
 
 Rows are grouped by agent type and model. The agent type is "main" for a session transcript
 and the agentType of the sibling agent-*.meta.json for an agent transcript. A request's
-time is the timestamp of its first line. --since and --until take a UTC date (YYYY-MM-DD,
-the whole day) or a UTC time (YYYY-MM-DDTHH:MM[:SS]); both ends are inclusive. Pass a session
-file instead of its folder to count the main session alone.
+time is the timestamp of its first line; a request without a timestamp is priced at peak.
+--since and --until take a UTC date (YYYY-MM-DD, the whole day) or a UTC time
+(YYYY-MM-DDTHH:MM[:SS]); both ends are inclusive and decide by that first line, so a request
+is kept or dropped whole. Pass a session file instead of its folder to count the main
+session alone.
 
 USD is priced at each request's own time; USD@peak prices every request at peak rates, the
 worst case that the research cost limit and the earlier ADR 0018 tables use.
 Prices are DeepSeek's, per 1M tokens, https://api-docs.deepseek.com/quick_start/pricing
-(read 2026-10-27). Peak is 01:00-04:00 and 06:00-10:00 UTC, Monday to Friday; the page also
+(read 2026-10-27); one price table for every date, so an old request is priced at today's
+rates. Peak is 01:00-04:00 and 06:00-10:00 UTC, Monday to Friday; the page also
 excludes Chinese public holidays, which this script cannot know: pass them as --offpeak-date.
 cache_write is priced like a cache miss (DeepSeek reports none). Only DeepSeek models are
 priced. A model starting with claude- is Anthropic: tokens, no USD. Any other model is
@@ -95,7 +101,9 @@ def parse_bound(text, end):
 
 
 def is_peak(moment, offpeak_dates):
-    if moment is None or moment.weekday() > 4 or moment.date().isoformat() in offpeak_dates:
+    if moment is None:
+        return True  # no timestamp: the worst case, never a cheaper guess
+    if moment.weekday() > 4 or moment.date().isoformat() in offpeak_dates:
         return False
     return any(moment.hour in hours for hours in PEAK_HOURS)
 
@@ -239,9 +247,7 @@ def count(files, since, until, offpeak_dates):
     requests = {}  # key -> kept request
     raw_lines = []
     for chain, agent, model, key, moment, tokens in read_lines(files):
-        if moment and ((since and moment < since) or (until and moment > until)):
-            continue
-        raw_lines.append((model, moment, tokens))
+        raw_lines.append((key, model, moment, tokens))
         kept = requests.get(key)
         if kept is None:
             requests[key] = {"agent": agent, "model": model, "moment": moment, "tokens": tokens,
@@ -252,12 +258,19 @@ def count(files, since, until, offpeak_dates):
         if tokens["output"] > kept["tokens"]["output"]:
             kept.update(agent=agent, model=model, tokens=tokens)
 
+    # Miss kinds look at the request before in its file, so classify before the window cuts.
+    # The window keeps or drops a whole request, by its first line, never half of one.
+    classify_misses(requests.values())
+    requests = {key: request for key, request in requests.items()
+                if not request["moment"] or not ((since and request["moment"] < since)
+                                                 or (until and request["moment"] > until))}
+    raw_lines = [line for line in raw_lines if line[0] in requests]
+
     raw = empty_totals()
     raw["lines"] = len(raw_lines)
-    for model, moment, tokens in raw_lines:
+    for _key, model, moment, tokens in raw_lines:
         add(raw, tokens, model, moment, offpeak_dates)
 
-    classify_misses(requests.values())
     dedup = empty_totals()
     rows = {}
     for request in requests.values():

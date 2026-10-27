@@ -14,7 +14,7 @@ answers it with one or two searches.
 ## Level: deep
 
 Research runs **deep** until the standard level is fixed (owner decision 2026-10-19: standard
-had 4 errors and 0.55 USD, almost the cost of deep). The standard branch stays in the
+had 4 errors and 0.55 USD, about four fifths of the cost of deep). The standard branch stays in the
 workflow for a later measurement but is not selectable.
 
 - **deep** runs P1 to P4; P4 is skipped when P1 to P3 already gave at least 25 unique

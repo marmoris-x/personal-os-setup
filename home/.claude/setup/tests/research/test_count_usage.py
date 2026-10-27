@@ -194,6 +194,82 @@ class CountUsage(unittest.TestCase):
         self.assertEqual(misses["prefix_break"]["tokens"], 0)
         self.assertEqual(misses["new_content"]["tokens"], 10)
 
+    def test_the_same_message_with_two_request_ids_counts_twice(self):
+        self.write(self.session, [line("m1", "r1", 5), line("m1", "r2", 5)])
+        self.assertEqual(self.run_json()["dedup"]["requests"], 2)
+
+    def test_every_peak_edge_and_the_weekend(self):
+        cases = [("2026-10-27T00:59:59.000Z", 0.15), ("2026-10-27T06:00:00.000Z", 0.3),
+                 ("2026-10-27T09:59:59.000Z", 0.3), ("2026-10-27T05:30:00.000Z", 0.15),
+                 ("2026-10-23T{{MORNING_TIME}}:00.000Z", 0.3),   # Friday
+                 ("2026-10-24T{{MORNING_TIME}}:00.000Z", 0.15)]  # Saturday
+        self.write(self.session, [line(f"m{i}", f"r{i}", 0, inp=MILLION, ts=ts)
+                                  for i, (ts, _) in enumerate(cases)])
+        self.assertAlmostEqual(self.run_json()["dedup"]["usd"], sum(usd for _, usd in cases))
+
+    def test_a_request_without_a_timestamp_is_priced_at_peak(self):
+        record = json.loads(line("m1", "r1", 0, inp=MILLION, ts=TUESDAY_OFF))
+        del record["timestamp"]
+        self.write(self.session, [json.dumps(record)])
+        self.assertAlmostEqual(self.run_json()["dedup"]["usd"], 0.3)
+
+    def test_prefix_break_is_the_shortfall_and_the_ninety_percent_edge_holds(self):
+        self.write(self.session, [
+            line("m1", "r1", 1, inp=1000, ts="2026-10-27T11:00:00.000Z"),
+            line("m2", "r2", 1, inp=100, hit=1000, ts="2026-10-27T11:01:00.000Z"),   # prompt 1100
+            line("m3", "r3", 1, inp=1700, hit=300, write=300, ts="2026-10-27T11:02:00.000Z"),
+            line("m4", "r4", 1, inp=10, hit=2070, ts="2026-10-27T11:03:00.000Z"),    # prompt 2300
+            line("m5", "r5", 1, inp=10, hit=2069, ts="2026-10-27T11:04:00.000Z"),    # prompt 2079
+            line("m6", "r6", 1, inp=100, hit=0, ts="2026-10-27T11:05:00.000Z"),      # context shrank
+        ])
+        misses = self.run_json()["dedup"]["misses"]
+        # r3: expected 1100, cache_read 300 is below 990, shortfall 800, misses 1700 + 300 = 2000
+        # r4: expected 2300, cache_read 2070 is exactly 90 %, no break
+        # r5: expected 2080, cache_read 2069 is above 90 %, no break
+        # r6: expected 2079, cache_read 0, shortfall 2079 but only 100 misses: the break is 100
+        self.assertEqual(misses["prefix_break"]["tokens"], 800 + 100)
+        self.assertEqual(misses["prefix_break"]["requests"], 2)
+        self.assertEqual(misses["new_content"]["tokens"], 100 + (2000 - 800) + 10 + 10)
+        self.assertEqual(misses["cold_start"]["tokens"], 1000)
+
+    def test_provider_totals_and_the_plain_table(self):
+        self.write(self.session, [line("m1", "r1", 4, inp=10, hit=90),
+                                  line("m2", "r2", 6, model="claude-sonnet-5-5", inp=1, hit=9)])
+        data = self.run_json()
+        self.assertEqual(data["providers"]["deepseek"]["requests"], 1)
+        self.assertEqual(data["providers"]["anthropic"]["requests"], 1)
+        self.assertAlmostEqual(data["providers"]["deepseek"]["hit_rate"], 0.9)
+        self.assertEqual(data["providers"]["anthropic"]["usd"], 0)
+        code, out = run_script("count_usage.py", self.root)
+        self.assertEqual(code, 0, out)
+        for text in ("agent", "USD@peak", "raw line sum", "deduplicated", "provider deepseek",
+                     "provider anthropic", "misses deepseek"):
+            self.assertIn(text, out)
+
+    def test_since_includes_its_own_instant_and_a_request_is_kept_or_dropped_whole(self):
+        self.write(self.session, [
+            line("m1", "r1", 1, ts="2026-10-20T08:00:00.000Z"),   # exactly --since: kept
+            line("m2", "r2", 2, ts="2026-10-20T07:59:59.000Z"),   # first line before --since: dropped
+            line("m2", "r2", 9, ts="2026-10-20T08:00:05.000Z"),   # ... with all its lines
+            line("m3", "r3", 3, ts="2026-10-20T08:59:00.000Z"),   # first line inside --until: kept
+            line("m3", "r3", 7, ts="2026-10-20T09:00:30.000Z"),   # ... with its later line
+        ])
+        data = self.run_json("--since", "2026-10-20T08:00:00", "--until", "2026-10-20T09:00:00")
+        self.assertEqual(data["dedup"]["requests"], 2)
+        self.assertEqual(data["dedup"]["output"], 1 + 7)
+        self.assertEqual(data["raw"]["lines"], 3)
+
+    def test_the_window_does_not_turn_a_later_request_into_a_cold_start(self):
+        self.write(self.session, [line("m1", "r1", 1, inp=500, ts="2026-10-19T11:00:00.000Z"),
+                                  line("m2", "r2", 1, inp=40, hit=500, ts="2026-10-20T11:00:00.000Z")])
+        misses = self.run_json("--since", "2026-10-20")["dedup"]["misses"]
+        self.assertEqual(misses["cold_start"]["tokens"], 0)
+        self.assertEqual(misses["new_content"]["tokens"], 40)
+
+    def test_an_agent_file_without_a_meta_file_is_called_agent(self):
+        self.write(self.root / "session" / "subagents" / "agent-zzz.jsonl", [line("m1", "r1", 3)])
+        self.assertEqual([row["agent"] for row in self.run_json()["rows"]], ["agent"])
+
     def test_offpeak_date_makes_a_holiday_cheap(self):
         self.write(self.session, [line("m1", "r1", 0, inp=MILLION, ts=TUESDAY_PEAK)])
         data = self.run_json("--offpeak-date", "2026-10-27")

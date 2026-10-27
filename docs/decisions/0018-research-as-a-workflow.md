@@ -84,8 +84,9 @@ too small for a workflow to pay off. `batch-run.ps1` stays harness-independent.
 Claude Code writes one model response as several transcript lines, one per content block
 (thinking, text, tool_use), and every line carries the full `usage` of the request. This ADR
 first summed every line for the agents, so each request was counted about 2.7 times. The
-2026-10-27 measurement found it: agent tokens were 63 to 67 % too high and agent USD at peak
-price 42 to 46 % too high. ClaudeBar counted 4 times for the same reason
+2026-10-27 measurement found it: the per-line sums were 2.7 to 3.3 times the real figures. Counted
+per request, the lean runs' agent tokens are 63 to 67 % lower and their agent USD at peak price
+42 to 46 % lower. ClaudeBar counted 4 times for the same reason
 (https://github.com/tddworks/ClaudeBar/issues/207); ccusage keeps the most complete line per
 key, because `output_tokens` grows while streaming and the input and cache fields are identical
 (https://github.com/ccusage/ccusage/issues/938).
@@ -93,7 +94,7 @@ key, because `output_tokens` grows while streaming and the input and cache field
 Rule: one request is one key, (`message.id`, `requestId`), or `message.id` alone when a line has
 no `requestId`; per key the line with the highest `output_tokens` counts. Every measurement uses
 `~/.claude/skills/research/scripts/count_usage.py`. It reads a session transcript, its
-`subagentsgent-*.jsonl` and a Workflow run's `transcriptDir`, prints the raw line sum next to
+`subagents/agent-*.jsonl` and a Workflow run's `transcriptDir`, prints the raw line sum next to
 the deduplicated sum, prices each request with DeepSeek's rates by its own time (peak 01:00 to
 04:00 and 06:00 to 10:00 UTC, Monday to Friday,
 https://api-docs.deepseek.com/quick_start/pricing, read 2026-10-27), and also prints `USD@peak`,
@@ -103,10 +104,11 @@ model is `unknown`. It also splits cache misses into cold start, new content and
 
 Every agent-token and cost figure below was recomputed from the transcripts that still exist.
 The main-session figure of a run is the deduplicated sum of the main session's requests from the
-first to the last line of the run's agents; the earlier main-session figures used slightly
-different windows and could not be reproduced exactly for the standard, deep and run 2 rows
-(run 1's old figure, 380,606, is reproduced as the raw line sum of this window). The two
-main-session figures of the first comparison table are whole sessions. The cost
+first to the last line of the run's agents. The raw line sums of that window reproduce the earlier
+main-session figures exactly (13,411,162, 1,196,998, 380,606 and 1,163,812), so the window is the
+one the earlier tables used; the earlier "6,202,712 deduplicated by message id" of the standard
+run equals the corrected figure. The two main-session figures of the first comparison table are
+whole sessions (their raw line sums, 22,158,573 and 576,070, are reproduced as well). The cost
 figures of the tables are USD at DeepSeek's peak rates. The old figures stay here as history:
 
 | Run | Agent tokens, counted per line | Agent tokens, counted per request | Agent USD at peak, per line | Agent USD at peak, per request |
@@ -179,12 +181,12 @@ candidates from 8 domains; P4 skipped) and ran the gap pass. All agents ran on
 | Duration | 21.9 min | 19.6 min |
 | Agents | 10 (2 search, 1 save, 2 extract, 1 verify, 1 writer, 1 repair, 2 check) | 15 (P1-P3 + gap, 1 save, 5 extract, 1 verify, 1 writer, 1 repair, 2 check) |
 | Agent tokens | 3,626,032 (input 505,304 + cache_read 2,864,256 + output 256,472) | 7,634,512 (input 690,947 + cache_read 6,571,136 + output 372,429) |
-| Main-session tokens | 6,536,063 | 743,657 |
-| Total tokens | 10,162,095 | 8,378,169 |
+| Main-session tokens | 6,202,712 | 598,499 |
+| Total tokens | 9,828,744 | 8,233,011 |
 | Pages | 14 unique, 0 duplicates (15 candidates, 1 failed) | 34 unique, 0 duplicates |
 | Verified evidence | 35 (23 exact, 12 markdown-stripped) | 85 |
 | `check_article.py` | 4 errors, 8 warnings, 1 repair round (11 -> 4) | 0 errors, 0 warnings, 1 repair round (3 -> 0) |
-| Cost at peak `deepseek-flash` | 0.5480 USD (agents 0.4765; main 0.0714) | 0.7058 USD (agents 0.6936; main 0.0122) |
+| Cost at peak `deepseek-flash` | 0.5451 USD (agents 0.4765; main 0.0685) | 0.7018 USD (agents 0.6936; main 0.0082) |
 
 The standard answer and the deep answer both state 0.50 Euro per car kilometre, 0.25 Euro
 for motorcycle and bicycle and 0.15 Euro per passenger.
@@ -196,8 +198,9 @@ for the accepted workflow. The owner later set the deep cost limit to **1.50 USD
 `deepseek-flash` price: the two corrected runs below differ by 0.12 USD, so the 0.03 USD miss
 against the earlier 1.40 USD estimate is within run-to-run noise; the quality criteria are
 unchanged. Standard is off: 4 errors and 1.0027 USD, almost the cost of deep. (These figures are
-the line-counted ones of the day. Counted per request, deep is 8.4M tokens and 0.71 USD, standard
-10.2M and 0.55 USD, the accepted workflow 1.13 USD; the ranking holds. The 1.50 USD limit was set
+the line-counted ones of the day. Counted per request, deep is 8.2M tokens and 0.70 USD, standard
+9.8M and 0.55 USD (about four fifths of deep, so "almost the cost of deep" no longer fits), the
+accepted workflow 1.13 USD; the ranking holds. The 1.50 USD limit was set
 on the inflated figures and is replaced by 1.00 USD, see the 2026-10-27 section.) Research runs
 deep until standard is fixed; the standard branch stays in the code for a later measurement
 but is not selectable. The table measures the first candidate; after the review the gap pass
@@ -219,13 +222,13 @@ prices.
 |---|---|---|
 | Agents | 17 | 17 |
 | Agent tokens | 9,684,545 (input 680,591 + cache_read 8,552,192 + output 451,762) | 10,033,095 (input 805,613 + cache_read 8,765,696 + output 461,786) |
-| Main-session tokens | 190,303 | 775,073 |
-| Total tokens | 9,874,848 | 10,808,168 |
+| Main-session tokens | 190,303 | 581,906 |
+| Total tokens | 9,874,848 | 10,615,001 |
 | Pages | 38 unique, 0 duplicates | 35 unique, 0 duplicates |
 | Verified evidence | 82 | 81 |
 | `check_article.py` | 0 errors, 5 warnings, 1 repair round | 0 errors, 5 warnings, 1 repair round |
 | Duration | 27.4 min | 28.0 min |
-| Cost at peak `deepseek-flash` | 0.7989 USD (agents 0.7976; main 0.0013) | 0.8544 USD (agents 0.8484; main 0.0060) |
+| Cost at peak `deepseek-flash` | 0.7989 USD (agents 0.7976; main 0.0013) | 0.8526 USD (agents 0.8484; main 0.0042) |
 
 Both runs skipped P4 on the early-finish rule, ran the gap pass, and state 0.50 Euro per car
 kilometre, 0.25 Euro for motorcycle and bicycle and 0.15 Euro per passenger. `fix_quotes.py`
@@ -234,7 +237,7 @@ new repair path was not needed in these runs; its eight tests cover the repair. 
 accepted both runs on 2026-10-19: 0 errors, 1 repair round, 82 and 81 verified, the same
 amounts, and, on the figures of that day, 27.84M and 28.62M tokens at an average cost of
 **1.4320 USD** under the owner's **1.50 USD** deep limit. Counted per request (2026-10-27) the
-runs hold 9.87M and 10.81M tokens and cost 0.7989 and 0.8544 USD, average **0.8267 USD** (0.8230
+runs hold 9.87M and 10.62M tokens and cost 0.7989 and 0.8526 USD, average **0.8258 USD** (0.8230
 USD without the main-session records). The quality criteria were not changed. The table and the decision are committed, exported and
 pushed with the fix.
 
@@ -353,18 +356,20 @@ every request in them is `deepseek-flash`, none is an Anthropic or any other mod
   needs a changed prefix, and the only one in the runs is a compaction.
 - **Interactive sessions, DeepSeek only.** 22 CLI sessions (main transcripts only) with requests from 2026-10-20 to 2026-10-26: 2,789
   `deepseek-flash` requests, **99.5 % cache hits**. Of the miss tokens, 74.9 % are new content,
-  15.3 % cold start and 9.8 % prefix break; the break is 16 requests (0.6 % of the requests);
+  15.3 % cold start and 9.8 % prefix break; the break is 16 requests (0.6 % of the requests; a
+  break has no time criterion, so a cache that expired in a pause counts too);
   in the twelve largest only the 24k to 27k system prefix was still cached, which fits a
   compaction (not checked one by one). The earlier figure of 99.3 % for "58 interactive sessions" did not split by
   provider, and its selection of sessions cannot be rebuilt from the transcripts, so it is
   replaced by this row. The same sessions also hold 1,763 Anthropic requests (`claude-sonnet-5-5`);
   they are counted separately, tokens only, and belong to no DeepSeek figure. The headless
-  sessions (entrypoint `sdk-cli`, 45 files) are a different workload: 229 DeepSeek requests, 86.8 %
-  hits, mostly cold starts.
+  sessions (entrypoint `sdk-cli`, 45 files) are a different workload: 229 DeepSeek requests
+  (two of them `deepseek/deepseek-v4.1-flash`, an unknown name, unpriced), 86.8 % hits, mostly cold
+  starts.
 - **Deep cost limit: 1.00 USD** at peak `deepseek-flash` price, replacing 1.50 USD, which was set
   on the inflated figures. The corrected deep runs cost 0.69 to 0.85 USD at peak (0.90 for the
   later 10-19 run). A run above the limit is reported to the owner, as before. Deep run A of
-  2026-10-25 cost 1.0050 USD (1.0062 with its main session) and is above it; it was an
+  2026-10-25 cost 1.0050 USD (1.0055 with its main session) and is above it; it was an
   experiment run beside run B and is recorded, not hidden.
 - **No staggered start of the agents.** The cold-start misses cost 2.3 cents a run at the prices
   of their own time (4.5 cents at peak; the dearest run 4.0 and 8.0 cents), less than the code
