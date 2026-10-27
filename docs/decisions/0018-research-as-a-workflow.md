@@ -201,7 +201,7 @@ unchanged. Standard is off: 4 errors and 1.0027 USD, almost the cost of deep. (T
 the line-counted ones of the day. Counted per request, deep is 8.2M tokens and 0.70 USD, standard
 9.8M and 0.55 USD (about four fifths of deep, so "almost the cost of deep" no longer fits), the
 accepted workflow 1.13 USD; the ranking holds. The 1.50 USD limit was set
-on the inflated figures and is replaced by 1.00 USD, see the 2026-10-27 section.) Research runs
+on the inflated figures and is replaced by 1.20 USD, see the 2026-10-27 section.) Research runs
 deep until standard is fixed; the standard branch stays in the code for a later measurement
 but is not selectable. The table measures the first candidate; after the review the gap pass
 moved behind verification (it reads `verified.jsonl`) and the extractor groups were balanced
@@ -354,23 +354,34 @@ every request in them is `deepseek-flash`, none is an Anthropic or any other mod
   79.9 % (815 requests), cold start 19.5 % (114 requests, one per agent), prefix break 0.5 %
   (1 request). New content is not fixable: it is text that did not exist before. A prefix break
   needs a changed prefix, and the only one in the runs is a compaction.
-- **Interactive sessions, DeepSeek only.** 22 CLI sessions (main transcripts only) with requests from 2026-10-20 to 2026-10-26: 2,789
-  `deepseek-flash` requests, **99.5 % cache hits**. Of the miss tokens, 74.9 % are new content,
-  15.3 % cold start and 9.8 % prefix break; the break is 16 requests (0.6 % of the requests; a
-  break has no time criterion, so a cache that expired in a pause counts too);
-  in the twelve largest only the 24k to 27k system prefix was still cached, which fits a
-  compaction (not checked one by one). The earlier figure of 99.3 % for "58 interactive sessions" did not split by
-  provider, and its selection of sessions cannot be rebuilt from the transcripts, so it is
-  replaced by this row. The same sessions also hold 1,763 Anthropic requests (`claude-sonnet-5-5`);
-  they are counted separately, tokens only, and belong to no DeepSeek figure. The headless
-  sessions (entrypoint `sdk-cli`, 45 files) are a different workload: 229 DeepSeek requests
-  (two of them `deepseek/deepseek-v4.1-flash`, an unknown name, unpriced), 86.8 % hits, mostly cold
-  starts.
-- **Deep cost limit: 1.00 USD** at peak `deepseek-flash` price, replacing 1.50 USD, which was set
-  on the inflated figures. The corrected deep runs cost 0.69 to 0.85 USD at peak (0.90 for the
-  later 10-19 run). A run above the limit is reported to the owner, as before. Deep run A of
-  2026-10-25 cost 1.0050 USD (1.0055 with its main session) and is above it; it was an
-  experiment run beside run B and is recorded, not hidden.
+- **DeepSeek cache hits by kind of session.** The first measurement reported 99.3 % cache hits for
+  "58 interactive sessions". The 58 are all session files (main transcripts) with `deepseek-*`
+  requests from 2026-10-20 to 2026-10-26; recounted per request they give 99.3 % again, but only
+  eight of the 58 are interactive. Grouped by working folder, entry point and first message:
+
+  | Kind of session | Sessions | Requests | Cache hit | Dates |
+  |---|---|---|---|---|
+  | Morning run (headless `claude -p`, vault folder, `life-os-morning` skill) | 8 | 53 | 87.8 % | 10-20 to 10-25 |
+  | Test and measurement runs (headless: 35, in the CLI: 4, for example a one-word reply, the orientation test, a research-workflow measurement) | 39 | 202 | 86.3 % | 10-20 to 10-25 |
+  | Task sessions (CLI, started with a `/goal` task file) | 3 | 570 | 99.5 % | 10-19 to 10-22 |
+  | **Interactive** (CLI, free input or pasted text) | 8 | 2,193 | **99.6 %** | 10-20 to 10-25 |
+  | All of them | 58 | 3,018 | 99.3 % | |
+
+  Only the interactive row is an interactive result. Of its miss tokens 77.6 % are new content,
+  12.2 % cold start and 10.2 % prefix break (14 requests of 2,193, 0.6 %; a break has no time
+  criterion, so a cache that expired in a pause counts too; in the largest breaks only the 24k
+  to 27k system prefix was still cached, which fits a compaction, not checked one by one).
+  The 8 interactive sessions are from 2026-10-20 to 2026-10-25, one of them (15 requests) from
+  2026-10-25; their transcripts show `deepseek-flash` as the model of every request, and they
+  do not record why a session ran on DeepSeek. Two requests of the test runs carry the unknown
+  model name `deepseek/deepseek-v4.1-flash` and are unpriced. Seven further CLI sessions in the
+  window hold only Claude models (1,763 `claude-sonnet-5-5` requests); they are counted as tokens
+  only and belong to no DeepSeek figure.
+- **Deep cost limit: 1.20 USD** at peak `deepseek-flash` price, replacing 1.50 USD, which was set
+  on the inflated figures, and an interim 1.00 USD. The corrected deep runs cost 0.69 to 0.90 USD
+  at peak; deep run A of 2026-10-25, the dearest, cost 1.0050 USD (1.0055 with its main
+  session), so 1.20 USD is about 20 % above it. A run above the limit is reported to the owner,
+  as before.
 - **No staggered start of the agents.** The cold-start misses cost 2.3 cents a run at the prices
   of their own time (4.5 cents at peak; the dearest run 4.0 and 8.0 cents), less than the code
   for a staggered start is worth. Revisit only if one run's cold start passes 10 cents at peak.

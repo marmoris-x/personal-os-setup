@@ -25,8 +25,9 @@ workflow for a later measurement but is not selectable.
 Before the first agent, say the level and its measured cost in one line. The measured values
 stand in `docs/decisions/0018-research-as-a-workflow.md`, section "Lean workflow (2026-10-19)".
 
-**Cost limit: 1.00 USD per deep run**, at peak `deepseek-flash` price (since 2026-10-27; the
-earlier 1.50 USD was set on figures that counted each request about 2.7 times). Measure a run
+**Cost limit: 1.20 USD per deep run**, at peak `deepseek-flash` price (since 2026-10-27; the
+earlier 1.50 USD was set on figures that counted each request about 2.7 times; the dearest
+measured run cost 1.005 USD). Measure a run
 only with `python -I -X utf8 "${CLAUDE_SKILL_DIR}/scripts/count_usage.py" <transcriptDir> <session
 transcript> --since <start> --until <end>` and read its `USD@peak`; a run above the limit is
 reported to the owner in the final message. Never add up transcript lines by hand.
