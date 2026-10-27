@@ -301,6 +301,19 @@ Signed-in calls use the account balance instead of the anonymous allowance.
    cross-check, search with two of the services above — different indexes agreeing is the
    evidence, and both sides of that comparison have to be services you would trust on their own.
 
+## How tokens and cost are counted (2026-10-27)
+
+Claude Code writes one model response as several transcript lines, one per content block, and
+every line carries the full `usage` of the request, so adding up the lines counts each request
+about 2.7 times. The rule: one request is one key (`message.id`, `requestId`; `message.id` alone
+when a line has no `requestId`), and per key the line with the highest `output_tokens` counts.
+The script `~/.claude/skills/research/scripts/count_usage.py` does this for a session transcript,
+its subagents and a Workflow run's `transcriptDir`, prints the raw line sum next to the
+deduplicated sum, prices only DeepSeek models with DeepSeek's rates by each request's own time
+(`USD@peak` prices all at peak), and keeps `claude-*` requests as tokens without USD. Every
+measurement of tokens or cost uses it. The measured values and the recomputed tables are in
+`docs/decisions/0018-research-as-a-workflow.md` of the setup repository.
+
 ## Known limits — accept these
 
 - Search queries and fetched URLs are sent to Exa (US company). The free plan has no

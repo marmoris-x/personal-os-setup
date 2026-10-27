@@ -1449,6 +1449,9 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/other-harnesses/agents-skills/quick-research-portable/SKILL.md'; Reason = '2026-10-26 (small-fixes, Part 1): the repair named in the report line is crawl4ai-repair.ps1' }
         @{ Path = 'HOME/.claude/docs/agent-tooling.md'; Reason = '2026-10-26 (small-fixes, Part 1): the Crawl4AI row names the own browser folder and the one repair command' }
         @{ Path = 'HOME/.claude/setup/tests/research/test_crawl4ai_browsers.py'; Reason = '2026-10-26 (small-fixes, Part 1): five tests, red first - the default folder, the override, and that main() replaces a shared folder from outside' }
+        @{ Path = 'HOME/.claude/skills/research/scripts/count_usage.py'; Reason = '2026-10-27 (usage-count-fix, Part 1): the one script that counts tokens and DeepSeek cost, once per request (message.id + requestId, the line with the most output); a transcript writes one response as several lines, and summing the lines counted each request about 2.7 times' }
+        @{ Path = 'HOME/.claude/setup/tests/research/test_count_usage.py'; Reason = '2026-10-27 (usage-count-fix, Part 1): 18 tests, red first against the missing script; one key counts once, two keys twice, the fallback to message.id, peak and off-peak, an unknown model, a model of another provider, the three miss kinds' }
+        @{ Path = 'HOME/.claude/skills/research/SKILL.md'; Reason = '2026-10-27 (usage-count-fix, Part 2): the deep cost limit is 1.00 USD at peak price, measured with count_usage.py; the standard-level figure is 0.55 USD' }
         @{ Path = 'HOME/.claude/skills/research/scripts/store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): the vault copy of a page moves the marker line below the frontmatter, so the frontmatter stays on line 1' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
