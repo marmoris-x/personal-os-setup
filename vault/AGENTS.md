@@ -111,8 +111,8 @@ If it stops a commit, tell me the file and rule name, never the value.
 
 ## Frontmatter
 Required: type, status, date. Allowed values: project | person | organisation | note | document | daily
-A page in `400-knowledge/` also carries `topic: <subject>`, the same short subject its file name
-starts with. Before choosing one, reuse a `topic` value already used in that folder when one fits;
+A page that sits directly in `400-knowledge/` (not in `research/`, which keeps its own dated
+titles) also carries `topic: <subject>`, the same short subject its file name starts with. Before choosing one, reuse a `topic` value already used in that folder when one fits;
 a new value only when none fits. A page that touches a second subject links to that subject's
 pages instead of carrying two topics.
 
