@@ -58,3 +58,12 @@ auftraege
 \./verify\.ps1
 \.\\restore\.ps1
 \./restore\.ps1
+# 400-knowledge became flat on 2026-10-27 (owner decision): pages sit directly in the folder,
+# named <subject>-<topic>.md. Its subject folders are old paths now. The trailing separator is
+# what tells them from the new names - 400-knowledge/personal-os-setup-report.md is right,
+# 400-knowledge/personal-os-setup/report.md is not.
+400-knowledge[\\/]claude-code[\\/]
+400-knowledge[\\/]islam[\\/]
+400-knowledge[\\/]personal-os[\\/]
+400-knowledge[\\/]personal-os-setup[\\/]
+400-knowledge[\\/]research-tools[\\/]
