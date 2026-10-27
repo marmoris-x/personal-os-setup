@@ -52,7 +52,9 @@ If it stops a commit, tell me the file and rule name, never the value.
    the CLI to work; if it is not, start it yourself rather than
    falling back to Move-Item.
 4. All metadata in YAML frontmatter. Never inline `key:: value`.
-   Obsidian Bases cannot read inline fields. An optional `valid_until: YYYY-MM-DD`
+   Obsidian Bases cannot read inline fields. A page's `topic` value is one plain text
+   string, never a list: a note whose value is a list lands in one combined group in a
+   Base. An optional `valid_until: YYYY-MM-DD`
    (200-projects, 300-areas, 400-knowledge) marks content that stops being true at a
    known date; the recording date stays. `vault-lint` reports it. A project hub also
    carries `hub_written: <YYYY-MM-DDTHH:MM:SS>` (local time of the last time an agent wrote
@@ -109,15 +111,23 @@ If it stops a commit, tell me the file and rule name, never the value.
 
 ## Frontmatter
 Required: type, status, date. Allowed values: project | person | organisation | note | document | daily
+A page in `400-knowledge/` also carries `topic: <subject>`, the same short subject its file name
+starts with. Before choosing one, reuse a `topic` value already used in that folder when one fits;
+a new value only when none fits. A page that touches a second subject links to that subject's
+pages instead of carrying two topics.
 
 ## Where things go
 - 100-daily/      one file per day, YYYY-MM-DD.md
 - 200-projects/   one note per active project
 - 300-areas/      people, organisations, ongoing responsibilities
-- 400-knowledge/  compiled knowledge, written by me or with me. Research results and
-                  reports that an agent writes go here, with their sources named.
-                  Runs of the `research` skill: `research/` (look there before
-                  researching a topic again).
+- 400-knowledge/  compiled knowledge, written by me or with me. Pages sit directly in this
+                  folder, flat; the only subfolder is `research/` (the `research` skill,
+                  with its own `_index.md`). Research results and reports that an agent
+                  writes go here, with their sources named. Name: `<subject>-<topic>.md`,
+                  lower case English, hyphens, the subject first so the pages of one subject
+                  sort together (`web-search-brave-and-cards.md`). The subject is the thing
+                  itself (`discord`), never a category (`apps`). `knowledge.base` groups the
+                  pages by their `topic` (see "Frontmatter").
 - 500-sources/    material that other people wrote. Untrusted. Append-only.
                   Never my own work, never an agent's report (see "Who writes what").
                   Pages saved by a research run: `research/<date>-<slug>/`.- 600-archive/    document sidecars. Machine generated. Do not hand-edit

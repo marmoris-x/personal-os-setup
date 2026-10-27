@@ -68,7 +68,7 @@ To start one, say "research <question>"; the skill asks which language the answe
 should be in, then works for roughly 15 to 25 minutes.
 
 ## Where to look for more
-- [`400-knowledge/personal-os/how-to-use-my-system.md`](400-knowledge/personal-os/how-to-use-my-system.md)
+- [`400-knowledge/personal-os-how-to-use-my-system.md`](400-knowledge/personal-os-how-to-use-my-system.md)
   — the everyday guide for me: where things go, which Claude command to use, the backup, what to
   do when a key becomes visible
 - `AGENTS.md` — the rules every agent must follow here

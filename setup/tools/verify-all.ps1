@@ -1453,6 +1453,12 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/setup/tests/research/test_count_usage.py'; Reason = '2026-10-27 (usage-count-fix, Part 1): 26 tests, red first against the missing script; one key counts once, two keys twice, the fallback to message.id, peak and off-peak, an unknown model, a model of another provider, the three miss kinds' }
         @{ Path = 'HOME/.claude/skills/research/SKILL.md'; Reason = '2026-10-27 (usage-count-fix, Part 2): the deep cost limit is 1.20 USD at peak price, measured with count_usage.py; the standard-level figure is 0.55 USD' }
         @{ Path = 'HOME/.claude/skills/research/scripts/store_results.py'; Reason = '2026-10-25 (search tuning, Part 4): the vault copy of a page moves the marker line below the frontmatter, so the frontmatter stays on line 1' }
+        @{ Path = 'HOME/.claude/skills/distill/SKILL.md'; Reason = '2026-10-27 (knowledge-flat, Part 3): step 3 files a new page flat into 400-knowledge/ as <subject>-<topic>.md with a topic key, never into a folder and never asking where; an empty argument proposes up to three topics once' }
+        @{ Path = 'HOME/.agents/skills/distill-portable/SKILL.md'; Reason = '2026-10-27 (knowledge-flat, Part 3): the same body as the Claude Code skill, kept identical from the Idea line on' }
+        @{ Path = 'HOME/.claude/docs/agent-tooling.md'; Reason = '2026-10-27 (knowledge-flat, Part 2): the web search analysis moved to 400-knowledge/web-search-index.md' }
+        @{ Path = 'VAULT/AGENTS.md'; Reason = '2026-10-27 (knowledge-flat, Part 1): 400-knowledge is flat with research/ as the only subfolder, the name is <subject>-<topic>.md, and topic is one plain value - rule 4 says why never a list' }
+        @{ Path = 'VAULT/README.md'; Reason = '2026-10-27 (knowledge-flat, Part 2): the help page moved to 400-knowledge/personal-os-how-to-use-my-system.md' }
+        @{ Path = 'VAULT/.obsidian/app.json'; Reason = '2026-10-27 (knowledge-flat, Part 2): alwaysUpdateLinks=true and newLinkFormat=absolute - without them the obsidian CLI moves a note and leaves every link pointing at the old name (measured on a throwaway note)' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

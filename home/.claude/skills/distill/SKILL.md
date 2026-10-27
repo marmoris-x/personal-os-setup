@@ -21,11 +21,16 @@ and one log line - nothing else is written.**
    keywords, also in the titles and `aliases`). If one exists, update that page instead of writing a
    second one (rule 6: one entity, one canonical note): put what is no longer true into its timeline
    section (create `## Timeline` if it has none), keep current state and history apart.
-3. Where a new page goes: the folder of the existing related page; otherwise a subfolder of
-   `400-knowledge/` named like the project of this session if that folder exists (for example a session
-   in `personal-os-setup` files into `400-knowledge/personal-os-setup/`); otherwise ask the owner with
-   the question dialog. Never choose a storage location on your own. File name: lowercase, hyphens, no
-   date prefix, no `|#^[]` characters.
+3. Where a new page goes: directly into `400-knowledge/`, flat - never a folder, never a question
+   about the location. File name `<subject>-<topic>.md`: lower case English, hyphens, the subject
+   first so the pages of one subject sort together (`web-search-brave-and-cards.md`), no date
+   prefix, no `|#^[]` characters. The subject is the thing itself (`discord`), never a category
+   (`apps`). Frontmatter `topic: <subject>`, one plain text value: read the `topic:` values already
+   in `400-knowledge/` and reuse one that fits, a new value only when none fits; a page that touches
+   a second subject links to that subject's pages instead of carrying two topics.
+   Never choose a storage location on your own.
+   If `$ARGUMENTS` is empty, propose up to three topics from this session and ask once, with the
+   question dialog and multi-select: one page per topic.
 4. Write the page from this session only, never invented. If this session is thin, the files it points
    at (the project's `PROGRESS.md`, `CHANGELOG.md`, decision records, test logs the owner named) are
    allowed sources; name each one under "Measured facts". Anything you did not see or measure goes into

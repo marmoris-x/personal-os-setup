@@ -10,5 +10,7 @@
   "newFileLocation": "folder",
   "newFileFolderPath": "inbox",
   "attachmentFolderPath": "inbox",
-  "openBehavior": "daily"
+  "openBehavior": "daily",
+  "alwaysUpdateLinks": true,
+  "newLinkFormat": "absolute"
 }

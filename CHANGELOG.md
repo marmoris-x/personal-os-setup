@@ -5,6 +5,19 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-10-27)
+
+Knowledge pages live flat in the vault (`400-knowledge/`), ordered by name and one Base instead
+of a folder per subject - owner decision of 2026-10-27.
+
+| What | Why |
+|---|---|
+| `vault/AGENTS.md`: "Where things go" says the pages sit directly in `400-knowledge/` with `research/` as the only subfolder, named `<subject>-<topic>.md`; "Frontmatter" adds `topic: <subject>`; rule 4 says the value is one plain string, never a list | The agent chose a folder for every page and the same subject split (`discord/` next to `discord-quests/`). A flat folder leaves nothing to choose, the subject moves into the name, and one Base groups by it |
+| `home/.claude/skills/distill/SKILL.md` and `home/.agents/skills/distill-portable/SKILL.md`: step 3 files flat with the name and `topic` of the vault rule, never a folder and never asking where; an empty `$ARGUMENTS` proposes up to three topics once (multi-select, one page per topic) | The skill was the writer that created the folders; three tests red first (3 of 13 against the old text), green after |
+| `vault/.obsidian/app.json`: `alwaysUpdateLinks: true` and `newLinkFormat: absolute` | Measured on a throwaway note: with the keys absent the `obsidian` CLI moves the note and leaves every link pointing at the old name; with them the links follow and keep the full path |
+| `home/.claude/docs/agent-tooling.md` and `vault/README.md`: the moved paths | The pages are now `400-knowledge/web-search-index.md` and `400-knowledge/personal-os-how-to-use-my-system.md` |
+| `tests/Distill.Tests.ps1`: three tests for the new step 3 | Without them a later edit brings the folder rule back quietly |
+
 ## Unreleased (2026-10-25)
 
 Search tuning after the review of 2026-10-24.

@@ -74,6 +74,36 @@ Describe 'the distill skill for Claude Code' {
     It 'never lets the session choose a storage location on its own' {
         (Read-Text $script:skill) | Should -Match 'Never choose a storage location on your own'
     }
+
+    # Owner decision 2026-10-27: knowledge pages live flat in 400-knowledge/. A folder for the
+    # project of the session was the old rule - it made the agent choose, and the folder split
+    # the same subject (discord/ and discord-quests/). A test keeps the old wording from creeping
+    # back through a later edit.
+    It 'files a new page directly into 400-knowledge/ and never into a subfolder' {
+        $t = Read-Text $script:skill
+        $t | Should -Match 'directly into `400-knowledge/`'
+        $t | Should -Match 'never a folder'
+        $t | Should -Not -Match 'subfolder of'
+        $t | Should -Not -Match 'named like the project of this session'
+    }
+
+    It 'names the page subject-topic and sets topic to the same subject' {
+        $t = Read-Text $script:skill
+        $t.Contains('`<subject>-<topic>.md`') | Should -BeTrue -Because 'the name carries the subject first'
+        $t.Contains('lower case English') | Should -BeTrue
+        $t.Contains('`topic: <subject>`') | Should -BeTrue -Because 'knowledge.base groups by this key'
+        $t.Contains('one plain text value') | Should -BeTrue -Because 'a list value lands in one combined Base group'
+        $t.Contains('reuse one that fits') | Should -BeTrue -Because 'a new topic value only when none fits'
+    }
+
+    It 'proposes up to three topics and asks once when the argument is empty' {
+        $t = Read-Text $script:skill
+        $i = $t.IndexOf('$ARGUMENTS` is empty')
+        $i | Should -BeGreaterThan 0 -Because 'the skill must handle a call without a topic'
+        $t.Substring($i) | Should -Match 'up to three topics'
+        $t.Substring($i) | Should -Match '(?i)multi-select'
+        $t.Substring($i) | Should -Match 'one page per topic'
+    }
 }
 
 Describe 'the portable twin' {
