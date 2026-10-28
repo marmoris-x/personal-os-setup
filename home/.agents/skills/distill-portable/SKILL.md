@@ -6,10 +6,10 @@ metadata:
   opencode/slash: "true"
 ---
 
-Portable copy of `~/.claude/skills/distill` for OpenCode and Codex. Call it with `/distill-portable <topic>`
+Portable copy of `~/.claude/skills/distill` for OpenCode and Codex. Call it with `@distill-portable <topic>`
 (OpenCode) or `$distill-portable <topic>` (Codex). The body is the same.
 
-The owner wants a knowledge page on the topic written after the command name.
+The owner wants a knowledge page on the topic written after the skill name.
 
 Idea (Karpathy, "LLM wiki", https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f): good
 answers are filed back into the wiki as new pages, so an exploration persists instead of disappearing
@@ -34,8 +34,8 @@ and one log line - nothing else is written.**
    new value only when none fits; a page that touches a second subject links to that subject's pages
    instead of carrying two topics.
    Never choose a storage location on your own.
-   If `$ARGUMENTS` is empty, propose up to three topics from this session and ask once, with the
-   question dialog and multi-select: one page per topic.
+   If the topic written after the skill name is empty, propose up to three topics from this session
+   and ask once, with the question dialog and multi-select: one page per topic.
 4. Write the page from this session only, never invented. If this session is thin, the files it points
    at (the project's `PROGRESS.md`, `CHANGELOG.md`, decision records, test logs the owner named) are
    allowed sources; name each one under "Measured facts". Anything you did not see or measure goes into

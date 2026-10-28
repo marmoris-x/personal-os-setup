@@ -122,7 +122,16 @@ Describe 'the portable twin' {
     }
 
     It 'has the same body as the Claude Code skill' {
-        (Get-Shared (Read-Text $script:portable)) | Should -BeExactly (Get-Shared (Read-Text $script:skill))
+        # The one intended difference: the portable skill calls the topic by its documented
+        # invocation (OpenCode @skill-id, Codex $skill-name), while the Claude Code skill uses
+        # $ARGUMENTS. The sentence is replaced in both bodies before the comparison, so its
+        # different line wrapping does not count as a difference.
+        $normalize = {
+            param([string]$Body)
+            $Body -replace '(?s)If (?:the topic written after the skill name is empty|`\$ARGUMENTS` is empty),.*?one page per topic\.', 'TOPIC-EMPTY-SENTENCE'
+        }
+        (& $normalize (Get-Shared (Read-Text $script:portable))) |
+            Should -BeExactly (& $normalize (Get-Shared (Read-Text $script:skill)))
     }
 }
 
