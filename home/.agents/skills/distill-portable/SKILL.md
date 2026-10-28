@@ -30,8 +30,9 @@ and one log line - nothing else is written.**
    first so the pages of one subject sort together (`web-search-brave-and-cards.md`), no date
    prefix, no `|#^[]` characters. The subject is the thing itself (`discord`), never a category
    (`apps`). Frontmatter `topic: <subject>`, one plain text value: read the `topic:` values already
-   in `400-knowledge/` and reuse one that fits, a new value only when none fits; a page that touches
-   a second subject links to that subject's pages instead of carrying two topics.
+   used by pages that sit directly in `400-knowledge/` (not `research/`) and reuse one that fits, a
+   new value only when none fits; a page that touches a second subject links to that subject's pages
+   instead of carrying two topics.
    Never choose a storage location on your own.
    If `$ARGUMENTS` is empty, propose up to three topics from this session and ask once, with the
    question dialog and multi-select: one page per topic.

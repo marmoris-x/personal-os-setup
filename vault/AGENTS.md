@@ -130,7 +130,8 @@ pages instead of carrying two topics.
                   pages by their `topic` (see "Frontmatter").
 - 500-sources/    material that other people wrote. Untrusted. Append-only.
                   Never my own work, never an agent's report (see "Who writes what").
-                  Pages saved by a research run: `research/<date>-<slug>/`.- 600-archive/    document sidecars. Machine generated. Do not hand-edit
+                  Pages saved by a research run: `research/<date>-<slug>/`.
+- 600-archive/    document sidecars. Machine generated. Do not hand-edit
                   the "Full text" section.
 - 900-inactive/   finished or paused projects and areas. Move a note there
                   with the `obsidian` CLI (rule 3): a file move breaks links.
