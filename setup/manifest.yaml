@@ -168,8 +168,10 @@ components:
     # image_z_image_turbo.json is the official ComfyUI template, copied verbatim into the live
     # skill folder. It is kept out of the repo (a decimal number in it reads as a 12-digit id to
     # the privacy scan); new-image.ps1 fetches it again from a pinned commit and checks its hash
-    # (ADR 0019).
-    exclude: ["synced", "__pycache__", "*.pyc", "image_z_image_turbo.json"]
+    # (ADR 0019). The three video templates are excluded for the same reason (a decimal number in
+    # them reads as a 12-digit id); the /video skill fetches them from a pinned commit and checks
+    # their hashes.
+    exclude: ["synced", "__pycache__", "*.pyc", "image_z_image_turbo.json", "video_wan2_2_5B_ti2v.json", "video_ltx2_3_t2v.json", "video_ltx2_3_i2v.json"]
     replace:
       - { root: HOME, to: "{{HOME}}" }
       - { root: VAULT, to: "{{VAULT}}" }
