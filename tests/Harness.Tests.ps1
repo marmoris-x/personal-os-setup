@@ -84,6 +84,23 @@ Describe 'Codex TOML merge' {
         $text | Should -Match "`r`n"
         $text | Should -Match '\[mcp_servers\.exa\]'
     }
+
+    It 'adds a missing top-level key from the template preamble' {
+        $existing = "notify = `"keep-me`"`n`n[mcp_servers.node_repl]`ncommand = 'x'`n"
+        $text = Get-CodexMergedText -ExistingText $existing -TemplateText $script:codexTemplate
+        ([regex]::Matches($text, '(?m)^\s*default_permissions\s*=')).Count |
+            Should -Be 1 -Because 'the profile needs its default_permissions key exactly once'
+        $text | Should -Match '(?m)^default_permissions = "guarded"$'
+        $text | Should -Match 'notify = "keep-me"' -Because 'an existing top-level value wins'
+        $text.IndexOf('default_permissions') | Should -BeLessThan $text.IndexOf('[mcp_servers')
+    }
+
+    It 'never overwrites a top-level value the person set' {
+        $existing = "default_permissions = `"custom`"`n`n[mcp_servers.node_repl]`ncommand = 'x'`n"
+        $text = Get-CodexMergedText -ExistingText $existing -TemplateText $script:codexTemplate
+        $text | Should -Match '(?m)^default_permissions = "custom"$'
+        $text | Should -Not -Match 'default_permissions = "guarded"'
+    }
 }
 
 Describe 'which harnesses are present' {

@@ -265,6 +265,21 @@ codex mcp add exa --url https://mcp.exa.ai/mcp
 **DeepSeek Harness (dsh):** supports MCP clients. Add `https://mcp.exa.ai/mcp` as a remote
 server in its MCP settings.
 
+## Per-path write guards in OpenCode and Codex (2026-10-28)
+
+Both harnesses document a write guard per path; the setup templates carry the rules.
+
+| Harness | Setting | Blocked |
+|---|---|---|
+| OpenCode | `permission.edit` object; the last matching pattern wins (opencode.ai/docs/permissions, read 2026-10-28) | edits under `~/OneDrive/**` and `~/Downloads/**`; everything else stays `allow` |
+| Codex | `permissions.guarded.filesystem`; `read` is read-only, `default_permissions = "guarded"` selects the profile (developers.openai.com/codex/permissions, read 2026-10-28) | `~/Downloads` and `~/OneDrive`; reads stay allowed, creating, changing, renaming and deleting are refused |
+
+Measured 2026-10-28: a Codex sandbox write into a path set to `read` was refused ("Zugriff
+verweigert"), a control write in the workspace root succeeded. **Not measured on the real
+paths: Codex is not used on this machine, and OpenCode is not installed.** The OneDrive line
+in the live `~/.codex/config.toml` was added by the owner; the template carries it for new
+machines. The OneDrive guard was not changed.
+
 ## Free limits (official Exa docs, read 2026-09-23)
 
 Search and page reading come from the **same** server and the **same** allowance. Both tools

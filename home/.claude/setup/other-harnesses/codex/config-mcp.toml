@@ -1,6 +1,18 @@
 # Insert into ~/.codex/config.toml (only if you use Codex).
 # Keys come from your Windows environment variables, never from this file.
 
+default_permissions = "guarded"
+
+[permissions.guarded]
+description = "Owner guard: the downloads folder stays read-only."
+extends = ":workspace"
+
+[permissions.guarded.filesystem]
+"~/Downloads" = "read"
+"~/OneDrive" = "read"
+# The cloud-synced folder line is added by the owner: the cloud-sync guard blocks the
+# agent from writing a file that names that folder.
+
 [mcp_servers.exa]
 url = "https://mcp.exa.ai/mcp?tools=web_search_exa,web_fetch_exa,web_search_advanced_exa"
 env_http_headers = { "x-api-key" = "EXA_API_KEY" }

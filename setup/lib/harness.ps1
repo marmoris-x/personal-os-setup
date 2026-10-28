@@ -136,6 +136,25 @@ function Get-CodexMergedText {
         else { $preamble.Add($line) }
     }
 
+    # Top-level keys stand before the first section, so the section merge cannot carry them.
+    # A missing key such as default_permissions is added to the preamble; an existing value
+    # always wins (the person's profile selection is never replaced).
+    $templatePreamble = New-Object System.Collections.Generic.List[object]
+    foreach ($line in ($TemplateText -split "`r?`n")) {
+        if ($line -match '^\s*\[([^\]]+)\]\s*(?:#.*)?$') { break }
+        $key = Get-TomlKeyName -Line $line
+        if ($key) { $templatePreamble.Add([pscustomobject]@{ Key = $key; Line = $line }) }
+    }
+    if ($templatePreamble.Count -gt 0) {
+        $existingTop = @(Get-TomlKeyNames -Lines $preamble)
+        $missingTop = @($templatePreamble | Where-Object { $existingTop -notcontains $_.Key })
+        if ($missingTop.Count -gt 0) {
+            while ($preamble.Count -gt 0 -and $preamble[$preamble.Count - 1].Trim() -eq '') { $preamble.RemoveAt($preamble.Count - 1) }
+            foreach ($item in $missingTop) { $preamble.Add($item.Line) }
+            $preamble.Add('')
+        }
+    }
+
     $seen = @{}
     foreach ($block in $blocks) {
         if ($seen.ContainsKey($block.Name)) { continue }

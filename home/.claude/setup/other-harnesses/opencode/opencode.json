@@ -77,7 +77,11 @@
   },
   "permission": {
     "webfetch": "deny",
-    "edit": "allow",
+    "edit": {
+      "*": "allow",
+      "~/OneDrive/**": "deny",
+      "~/Downloads/**": "deny"
+    },
     "external_directory": {
       "*": "allow"
     },
