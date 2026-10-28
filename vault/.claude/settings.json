@@ -2,9 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "deny": [
-      "Edit(//c/Users/*/OneDrive/**)",
-      "Write(//c/Users/*/OneDrive/**)",
-      "NotebookEdit(//c/Users/*/OneDrive/**)"
+      "Edit(//c/Users/*/OneDrive/**)"
     ],
     "ask": [],
     "allow": [],

@@ -1459,6 +1459,7 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/AGENTS.md'; Reason = '2026-10-27 (knowledge-flat, Part 1): 400-knowledge is flat with research/ as the only subfolder, the name is <subject>-<topic>.md, and topic is one plain value - rule 4 says why never a list' }
         @{ Path = 'VAULT/README.md'; Reason = '2026-10-27 (knowledge-flat, Part 2): the help page moved to 400-knowledge/personal-os-how-to-use-my-system.md' }
         @{ Path = 'VAULT/.obsidian/app.json'; Reason = '2026-10-27 (knowledge-flat, Part 2): alwaysUpdateLinks=true and newLinkFormat=absolute - without them the obsidian CLI moves a note and leaves every link pointing at the old name (measured on a throwaway note)' }
+        @{ Path = 'VAULT/.claude/settings.json'; Reason = '2026-10-28: the deny list keeps only the Edit path rule for the cloud-synced folder. Write(path) and NotebookEdit(path) rules are never matched by the file permission checks, and Claude Code warned about both at every session start (measured 2026-10-28); Edit rules cover all file-editing tools (code.claude.com/docs/en/permissions)' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null
