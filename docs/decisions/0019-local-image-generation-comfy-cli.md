@@ -72,3 +72,8 @@ Rules that hold for the skill and its script:
 - `comfy install --workspace=<dir>` uses `<dir>` itself as the target (comfy-cli 1.23.0), not
   `<dir>/ComfyUI` as its README says, and `--fast-deps` writes `override.txt` and
   `requirements.compiled` into the current folder: run it from a scratch folder.
+- The rebuild from nothing is written down in `docs/restore-comfyui.md`: prerequisites, install
+  order, the eight model files with size, pinned URL and SHA-256, start flags, two proof jobs
+  and the measured problems. The shared `home/.claude/skills/image/scripts/restore-models.ps1`
+  downloads only the missing files, resumes a `.part`, checks size and SHA-256, and refuses
+  below the missing size plus 30 GB free. It serves both `/image` and `/video`.

@@ -194,3 +194,9 @@ royalty-free. The threshold is a fact of the licence, not a legal opinion.
   owner's yes.
 - A reinstall follows the recipe in `~/.claude/skills/image/SKILL.md`; the video skill adds no
   separate ComfyUI.
+- A rebuild from nothing is written down in `docs/restore-comfyui.md` (install order, all eight
+  image and video model files with size, pinned URL and SHA-256, start flags, two proof jobs,
+  the RAM and commit-limit notes). The shared
+  `home/.claude/skills/image/scripts/restore-models.ps1` restores exactly these five LTX files
+  next to the three image files, resumable and verified; it never downloads the unused
+  `ltx-2.3-22b-distilled-fp8.safetensors`.

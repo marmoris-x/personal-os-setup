@@ -1466,6 +1466,9 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/README.md'; Reason = '2026-10-27 (knowledge-flat, Part 2): the help page moved to 400-knowledge/personal-os-how-to-use-my-system.md' }
         @{ Path = 'VAULT/.obsidian/app.json'; Reason = '2026-10-27 (knowledge-flat, Part 2): alwaysUpdateLinks=true and newLinkFormat=absolute - without them the obsidian CLI moves a note and leaves every link pointing at the old name (measured on a throwaway note)' }
         @{ Path = 'VAULT/.claude/settings.json'; Reason = '2026-10-28: the deny list keeps only the Edit path rule for the cloud-synced folder. Write(path) and NotebookEdit(path) rules are never matched by the file permission checks, and Claude Code warned about both at every session start (measured 2026-10-28); Edit rules cover all file-editing tools (code.claude.com/docs/en/permissions)' }
+        @{ Path = 'HOME/.claude/skills/image/scripts/restore-models.ps1'; Reason = '2026-10-29 (comfy-restore): the shared model restore script - the eight /image and /video files with pinned URL, size and SHA-256, resumable download, size and hash check, 30 GB free-space reserve, -WhatIf; tested only against a fake list' }
+        @{ Path = 'HOME/.claude/skills/image/SKILL.md'; Reason = '2026-10-29 (comfy-restore): the reinstall section points at restore-models.ps1 and docs/restore-comfyui.md' }
+        @{ Path = 'HOME/.claude/skills/video/SKILL.md'; Reason = '2026-10-29 (comfy-restore): the reinstall section points at the shared restore script and docs/restore-comfyui.md' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

@@ -22,6 +22,15 @@ owner's explicit yes.
 | `setup/tools/verify-all.ps1` (check J) | One intended-change line per new or changed mirror file |
 | RAM guard lowered the same day: the video script, both video `SKILL.md`s (here and portable), `docs/decisions/0022-local-video-generation.md`, the Reason line in `setup/tools/verify-all.ps1` | The guard drops from 20.8 GiB (peak + 4 GiB reserve) to 15.9 GiB, the lowest free RAM a clean run was measured at (two 5 s 1280x720 clips started at 15.94 and 16.19 GiB free and finished normally). The owner asked why not after both runs; the tests' explicit `-MinFreeGiB` values are unchanged and the 9999 GiB refusal case still holds |
 
+Restore documentation (2026-10-29): the way back to the ComfyUI models is written down.
+
+| What | Why |
+|---|---|
+| `docs/restore-comfyui.md` (new) | The rebuild from an empty disk is copy, paste and wait: prerequisites, the install commands in the order they worked, the eight model files with size, pinned URL and SHA-256, start flags, one small `/image` and one short `/video` proof job, and the measured problems (RAM guard, commit limit, GPU holder, INT8 was never used) |
+| `home/.claude/skills/image/scripts/restore-models.ps1` (new) | The shared restore script for both skills: the table of all eight files, only missing files are downloaded, `.part` resumes, byte size and SHA-256 are checked, a wrong file stops in German, `-WhatIf` lists the plan, and the target drive must hold the missing bytes plus 30 GB free. No Hugging Face login and no key. Tested only against a fake list in `C:\Dev\Temp\comfy-restore\` (14 checks green, plus a resume run) |
+| `home/.claude/skills/image/SKILL.md`, `home/.claude/skills/video/SKILL.md`, ADR 0019, ADR 0022 | Each points at the new doc and the restore script, so the recipe is found from both skills and both decisions |
+| `setup/tools/check-language.ps1`, `setup/tools/verify-all.ps1` (check J), `docs/structure.md` | The language exemption for the German messages the owner reads, the intended-change lines for the new and changed mirror files, and the regenerated structure list |
+
 ## Unreleased (2026-10-27)
 
 Knowledge pages live flat in the vault (`400-knowledge/`), ordered by name and one Base instead

@@ -92,5 +92,9 @@ the start (nothing lower has been measured).
 
 ## Reinstall and uninstall
 
-The recipe is the one in `~/.claude/skills/image/SKILL.md` ("Reinstall and uninstall"); the models
-of this skill are the five LTX files above. Never delete them without the owner's yes.
+The program recipe is the one in `~/.claude/skills/image/SKILL.md` ("Reinstall and uninstall").
+The five model files of this skill are restored by the shared script
+`~/.claude/skills/image/scripts/restore-models.ps1` (it restores all eight image and video
+files, resumable, size and SHA-256 checked, `-WhatIf` lists the missing ones); the full rebuild
+from an empty disk is `C:\Dev\Projects\personal-os-setup\docs\restore-comfyui.md`. Never delete
+the five LTX files without the owner's yes.

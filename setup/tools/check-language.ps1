@@ -74,6 +74,7 @@ $exemptRules = @(
     @{ pattern = '^home/\.agents/skills/.*SKILL\.md$';                      reason = 'portable skill copies quote the owner German trigger phrases and report lines' },
     @{ pattern = '^home/\.claude/life-os/project-tracker\.ps1$';            reason = 'writes the owner German project activity and morning report lines' },
     @{ pattern = '^home/\.claude/skills/image/scripts/new-image\.ps1$';    reason = 'prints the German messages the owner reads (graphics memory full, template check, no answer)' },
+    @{ pattern = '^home/\.claude/skills/image/scripts/restore-models\.ps1$'; reason = 'prints the German messages the owner reads (missing file, wrong size or hash, free-space refusal, failed download)' },
     @{ pattern = '^home/\.claude/skills/video/scripts/new-video\.ps1$';    reason = 'prints the German messages the owner reads (RAM guard with the programs to close, GPU holder, graphics memory full, template check, no answer)' },
     @{ pattern = '^home/\.claude/hooks/deepseek-orientation\.ps1$';        reason = 'prints the German warning the owner reads when the orientation file does not fit' },
     @{ pattern = '^docs/media-projects\.md$';                              reason = 'quotes the German morning report line the owner reads' },

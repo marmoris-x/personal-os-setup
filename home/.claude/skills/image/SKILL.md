@@ -86,6 +86,12 @@ It has its own script and its own measured RAM guard; this skill never starts it
 
 ## Reinstall and uninstall
 
+- Models only: `pwsh -NoProfile -File "$HOME\.claude\skills\image\scripts\restore-models.ps1" -WhatIf`
+  lists what is missing, then the same call without `-WhatIf` downloads it (resumable, size and
+  SHA-256 checked, refuses below the missing size plus 30 GB free). It restores the eight files
+  of both skills and needs no Hugging Face login. The full rebuild recipe from an empty disk is
+  `C:\Dev\Projects\personal-os-setup\docs\restore-comfyui.md` (install commands, model table,
+  start flags, two proof jobs, known problems).
 - Reinstall: `comfy stop`; move `{{DEV}}\External\ComfyUI\models` to `{{DEV}}\Temp\comfyui-models`;
   delete `{{DEV}}\External\ComfyUI` (only with the owner's yes); from `{{DEV}}\Temp` run
   `comfy --skip-prompt --workspace={{DEV}}\External\ComfyUI install --nvidia --cuda-version 13.0 --skip-manager --fast-deps`
