@@ -388,7 +388,7 @@ components:
     macos: "generated"
     linux: "generated"
   comfy-cli:
-    windows: "manual: uv tool install comfy-cli --python 3.13, then the ComfyUI recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU)"
+    windows: "manual: uv tool install comfy-cli --python 3.13, then the ComfyUI recipe in ~/.claude/skills/image/SKILL.md and the video models in ~/.claude/skills/video/SKILL.md (about 63 GB, NVIDIA GPU)"
     macos: "unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows"
     linux: "unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows"
   # --- area windows ---

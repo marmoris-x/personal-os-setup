@@ -1,0 +1,92 @@
+{
+  "id": "fixture-t2v",
+  "nodes": [
+    {
+      "id": 75,
+      "type": "SaveVideo",
+      "title": "Save Video",
+      "mode": 0,
+      "widgets_values": ["video/LTX_2.3_t2v", "auto", "auto", "auto"]
+    },
+    {
+      "id": 267,
+      "type": "b94257db-cdc1-45d3-8913-ca61e782d9c1",
+      "title": "LTX-2.3 text to video",
+      "mode": 0,
+      "widgets_values": ["", false, 1280, 720, 5, 25, 42, "ltx-2.3-22b-dev-fp8.safetensors", "ltx_2.3_22b_distilled_1.1_lora_dynamic_fro09_avg_rank_111_bf16.safetensors", "gemma_3_12B_it_fp4_mixed.safetensors", "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"]
+    }
+  ],
+  "links": [],
+  "definitions": {
+    "subgraphs": [
+      {
+        "id": "b94257db-cdc1-45d3-8913-ca61e782d9c1",
+        "nodes": [
+          {
+            "id": 240,
+            "type": "CLIPTextEncode",
+            "title": "Positive",
+            "mode": 0,
+            "widgets_values": [""]
+          },
+          {
+            "id": 266,
+            "type": "PrimitiveStringMultiline",
+            "title": "Prompt",
+            "mode": 0,
+            "widgets_values": ["placeholder prompt"]
+          },
+          {
+            "id": 225,
+            "type": "PrimitiveInt",
+            "title": "Duration",
+            "mode": 0,
+            "widgets_values": [5, "fixed"]
+          },
+          {
+            "id": 257,
+            "type": "PrimitiveInt",
+            "title": "Width",
+            "mode": 0,
+            "widgets_values": [1280, "fixed"]
+          },
+          {
+            "id": 258,
+            "type": "PrimitiveInt",
+            "title": "Height",
+            "mode": 0,
+            "widgets_values": [720, "fixed"]
+          },
+          {
+            "id": 260,
+            "type": "PrimitiveInt",
+            "title": "Frame Rate",
+            "mode": 0,
+            "widgets_values": [25, "fixed"]
+          },
+          {
+            "id": 237,
+            "type": "RandomNoise",
+            "title": "Noise (stage 2)",
+            "mode": 0,
+            "widgets_values": [810138461690240, "randomize"]
+          },
+          {
+            "id": 330,
+            "type": "PrimitiveBoolean",
+            "title": "Enhance Prompt",
+            "mode": 0,
+            "widgets_values": [true]
+          },
+          {
+            "id": 228,
+            "type": "EmptyLTXVLatentVideo",
+            "title": "Empty Latent",
+            "mode": 0,
+            "widgets_values": [768, 512, 97, 1]
+          }
+        ]
+      }
+    ]
+  }
+}

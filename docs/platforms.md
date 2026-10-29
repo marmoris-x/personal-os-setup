@@ -5,7 +5,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/platfo
 regenerate with `pwsh setup/tools/generate-docs.ps1`. Acceptance check L fails when this
 file and the map disagree.
 
-- Manifest checksum: `a6b7566158e024a6`
+- Manifest checksum: `d70882ddb86a423a`
 
 ## What each system can do
 
@@ -104,7 +104,7 @@ written next to it. An agent that meets one of these skips the component and say
 | `obsidian-plugin-tasks` | `plugin` | `plugin` | `plugin` |
 | `life-os-venv` | `generated` | `generated` | `generated` |
 | `crawl4ai` | `generated` | `generated` | `generated` |
-| `comfy-cli` | `manual: uv tool install comfy-cli --python 3.13, then the ComfyUI recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU)` | `unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows` | `unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows` |
+| `comfy-cli` | `manual: uv tool install comfy-cli --python 3.13, then the ComfyUI recipe in ~/.claude/skills/image/SKILL.md and the video models in ~/.claude/skills/video/SKILL.md (about 63 GB, NVIDIA GPU)` | `unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows` | `unsupported: the ComfyUI recipe of this repo is written for an NVIDIA GPU on Windows` |
 | `own-tools` | `generated` | `generated` | `generated` |
 | `os-sync` | `manual: start SyncTrayzor once - it carries the Syncthing service and sets up its own autostart` | `homebrew-service:syncthing` | `systemd-user:syncthing.service` |
 | `os-backup` | `packages:windows/configuration.winget` | `packages:macos/Brewfile` | `packages:linux/packages.yaml` |

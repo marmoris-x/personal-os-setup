@@ -206,6 +206,7 @@ docs/decisions/0018-research-as-a-workflow.md
 docs/decisions/0019-local-image-generation-comfy-cli.md
 docs/decisions/0020-model-specific-orientation-through-profile-hooks.md
 docs/decisions/0021-everything-flows-in-by-itself.md
+docs/decisions/0022-local-video-generation.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
@@ -223,6 +224,8 @@ home/.agents/skills/image-portable/agents/openai.yaml
 home/.agents/skills/image-portable/SKILL.md
 home/.agents/skills/media-tools-portable/SKILL.md
 home/.agents/skills/quick-research-portable/SKILL.md
+home/.agents/skills/video-portable/agents/openai.yaml
+home/.agents/skills/video-portable/SKILL.md
 home/.agents/skills/web-research/SKILL.md
 home/.claude/agents/evidence-extractor.md
 home/.claude/agents/research-writer.md
@@ -338,6 +341,8 @@ home/.claude/skills/research/scripts/store_results.py
 home/.claude/skills/research/scripts/verify_evidence.py
 home/.claude/skills/research/SKILL.md
 home/.claude/skills/reuse-first/SKILL.md
+home/.claude/skills/video/scripts/new-video.ps1
+home/.claude/skills/video/SKILL.md
 home/.claude/statusline.ps1
 home/.claude/TROUBLESHOOTING.md
 home/.config/gitleaks/gitleaks.toml
@@ -401,6 +406,8 @@ tests/fixtures/image-template-minimal.json
 tests/fixtures/install-baseline-v2.1.2.json
 tests/fixtures/manifest-broken.yaml
 tests/fixtures/personal.dummy.yaml
+tests/fixtures/video-ltx-i2v-minimal.json
+tests/fixtures/video-ltx-t2v-minimal.json
 tests/Format-Strings.Tests.ps1
 tests/Harness.Tests.ps1
 tests/Hooks.Tests.ps1
@@ -426,6 +433,7 @@ tests/sandbox/personal-os.wsb
 tests/sandbox/smoke-install.ps1
 tests/Structure.Tests.ps1
 tests/VerifyAllRoot.Tests.ps1
+tests/Video.Tests.ps1
 vault/.claude/rules/sources.md
 vault/.claude/settings.json
 vault/.claude/skills/json-canvas/references/EXAMPLES.md

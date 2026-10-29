@@ -4,7 +4,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `a6b7566158e024a6` (SHA256, first 16 characters)
+- Manifest checksum: `d70882ddb86a423a` (SHA256, first 16 characters)
 - Manifest version: 1
 
 ## Core (65 of 82)
@@ -97,7 +97,7 @@ file no longer matches the manifest (`-Check`).
 | `winget-optional` | windows | optional | programs from `windows/winget-optional.json` |
 | `plugins-claude-code` | claude | optional | Claude Code marketplaces and plugins are installed by install.ps1 from settings.json (enabledPlugins). |
 | `crawl4ai` | research | optional | uv tool install crawl4ai + crawl4ai-setup (browser), then the self-test crawl4ai-selftest.ps1 reads one page (a browser that does not start is an ERROR, not a pass); crwl lands in ~/.local/bin. It is the first page fetcher of save_pages.py, so a missing uv or Python is reported with a manual step instead of silently skipping it |
-| `comfy-cli` | research | optional | Local image generation (/image skill, ADR 0019): `uv tool install comfy-cli --python 3.13`, then ComfyUI and one model by the recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose. |
+| `comfy-cli` | research | optional | Local image and video generation (/image and /video skills, ADR 0019 and ADR 0022): `uv tool install comfy-cli --python 3.13`, then ComfyUI and the models by the recipes in ~/.claude/skills/image/SKILL.md and ~/.claude/skills/video/SKILL.md (about 63 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose. |
 
 ## Fixed installer stages (deliberately not in the manifest, see `docs/decisions/0013-install-stages.md`)
 

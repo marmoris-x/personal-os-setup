@@ -31,7 +31,9 @@ Rules that hold for the skill and its script:
 - ComfyUI starts with `--disable-partner-nodes` and listens on `127.0.0.1:8188` only; both are
   saved once with `comfy set-default`.
 - No custom nodes, no ComfyUI-Manager, no second model, no video model without the owner's yes.
-  Exactly one ComfyUI on the machine. Tracking off (`comfy tracking disable`).
+  Exactly one ComfyUI on the machine. Tracking off (`comfy tracking disable`). The yes of
+  2026-10-28 covered Wan 2.2 5B and LTX-2.3; the comparison of 2026-10-29 kept LTX-2.3, in the
+  separate `/video` skill (ADR 0022).
 - One model: Z-Image-Turbo (template `image_z_image_turbo`, three files: diffusion model 11.5 GB,
   text encoder 7.5 GB, VAE 0.3 GB; "fits within 16GB VRAM consumer devices",
   https://docs.comfy.org/tutorials/image/z-image/z-image-turbo.md).

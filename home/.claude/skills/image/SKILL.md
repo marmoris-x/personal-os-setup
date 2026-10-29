@@ -79,10 +79,10 @@ The models: `z_image_turbo_bf16.safetensors` (11.5 GB, diffusion_models), `qwen_
 (7.5 GB, text_encoders), `ae.safetensors` (0.3 GB, vae), all from
 https://huggingface.co/Comfy-Org/z_image_turbo (`resolve/main/split_files/...`).
 
-## Video is not set up
+## Video
 
-Wan 2.2 14B fp8 is two files of 14.3 GB each (https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged).
-Ask the owner first; do not download anything.
+Short clips with sound come from the separate skill `/video` (LTX-2.3, same ComfyUI, ADR 0022).
+It has its own script and its own measured RAM guard; this skill never starts it.
 
 ## Reinstall and uninstall
 

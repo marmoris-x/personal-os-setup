@@ -5,6 +5,22 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-10-29)
+
+Local video generation (`/video`, ADR 0022): the blind A/B kept LTX-2.3, Wan was removed with the
+owner's explicit yes.
+
+| What | Why |
+|---|---|
+| `home/.claude/skills/video/SKILL.md` and `scripts/new-video.ps1` (new) | `/video` next to `/image`: one model (LTX-2.3, sound in the same pass), pinned templates whose hash is checked on every use, the measured RAM guard (20.8 GiB free = 16.8 GiB ComfyUI peak + 4 GiB) with a German refusal naming the programs, a refusal while another program holds the GPU, stop after the clip when the run started the server |
+| `tests/Video.Tests.ps1` and two template fixtures (new) | 25 cases: the first run against the missing script failed 16 of 21; the review added four (GPU holder, desktop noise on the Windows GPU list, odd size, template hash on an existing file), red first as well. Hostile prompt, size and duration limits, RAM guard, local-only flags, OOM in German, hash check, `-Stop`, no second model |
+| `home/.agents/skills/video-portable/` (new) | The portable twin for OpenCode and Codex, explicit invocation only |
+| `home/.agents/skills/image-portable/SKILL.md` | The same pointer in the portable twin |
+| `home/.claude/skills/image/SKILL.md` | "Video is not set up" points to `/video`; the measured answer is in ADR 0022 |
+| `docs/decisions/0022-local-video-generation.md` (new), ADR 0019 | The owner's yes and its limits, the measured table, the blind counts, the licence quoted from the LICENSE file, the rejected options |
+| `setup/manifest.yaml`, `setup/platforms.yaml`, `docs/components.md`, `docs/platforms.md` | The `comfy-cli` component names both skills and the real 63 GB |
+| `setup/tools/verify-all.ps1` (check J) | One intended-change line per new or changed mirror file |
+
 ## Unreleased (2026-10-27)
 
 Knowledge pages live flat in the vault (`400-knowledge/`), ordered by name and one Base instead

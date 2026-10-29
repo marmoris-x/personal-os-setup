@@ -1,0 +1,99 @@
+{
+  "id": "fixture-i2v",
+  "nodes": [
+    {
+      "id": 269,
+      "type": "LoadImage",
+      "title": "Start Image",
+      "mode": 0,
+      "widgets_values": ["placeholder.png", "image"]
+    },
+    {
+      "id": 75,
+      "type": "SaveVideo",
+      "title": "Save Video",
+      "mode": 0,
+      "widgets_values": ["video/LTX_2.3_i2v", "auto", "auto", "auto"]
+    },
+    {
+      "id": 320,
+      "type": "2454ad83-157c-40dd-9f19-5daaf4041ce0",
+      "title": "LTX-2.3 image to video",
+      "mode": 0,
+      "widgets_values": ["", false, 1280, 720, 5, 25, 42, "ltx-2.3-22b-dev-fp8.safetensors", "ltx_2.3_22b_distilled_1.1_lora_dynamic_fro09_avg_rank_111_bf16.safetensors", "gemma_3_12B_it_fp4_mixed.safetensors", "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"]
+    }
+  ],
+  "links": [],
+  "definitions": {
+    "subgraphs": [
+      {
+        "id": "2454ad83-157c-40dd-9f19-5daaf4041ce0",
+        "nodes": [
+          {
+            "id": 303,
+            "type": "CLIPTextEncode",
+            "title": "Positive",
+            "mode": 0,
+            "widgets_values": [""]
+          },
+          {
+            "id": 319,
+            "type": "PrimitiveStringMultiline",
+            "title": "Prompt",
+            "mode": 0,
+            "widgets_values": ["placeholder prompt"]
+          },
+          {
+            "id": 301,
+            "type": "PrimitiveInt",
+            "title": "Duration",
+            "mode": 0,
+            "widgets_values": [5, "fixed"]
+          },
+          {
+            "id": 312,
+            "type": "PrimitiveInt",
+            "title": "Width",
+            "mode": 0,
+            "widgets_values": [1280, "fixed"]
+          },
+          {
+            "id": 299,
+            "type": "PrimitiveInt",
+            "title": "Height",
+            "mode": 0,
+            "widgets_values": [720, "fixed"]
+          },
+          {
+            "id": 300,
+            "type": "PrimitiveInt",
+            "title": "Frame Rate",
+            "mode": 0,
+            "widgets_values": [25, "fixed"]
+          },
+          {
+            "id": 277,
+            "type": "RandomNoise",
+            "title": "Noise (stage 2)",
+            "mode": 0,
+            "widgets_values": [60540193790228, "randomize"]
+          },
+          {
+            "id": 328,
+            "type": "PrimitiveBoolean",
+            "title": "Enhance Prompt",
+            "mode": 0,
+            "widgets_values": [true]
+          },
+          {
+            "id": 295,
+            "type": "EmptyLTXVLatentVideo",
+            "title": "Empty Latent",
+            "mode": 0,
+            "widgets_values": [768, 512, 97, 1]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -282,6 +282,8 @@ components:
     source: "{HOME}/.claude/setup/other-harnesses"
     target: "HOME/.claude/setup/other-harnesses"
     recursive: true
+    # A hand-made .bak next to a template is an editor leftover, never part of the install.
+    exclude: ["*.bak"]
 
   # The portable skills every other harness reads from ~/.agents/skills. The files carry the
   # same {{PLACEHOLDER}} tokens as the templates under setup/other-harnesses, so a fresh machine
@@ -754,7 +756,7 @@ components:
     area: research
     type: generated
     core: false
-    note: "Local image generation (/image skill, ADR 0019): `uv tool install comfy-cli --python 3.13`, then ComfyUI and one model by the recipe in ~/.claude/skills/image/SKILL.md (about 20 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose."
+    note: "Local image and video generation (/image and /video skills, ADR 0019 and ADR 0022): `uv tool install comfy-cli --python 3.13`, then ComfyUI and the models by the recipes in ~/.claude/skills/image/SKILL.md and ~/.claude/skills/video/SKILL.md (about 63 GB, NVIDIA GPU). Not installed by install.ps1: the models are re-downloadable and the owner starts it on purpose."
 
   - id: own-tools
     area: windows
