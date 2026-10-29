@@ -13,6 +13,11 @@
 # The repo copies of the templates are not kept (the privacy scan reads a decimal number in them
 # as a 12-digit id), so the fixtures are trimmed copies with the same node structure, and every
 # test hands the paths over explicitly.
+# The skill is Windows-only by decision (setup/platforms.yaml: unsupported on macOS and Linux -
+# the ComfyUI recipe is written for an NVIDIA GPU on Windows). The RAM guard reads Win32 memory
+# counters, so the suite is skipped there with a reason instead of failing every case.
+$script:videoTestsWindowsOnly = ($IsWindows -or ($env:OS -eq 'Windows_NT'))
+
 BeforeAll {
     $repoRoot = Split-Path -Parent $PSScriptRoot
     $script:newVideo = Join-Path $repoRoot 'home/.claude/skills/video/scripts/new-video.ps1'
@@ -168,7 +173,7 @@ exit 0
     }
 }
 
-Describe 'new-video.ps1' {
+Describe 'new-video.ps1' -Skip:(-not $script:videoTestsWindowsOnly) {
     BeforeAll {
         $script:listener = Start-Listener
         $script:upPort = $script:listener.LocalEndpoint.Port
