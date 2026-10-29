@@ -99,7 +99,7 @@ if (($Width % 2) -ne 0 -or ($Height % 2) -ne 0) {
     exit 1
 }
 
-# --- the free-RAM guard: measured peak + 4 GiB, refuse in German before anything starts --------
+# --- the free-RAM guard: the measured floor of 15.9 GiB free, refuse in German before anything --
 $osMem = Get-CimInstance Win32_OperatingSystem
 $freeGiB = [math]::Round($osMem.FreePhysicalMemory / 1MB, 2)
 if ($freeGiB -lt $MinFreeGiB) {
