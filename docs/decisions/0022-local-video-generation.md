@@ -110,8 +110,10 @@ image-to-video face was "completely distorted" while LTX stayed close to the sta
 
 - Three fresh `claude-ds` sessions (the vault, a project folder, the Temp folder) each made one
   clip and read its contact sheet (122.4 s, 129.3 s, 134.8 s; the `Read` calls are in the
-  session transcripts). A direct text-to-video run at 5 s 1280x720 and a direct image-to-video
-  run at 2 s 768x512 (68 s including the server start) worked with the real templates.
+  session transcripts). A fourth session ran the final script after the review fixes (130.7 s,
+  clip read, port closed). A direct text-to-video run at 5 s 1280x720 and a direct
+  image-to-video run at 2 s 768x512 (68 s including the server start) worked with the real
+  templates.
 - The RAM guard refused live at 20.58 GiB and at 20.54 GiB free (German text, the five programs
   named, nothing started) and let the three sessions run at 22.1-23.3 GiB.
 - The contact sheet first used fixed 30-frame steps and left two black tiles on a 49-frame clip;
