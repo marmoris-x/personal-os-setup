@@ -12,7 +12,7 @@
 #   -ModelsRoot   the ComfyUI models folder (default {{DEV}}\External\ComfyUI\models)
 #   -ModelList    a JSON file with the same fields as the table, for the fake-list test only
 #
-# The script is based on C:\Dev\Temp\video\download-models.ps1, which downloaded these eight
+# The script is based on {{DEV}}\Temp\video\download-models.ps1, which downloaded these eight
 # files on 2026-10-28 and checked every one of them against Hugging Face (see ADR 0022).
 [CmdletBinding()]
 param(
@@ -97,7 +97,7 @@ function Fail([string]$Message) {
     exit 1
 }
 
-# {{DEV}} is the repository placeholder; on the live machine it is C:\Dev. When this file
+# {{DEV}} is the repository placeholder; on the live machine it is {{DEV}}. When this file
 # runs from the repository itself, read the real Dev root from the personal values file.
 function Resolve-DevPlaceholder([string]$Path) {
     if ($Path -notmatch '\{\{DEV\}\}') { return $Path }
@@ -115,7 +115,7 @@ function Resolve-DevPlaceholder([string]$Path) {
 $ModelsRoot = Resolve-DevPlaceholder $ModelsRoot
 if (-not $ModelsRoot) {
     Fail ('Der Pfad enthaelt noch den Platzhalter {{DEV}}, und ' + (Join-Path $HOME '.personal-os\personal.yaml') +
-        ' nennt kein dev_root. Bitte den Ordner mit -ModelsRoot angeben, zum Beispiel C:\Dev\External\ComfyUI\models.')
+        ' nennt kein dev_root. Bitte den Ordner mit -ModelsRoot angeben, zum Beispiel {{DEV}}\External\ComfyUI\models.')
 }
 
 $models = if ($ModelList) {

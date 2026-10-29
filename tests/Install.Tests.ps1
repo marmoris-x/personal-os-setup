@@ -270,7 +270,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # script count_usage.py and its test test_count_usage.py.
         # 156 measured 2026-10-29: the /video skill adds two core files (SKILL.md and
         # new-video.ps1); its portable twin is not core, like the other portable skills.
-        $files.Count | Should -BeLessThan 157 -Because 'twelve intended core files were added since 2026-10-25'
+        # 157 measured 2026-10-29: the ComfyUI-restore task adds one core file,
+        # restore-models.ps1 in the image skill.
+        $files.Count | Should -BeLessThan 158 -Because 'thirteen intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {
