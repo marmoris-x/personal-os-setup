@@ -1318,6 +1318,7 @@ if (Test-Selected 'J') { try {
     # excludes nothing, so the same wheels install as before.
     $intended = @(
         @{ Path = 'HOME/.claude/life-os/requirements.txt'; Reason = 'repo-authored file: the three CUDA pins carry `; sys_platform != "darwin"` since v2.3.1, without which pip leaves the whole venv empty on macOS (measured 2026-10-14, first full-setup run)' }
+        @{ Path = 'HOME/.claude/gitignore'; Reason = '2026-10-29 (video task): the two fetched video workflow templates are ignored, so neither repository keeps them (a decimal number in them reads as a 12-digit id to the privacy scan, ADR 0022)' }
         @{ Path = 'HOME/.claude/setup/powershell/add-to-archive.ps1'; Reason = 'v3.0.0: the category list left the file. It was a ValidateSet and is now read from the personal layer at run time (setup/lib/personal.ps1), because the folder names are personal and the repository is public' }
         @{ Path = 'HOME/.claude/setup/tests/test-add-to-archive.ps1'; Reason = 'v3.0.0: the same change on the test side - invented fixture names and a fixture personal values file, so no category name of this machine stands in a public repository' }
         @{ Path = 'HOME/.claude/setup/tests/test-archive-guard.ps1'; Reason = 'v3.0.0: personal fixture names replaced by invented ones (categories, authority abbreviations, life-area note names)' }

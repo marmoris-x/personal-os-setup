@@ -38,3 +38,9 @@ profiles/
 **/*.pyc
 # skills synced from claude.ai (Anthropic's own, not part of this setup)
 skills/synced/
+
+# official video workflow templates: fetched by the /video script from the pinned commit and
+# kept out of every repository (a decimal number reads as a 12-digit id to the privacy scan,
+# ADR 0022)
+skills/video/video_ltx2_3_t2v.json
+skills/video/video_ltx2_3_i2v.json
