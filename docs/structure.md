@@ -214,6 +214,7 @@ docs/install-with-an-agent.md
 docs/media-projects.md
 docs/phone-setup.md
 docs/platforms.md
+docs/restore-comfyui.md
 docs/structure.md
 docs/troubleshooting.md
 docs/updating.md
@@ -320,6 +321,7 @@ home/.claude/setup/tests/test-trifecta-guard.ps1
 home/.claude/skills/distill/SKILL.md
 home/.claude/skills/docs-import/SKILL.md
 home/.claude/skills/image/scripts/new-image.ps1
+home/.claude/skills/image/scripts/restore-models.ps1
 home/.claude/skills/image/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
 home/.claude/skills/media-tools/SKILL.md
