@@ -42,10 +42,13 @@ Rules that hold for the skill and its script:
 - Local only: never `comfy setup`, never Comfy Cloud, never `COMFY_API_KEY`, never `comfy generate`.
   Every `comfy run`, `jobs` and `download` call carries `--where local`. ComfyUI starts with
   `--disable-partner-nodes` and listens on `127.0.0.1:8188` only; tracking stays off.
-- Free-RAM guard before every start: the measured ComfyUI working-set peak of the clean re-measure
-  (17,214.6 MiB = 16.81 GiB) plus 4 GiB = **20.8 GiB free**. Below that the script refuses in
+- Free-RAM guard before every start: **15.9 GiB free**. Below that the script refuses in
   German, names the five programs using the most memory and starts nothing. It never closes a
-  program itself and never starts a job that can freeze the PC.
+  program itself and never starts a job that can freeze the PC. Amended 2026-10-29: the guard
+  first was the measured ComfyUI working-set peak (17,214.6 MiB = 16.81 GiB) plus 4 GiB =
+  20.8 GiB; two clean 5 s runs then started at 15.94 and 16.19 GiB free and finished normally,
+  because the peak working set includes memory-mapped model files that Windows evicts to the
+  pagefile. The owner had the guard lowered to the measured floor.
 - ComfyUI is stopped after the clip when this run started it; a server that already answered is
   never touched. `-KeepRunning` keeps it.
 - Before it starts a server, the script asks `nvidia-smi` for compute apps. While another model
@@ -183,9 +186,10 @@ royalty-free. The threshold is a fact of the licence, not a legal opinion.
 
 - No session that does not call `/video` carries the skill or its template; the Skills row of
   `/context all` stays unchanged.
-- With a browser open, free RAM often sits below 20.8 GiB; the script then refuses and names the
-  programs to close. That is intended: the clean re-measure showed only 1.32 GiB free at the
-  deepest point of a run.
+- With a browser open, free RAM often sits below 20.8 GiB. Until 2026-10-29 the script refused
+  there and named the programs to close; since the guard sits at the measured floor (15.9 GiB)
+  such runs start. The clean re-measure showed only 1.32 GiB free at the deepest point of a
+  run, which the pagefile absorbed in the two clean runs of that day.
 - The five model files (42.96 GB) are re-downloadable and not backed up. Deleting them needs the
   owner's yes.
 - A reinstall follows the recipe in `~/.claude/skills/image/SKILL.md`; the video skill adds no

@@ -29,8 +29,9 @@ pwsh -NoProfile -File "$HOME\.claude\skills\video\scripts\new-video.ps1" -Prompt
 4. Exit code 1 with a German text about the graphics memory or the RAM: pass that text on in
    German; do not retry, do not switch to another model.
 5. Exit code 1 with the German RAM guard text: the script refuses before it starts, because free
-   RAM is below the measured ComfyUI peak (16.8 GiB) plus 4 GiB. Pass the text on; the owner
-   closes the programs it names, then runs it again. Never close them yourself.
+   RAM is below the guard of 15.9 GiB - the lowest free RAM of a clean run (2026-10-29; the
+   measured ComfyUI peak is 16.8 GiB working set). Pass the text on; the owner closes the programs
+   it names, then runs it again. Never close them yourself.
 
 ## Stop it
 
@@ -85,8 +86,9 @@ The models (all from pinned Hugging Face revisions, checked against size and SHA
 `ltx-2.3-22b-distilled-fp8.safetensors` file is **not** loaded by these templates.
 
 Measured on 2026-10-28/29 (RTX 5060 Ti 16 GB, 31.06 GiB usable RAM): 5 s 1280x720 with sound
-86-108 s cold, 82-96 s warm, peak VRAM 15,875 MiB, ComfyUI peak 16.8 GiB working set. Free RAM
-below 20.8 GiB is refused before the start.
+86-108 s cold, 82-96 s warm, peak VRAM 15,875 MiB, ComfyUI peak 16.8 GiB working set. Two clean
+runs on 2026-10-29 started at 15.94 and 16.19 GiB free; free RAM below 15.9 GiB is refused before
+the start (nothing lower has been measured).
 
 ## Reinstall and uninstall
 

@@ -11,9 +11,11 @@
 # of the clip and the seed, then a 2x2 contact sheet. ComfyUI is stopped afterwards when this run
 # started it (-KeepRunning keeps it); a server that was already running is never touched.
 #
-# Before anything starts, the free RAM is compared with the measured ComfyUI peak of the clean
-# re-measure of 2026-10-29 (17,214.6 MiB working set = 16.81 GiB) plus 4 GiB reserve. Below that
-# the script refuses in German and names the programs to close. The launch options (output folder,
+# Before anything starts, the free RAM is compared with the floor of 2026-10-29: the ComfyUI peak
+# working set is 17,214.6 MiB (16.81 GiB), and the two clean 5 s runs started at 15.94 and
+# 16.19 GiB free, so the guard sits at 15.9 GiB - the lowest value a clean run was measured at.
+# Below that the script refuses in German and names the programs to close. The launch options
+# (output folder,
 # --disable-partner-nodes, port) are saved once with `comfy set-default`. This script never calls
 # `comfy setup`, `comfy generate` or anything that talks to Comfy Cloud.
 [CmdletBinding(DefaultParameterSetName = 'Make')]
@@ -57,8 +59,8 @@ param(
     [string]$NvidiaSmi = 'nvidia-smi',
     [int]$Port = 8188,
     [int]$StartupTimeoutSec = 120,
-    # 17,214.6 MiB ComfyUI working-set peak (LTX-2.3, clean re-measure 2026-10-29) + 4 GiB.
-    [double]$MinFreeGiB = 20.8
+    # 15.94 GiB was the lowest free RAM of a clean run (LTX-2.3, 5 s 1280x720, 2026-10-29).
+    [double]$MinFreeGiB = 15.9
 )
 
 $ErrorActionPreference = 'Stop'
@@ -102,8 +104,9 @@ $osMem = Get-CimInstance Win32_OperatingSystem
 $freeGiB = [math]::Round($osMem.FreePhysicalMemory / 1MB, 2)
 if ($freeGiB -lt $MinFreeGiB) {
     Write-Output (('Zu wenig freier Arbeitsspeicher: {0} GiB frei, noetig sind {1} GiB ' +
-        '(gemessene ComfyUI-Spitze 16.8 GiB + 4 GiB Reserve). Der Clip wird nicht gestartet, ' +
-        'damit der Rechner nicht einfriert. Schliesse bitte diese Programme:') -f $freeGiB, $MinFreeGiB)
+        '(gemessene ComfyUI-Spitze 16.8 GiB; niedrigster sauberer Lauf 15.94 GiB frei, ' +
+        '2026-10-29). Der Clip wird nicht gestartet, damit der Rechner nicht einfriert. ' +
+        'Schliesse bitte diese Programme:') -f $freeGiB, $MinFreeGiB)
     $top = @(Get-Process | Where-Object { $_.ProcessName -ne 'Memory Compression' } |
         Group-Object ProcessName |
         ForEach-Object {

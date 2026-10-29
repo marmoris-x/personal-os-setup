@@ -20,6 +20,7 @@ owner's explicit yes.
 | `docs/decisions/0022-local-video-generation.md` (new), ADR 0019 | The owner's yes and its limits, the measured table, the blind counts, the licence quoted from the LICENSE file, the rejected options |
 | `setup/manifest.yaml`, `setup/platforms.yaml`, `docs/components.md`, `docs/platforms.md` | The `comfy-cli` component names both skills and the real 63 GB |
 | `setup/tools/verify-all.ps1` (check J) | One intended-change line per new or changed mirror file |
+| RAM guard lowered the same day: the video script, both video `SKILL.md`s (here and portable), `docs/decisions/0022-local-video-generation.md`, the Reason line in `setup/tools/verify-all.ps1` | The guard drops from 20.8 GiB (peak + 4 GiB reserve) to 15.9 GiB, the lowest free RAM a clean run was measured at (two 5 s 1280x720 clips started at 15.94 and 16.19 GiB free and finished normally). The owner asked why not after both runs; the tests' explicit `-MinFreeGiB` values are unchanged and the 9999 GiB refusal case still holds |
 
 ## Unreleased (2026-10-27)
 
