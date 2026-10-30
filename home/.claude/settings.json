@@ -88,6 +88,16 @@
     "defaultMode": "auto"
   },
   "model": "sonnet",
+  "skillOverrides": {
+    "dataviz": "user-invocable-only",
+    "claude-api": "user-invocable-only",
+    "update-config": "user-invocable-only",
+    "loop": "user-invocable-only",
+    "plugin-authoring": "user-invocable-only",
+    "keybindings-help": "user-invocable-only",
+    "simplify": "user-invocable-only",
+    "fewer-permission-prompts": "user-invocable-only"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -336,16 +346,6 @@
     "type": "command",
     "command": "{{PWSH_PATH}} -NoProfile -ExecutionPolicy Bypass -File {{HOME_FWD}}/.claude/statusline.ps1"
   },
-  "skillOverrides": {
-    "dataviz": "user-invocable-only",
-    "claude-api": "user-invocable-only",
-    "update-config": "user-invocable-only",
-    "loop": "user-invocable-only",
-    "plugin-authoring": "user-invocable-only",
-    "keybindings-help": "user-invocable-only",
-    "simplify": "user-invocable-only",
-    "fewer-permission-prompts": "user-invocable-only"
-  },
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
@@ -358,6 +358,12 @@
       "source": {
         "source": "github",
         "repo": "cosai-oasis/project-codeguard"
+      }
+    },
+    "hyperframes": {
+      "source": {
+        "source": "github",
+        "repo": "heygen-com/hyperframes"
       }
     }
   },

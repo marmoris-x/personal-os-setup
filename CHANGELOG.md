@@ -5,6 +5,13 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-10-30)
+
+| What | Why |
+|---|---|
+| `home/.claude/life-os/requirements.txt`: `filelock==4.0.12` -> `4.2.1`; the live copy and the venv at `%LOCALAPPDATA%\life-os\venv` updated in place | Two open Dependabot alerts on `claude-config` (GHSA-v4x8-3wr5-3wq8 high, GHSA-9vhv-jxww-xfm5 low), both about `ReadWriteLock`; filelock is a transitive dependency of huggingface_hub (plain `FileLock`) and nothing here uses `ReadWriteLock`. `pip check` clean, `import filelock` and `import huggingface_hub` verified |
+| `home/.claude/settings.json`: the mirror catches up with the live file (plugin `hyperframes`, `skillOverrides` moved, same eight entries) | Written by the export on 2026-10-30 before it stopped at a missing `~/.agents`; after the folder was rendered back from this mirror (10 files, placeholder-expanded), export and drift-check report 0 new, 0 changed, 0 removed and `check.ps1` ends CHECK-OK |
+
 ## Unreleased (2026-10-29)
 
 Local video generation (`/video`, ADR 0022): the blind A/B kept LTX-2.3, Wan was removed with the
