@@ -364,7 +364,8 @@
       "source": {
         "source": "github",
         "repo": "heygen-com/hyperframes"
-      }
+      },
+      "autoUpdate": true
     }
   },
   "language": "german",
