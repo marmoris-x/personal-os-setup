@@ -453,6 +453,7 @@ vault/.claude/skills/vault-lint/graph_health.py
 vault/.claude/skills/vault-lint/project_sync.py
 vault/.claude/skills/vault-lint/SKILL.md
 vault/.claude/skills/vault-lint/test_expiry.py
+vault/.claude/skills/vault-lint/test_names.py
 vault/.claude/skills/vault-lint/test_project_sync.py
 vault/.obsidian/app.json
 vault/.obsidian/appearance.json

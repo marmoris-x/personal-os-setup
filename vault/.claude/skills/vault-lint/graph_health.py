@@ -27,6 +27,10 @@ Checks:
   4. duplicate names - the same file name (stem) twice in the scanned area,
      or the same frontmatter alias on two notes: such links are ambiguous;
      fix with an alias or a path link
+  5. German folder names - folder names under 000-meta, 100-daily, 200-projects
+     and 400-knowledge that contain an umlaut or the sharp s, or a German
+     structural word; content folders (300-areas, 500-sources, 600-archive,
+     900-inactive, inbox, outbox, trash) and content file names are exempt
 
 Obsidian does not render [[...]] inside code as links, so fenced blocks
 and inline code spans are blanked out before the scan (line numbers stay
@@ -36,6 +40,7 @@ Exit 1 when there is at least one finding.
 import argparse
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -45,6 +50,20 @@ ORPHAN_DIRS = ["200-projects", "300-areas", "400-knowledge"]
 # Vault-relative subtrees that stay out of the note scan (see the doc string).
 SCAN_SKIP_SUBTREES = ["900-inactive/research-tests"]
 TARGET_SKIP = {".git", ".obsidian", "trash", "outbox"}
+NAME_SCAN_DIRS = ["000-meta", "100-daily", "200-projects", "400-knowledge"]
+NAME_SKIP_PARTS = {".git", ".obsidian", ".claude", "__pycache__",
+                   "300-areas", "500-sources", "600-archive", "900-inactive",
+                   "inbox", "outbox", "trash"}
+GERMAN_NAME_WORDS = {
+    "auftraege", "auftrag", "uebergabe", "planung", "notizen", "entwurf",
+    "vorlage", "vorlagen", "archiv", "aufgaben", "recherche", "wissen",
+    "projekte", "bereiche", "quellen", "eingang", "ausgang", "papierkorb",
+    "besprechung", "protokoll", "bericht", "dokumente", "bilder", "musik",
+    "ordner", "struktur", "gesundheit", "finanzen", "wohnen", "bildung",
+    "karriere",
+}
+GERMAN_CHARS = set("äöüß")
+NAME_SPLIT_RE = re.compile(r"[-_. ]+")
 LINK_RE = re.compile(r"\[\[([^\[\]\n]+?)\]\]")
 MD_LINK_RE = re.compile(r"!?\[[^\]\n]*\]\(([^)\n]+)\)")
 SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
@@ -108,6 +127,36 @@ def split_target(raw):
     target = raw.split("|", 1)[0]
     target = target.split("#", 1)[0].split("^", 1)[0].strip()
     return target
+
+
+def german_name_reason(name):
+    """Why a folder name looks German, or None."""
+    lowered = unicodedata.normalize("NFC", name).lower()
+    if any(ch in lowered for ch in GERMAN_CHARS):
+        return "German character"
+    for part in NAME_SPLIT_RE.split(lowered):
+        if part in GERMAN_NAME_WORDS:
+            return "German word '" + part + "'"
+    return None
+
+
+def find_german_folder_names(vault):
+    """Folder names in the system folders that look German (see the doc string)."""
+    findings = []
+    for d in NAME_SCAN_DIRS:
+        folder = vault / d
+        if not folder.is_dir():
+            continue
+        for p in sorted(folder.rglob("*")):
+            if not p.is_dir():
+                continue
+            rel = p.relative_to(vault)
+            if any(part in NAME_SKIP_PARTS for part in rel.parts):
+                continue
+            reason = german_name_reason(p.name)
+            if reason:
+                findings.append({"path": rel.as_posix(), "reason": reason})
+    return findings
 
 
 def in_skipped_subtree(path, vault):
@@ -226,6 +275,11 @@ def main():
             print("FINDING alias collision: " + alias + " -> "
                   + ", ".join(sorted(p.relative_to(vault).as_posix() for p in files)))
             findings += 1
+
+    for finding in find_german_folder_names(vault):
+        print("FINDING german folder name: " + finding["path"]
+              + " (" + finding["reason"] + ")")
+        findings += 1
 
     print("scanned " + str(len(notes)) + " notes, " + str(link_count) + " wikilinks, "
           + str(md_count) + " markdown links")

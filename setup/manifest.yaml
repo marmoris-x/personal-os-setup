@@ -651,6 +651,7 @@ components:
     type: dir
     core: true
     dirs:
+      - "VAULT/000-meta/orders"
       - "VAULT/000-meta/todo-archive"
       - "VAULT/100-daily"
       - "VAULT/200-projects"

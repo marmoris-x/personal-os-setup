@@ -5,6 +5,21 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-11-02)
+
+The vault's agent orders left the German `000-meta/auftraege` folder.
+
+| What | Why |
+|---|---|
+| `setup/tools/drift-check.ps1`: the vault exclusion is now `^orders/` | The live vault folder is `000-meta/orders`; the old pattern would report the new folder as unmanaged |
+| `setup/tools/check-language.ps1`: the tolerated phrase `auftraege` is gone; the German word list keeps it; `vault/.claude/skills/vault-lint/graph_health.py` and `test_names.py` are exempt for their German name data | The tool no longer has to spell the old folder name; the word list still detects it in future text, and the new check's data and fixtures are not prose |
+| `setup/tools/old-paths.txt`: unchanged, `auftraege` stays | The old name must not come back; it is a historical old path |
+| `vault/AGENTS.md`, `vault/README.md`, `vault/.claude/skills/vault-lint/graph_health.py`, `vault/.claude/skills/vault-lint/SKILL.md`, `vault/.claude/skills/vault-lint/test_names.py`: exported from the live vault | The new "Orders for agents" rule, the `orders/` entry, and the German folder-name check with NFC normalization and its tests |
+| `tests/Install.Tests.ps1`: the minimal-install core file count moves from 157 to 158 and the guard from `<158` to `<159` | The vault-lint name check adds `test_names.py` as one core file |
+| `setup/tools/verify-all.ps1`: check C now has six documented exclusions (the stale `setup/tools/drift-check.ps1` entry is gone); check J documents the changed `graph_health.py` and the new `test_names.py` | `drift-check.ps1` no longer spells the old folder name; the two vault-lint files are intended install changes |
+| `setup/manifest.yaml`: `VAULT/000-meta/orders` joins `vault-dirs`; `docs/components.md` and `docs/platforms.md` regenerated | A fresh install must create the folder the new `AGENTS.md` rule names; the generated docs carry the new manifest checksum |
+| `docs/structure.md`: the structure block lists the new `vault/.claude/skills/vault-lint/test_names.py` | `check-structure.ps1 -Write` ran; check A sees the new tracked file |
+
 ## Unreleased (2026-10-30)
 
 | What | Why |

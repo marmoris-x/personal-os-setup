@@ -148,6 +148,13 @@ pages instead of carrying two topics.
 - My own work (commands, scripts, templates, configurations) is never stored in
   `500-sources/`. It is a project: code in `{{DEV}}\Projects`, one note in `200-projects/`.
 
+## Orders for agents
+A long order, plan or handoff for an agent belongs to the project it serves:
+`{{DEV}}\Projects\<repo>\docs\orders\`. An order that serves the vault itself, or a project
+without a repository, goes to `000-meta/orders/`. File names are English; the content may be
+German when it is written for me. Every order is linked from `000-meta/index.md` or from its
+project hub.
+
 ## Page length
 A note in `400-knowledge/` or `200-projects/` stays under about 200 lines. A longer page is
 split by topic into linked pages (for example one routine page and one reference page); the

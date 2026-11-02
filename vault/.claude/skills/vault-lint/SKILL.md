@@ -43,7 +43,10 @@ Follow the vault's AGENTS.md. This is Karpathy's "lint" step: keep the wiki true
   `400-knowledge`, duplicate page names and alias collisions. Fix a broken link by finding
   the intended note; if the intent is unclear, list it. An orphan note gets linked from its
   hub or the index (AGENTS.md rule 13). A duplicate name gets an `aliases` entry or a path
-  link. Exit 1 means findings.
+  link. It also reports German folder names in the system folders (`000-meta`, `100-daily`,
+  `200-projects`, `400-knowledge`): an umlaut/ß or a German structural word. Content folders
+  (`300-areas`, `500-sources`, `600-archive`, `900-inactive`, `inbox`, `outbox`, `trash`) and
+  content file names are exempt. Exit 1 means findings.
 - `python -I -X utf8 .claude/skills/vault-lint/project_sync.py` — every git repository under
   `{{DEV}}\Projects` has exactly one hub note (`200-projects/` while active, `900-inactive/`
   when finished), hub notes carry `repo:`, and an active note may not be more than 30 days

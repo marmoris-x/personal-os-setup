@@ -30,6 +30,7 @@ documents and tasks — kept in git, so every change is recorded, and worked in 
 | `user.md` | my data for filling in forms and letters |
 | `todo.md` | the single task list: Now, Next, Waiting, Later, Done |
 | `log.md` | the history: one line per import, change, check or decision |
+| `orders/` | long orders, plans and handoffs for vault-level agent work; project orders live in the project repo |
 | `overview.base` | the projects, people and organisations as tables |
 | `templates/` | the note shapes: daily, person, project, source |
 | `scripts/` | `build-sidecars.py` for the document archive, `setup-laptop.ps1` |

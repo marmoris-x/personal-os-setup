@@ -50,7 +50,6 @@ $germanWords = @(
 $toleratedPhrases = @(
     @{ text = 'inbox/audio/erledigt';                           reason = 'a folder inside the owner vault (his word for done)' },
     @{ text = 'Dokumentenarchiv';                               reason = 'the owner archive folder name, from his personal.yaml' },
-    @{ text = 'auftraege';                                      reason = 'a folder inside the owner vault (his tasks folder): a scanner that must exclude it has to spell the name' },
     @{ text = 'Fuer das andere bitte eine neue Sitzung starten'; reason = 'the sentence the session guard relays to the owner' },
     @{ text = 'noch nicht';                                     reason = 'a German phrase the research standard looks for in German texts' },
     @{ text = '2026_Maerz';                                     reason = 'the owner real document file name' },
@@ -87,6 +86,8 @@ $exemptRules = @(
     @{ pattern = '^docs/phone-setup\.md$';                                  reason = 'quotes the label a German phone really shows' },
     @{ pattern = '^setup/tools/old-paths\.txt$';                            reason = 'the pattern list that check C of verify-all searches for: it has to name the old German file names' },
     @{ pattern = '^setup/tools/check-language\.ps1$';                       reason = 'it holds the German word list that this check searches for' },
+    @{ pattern = '^vault/\.claude/skills/vault-lint/graph_health\.py$';     reason = 'it holds the German folder-name list that the check searches for; the words are data, not prose' },
+    @{ pattern = '^vault/\.claude/skills/vault-lint/test_names\.py$';       reason = 'the German fixtures of the folder-name check; the words are test data, not prose' },
     @{ pattern = '^CHANGELOG\.md$';                                         reason = 'a record of what was true at the time: it names the old German file names that were renamed away (check C excludes it for the same reason)' },
     @{ pattern = '^vault/gitignore$';                                       reason = 'lists the owner vault working folders by name' },
     @{ pattern = '^vault/\.stignore$';                                      reason = 'same, for the sync tool' }

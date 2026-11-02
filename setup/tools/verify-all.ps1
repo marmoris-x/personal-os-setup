@@ -895,15 +895,16 @@ if (Test-Selected 'C') { try {
     if ($oldPatterns.Count -eq 0) { throw 'the pattern file is empty' }
     Push-Location $RepoRoot
     $repoHits = New-Object System.Collections.Generic.List[string]
-    # Five documented exceptions, each with its reason in the output. They are the files that
+    # Six documented exceptions, each with its reason in the output. They are the files that
     # have to name the old paths: the record of what was true (CHANGELOG), the record of the move
-    # itself (ADR 0014), the pattern list, the German word list of check E, and the unmanaged
-    # scan of drift-check.ps1 (its exclusion table must spell the owner's live German vault
-    # folder to exclude it - found by the first acceptance run after the unmanaged scan landed,
-    # 2026-10-16; this very file may not spell that name, or the search finds itself).
+    # itself (ADR 0014), the pattern list, the German word list of check E, and the German
+    # folder-name check and its test (their word list and fixture must spell the old name to
+    # detect it). drift-check.ps1 is deliberately not exempt any more: since 2026-11-02 it
+    # spells the new vault folder, so check C must see it.
     $skipOldPathFiles = @('CHANGELOG.md', 'docs/decisions/0014-final-layout.md',
                           'setup/tools/old-paths.txt', 'setup/tools/check-language.ps1',
-                          'setup/tools/drift-check.ps1')
+                          'vault/.claude/skills/vault-lint/graph_health.py',
+                          'vault/.claude/skills/vault-lint/test_names.py')
     # The documented scratch paths are skipped by their REPO-RELATIVE path, not by name: review 5
     # showed that a plain name match silently skipped docs/install-test/ (which is content, not
     # scratch). Junctions and symlinks are not followed - the walk stays inside the repository.
@@ -1469,6 +1470,8 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/image/scripts/restore-models.ps1'; Reason = '2026-10-29 (comfy-restore): the shared model restore script - the eight /image and /video files with pinned URL, size and SHA-256, resumable download, size and hash check, 30 GB free-space reserve, -WhatIf; tested only against a fake list' }
         @{ Path = 'HOME/.claude/skills/image/SKILL.md'; Reason = '2026-10-29 (comfy-restore): the reinstall section points at restore-models.ps1 and docs/restore-comfyui.md' }
         @{ Path = 'HOME/.claude/skills/video/SKILL.md'; Reason = '2026-10-29 (comfy-restore): the reinstall section points at the shared restore script and docs/restore-comfyui.md' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/graph_health.py'; Reason = '2026-11-02 (agent-orders task): the German folder-name check in the system folders, with NFC normalization for decomposed umlauts' }
+        @{ Path = 'VAULT/.claude/skills/vault-lint/test_names.py'; Reason = '2026-11-02 (agent-orders task): the tests for that check, including the decomposed-umlaut case' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

@@ -4,7 +4,7 @@ This file is **generated** - do not edit it by hand. The source is `setup/manife
 regenerate with `pwsh setup/tools/generate-docs.ps1`. `setup/tools/check.ps1` fails when this
 file no longer matches the manifest (`-Check`).
 
-- Manifest checksum: `d70882ddb86a423a` (SHA256, first 16 characters)
+- Manifest checksum: `eba7e12853ca7d33` (SHA256, first 16 characters)
 - Manifest version: 1
 
 ## Core (65 of 82)

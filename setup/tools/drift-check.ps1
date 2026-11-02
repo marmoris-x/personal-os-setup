@@ -145,7 +145,7 @@ $unmanagedExclusions = @(
     @{ root = 'VAULT/.obsidian';              pattern = '^plugins/[^/]+/(main\.js|styles\.css|manifest\.json|[^/]+\.sh)$'; reason = 'plugin-code' }
     # VAULT/000-meta
     @{ root = 'VAULT/000-meta';               pattern = '^[^/]+\.md$';                 reason = 'note' }           # the owner's own notes (todo.md, log.md, index.md, ...)
-    @{ root = 'VAULT/000-meta';               pattern = '^auftraege/';                 reason = 'personal' }
+    @{ root = 'VAULT/000-meta';               pattern = '^orders/';                    reason = 'personal' }
     @{ root = 'VAULT/000-meta';               pattern = '^todo-archive/';              reason = 'archive' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-(state|inbox|conflicts)\.json$'; reason = 'runtime' }
     @{ root = 'VAULT/000-meta';               pattern = '^life-os-expiry\.json$';      reason = 'runtime' }
