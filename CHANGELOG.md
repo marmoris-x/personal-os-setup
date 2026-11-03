@@ -5,6 +5,12 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-11-03)
+
+| What | Why |
+|---|---|
+| `home/.claude/life-os/requirements.txt`: `certifi==2026.7.22` -> `2026.10.18`; the live copy under `~/.claude/life-os/` updated in place | Dependabot alert GHSA-6q48-6c7w-9gw2 (critical): certifi bundled emSign root CAs with compromised intermediate CA keys. The file is repo-authored (`doc-only`), so `export.ps1` does not mirror it; live and repo were edited to the same content and checked with SHA-256 |
+
 ## Unreleased (2026-11-02)
 
 The vault's agent orders left the German `000-meta/auftraege` folder.

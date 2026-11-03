@@ -6,13 +6,16 @@
 # (GHSA-v4x8-3wr5-3wq8 high, GHSA-9vhv-jxww-xfm5 low). filelock is a transitive
 # dependency of huggingface_hub, which uses the plain FileLock only; pip check is clean.
 #
+# certifi was bumped 2026.7.22 -> 2026.10.18 on 2026-11-03: GHSA-6q48-6c7w-9gw2 (critical),
+# bundled emSign root CAs with compromised intermediate CA keys.
+#
 # The three nvidia pins carry a marker since 2026-10-14: they are the CUDA runtime wheels of
 # the frozen Windows venv, and on macOS (Apple Silicon, no CUDA) no such wheel exists - pip
 # stopped there and the whole venv stayed empty. Measured in the first full-setup CI run:
 # "No matching distribution found for nvidia-cublas-cu12==12.9.2.10" on macos-latest.
 anyio==4.15.1
 av==18.1.0
-certifi==2026.7.22
+certifi==2026.10.18
 click==8.5.0
 colorama==0.4.6
 ctranslate2==4.8.2
