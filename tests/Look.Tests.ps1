@@ -339,7 +339,9 @@ Describe 'look.ps1' -Skip:(-not $IsWindows) {
         $body.messages[0].role | Should -Be 'user'
         $body.messages[0].content[0].type | Should -Be 'image_url'
         $body.messages[0].content[0].image_url.url | Should -Match '^data:image/png;base64,[A-Za-z0-9+/=]+$'
-        $body.messages[0].content[0].image_url.media_resolution | Should -Be 'MEDIA_RESOLUTION_HIGH'
+        # The live Google API rejects media_resolution inside image_url (HTTP 400) and accepts it
+        # as a sibling of image_url in the content part (measured 2026-11-04).
+        $body.messages[0].content[0].media_resolution | Should -Be 'MEDIA_RESOLUTION_HIGH'
         $body.messages[0].content[1].type | Should -Be 'text'
         $body.messages[0].content[1].text | Should -Be $script:defaultAsk
     }
@@ -347,7 +349,7 @@ Describe 'look.ps1' -Skip:(-not $IsWindows) {
     It 'switches the media resolution to ultra_high on request' {
         $r = Invoke-LookScenario -Mode 'ok' -Arguments @('-Path', $script:png, '-Resolution', 'ultra_high')
         $r.Code | Should -Be 0 -Because $r.Text
-        ($r.Request.body | ConvertFrom-Json).messages[0].content[0].image_url.media_resolution | Should -Be 'MEDIA_RESOLUTION_ULTRA_HIGH'
+        ($r.Request.body | ConvertFrom-Json).messages[0].content[0].media_resolution | Should -Be 'MEDIA_RESOLUTION_ULTRA_HIGH'
     }
 
     It 'accepts an mp4 as a video data URI' {

@@ -217,11 +217,9 @@ $payload = [ordered]@{
             role    = 'user'
             content = @(
                 [ordered]@{
-                    type        = 'image_url'
-                    image_url   = [ordered]@{
-                        url              = "data:$mediaType;base64,$b64"
-                        media_resolution = $mediaResolution
-                    }
+                    type             = 'image_url'
+                    image_url        = [ordered]@{ url = "data:$mediaType;base64,$b64" }
+                    media_resolution = $mediaResolution
                 }
                 [ordered]@{ type = 'text'; text = $Ask }
             )
