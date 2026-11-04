@@ -324,6 +324,7 @@ home/.claude/skills/image/scripts/new-image.ps1
 home/.claude/skills/image/scripts/restore-models.ps1
 home/.claude/skills/image/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
+home/.claude/skills/look/scripts/look.ps1
 home/.claude/skills/media-tools/SKILL.md
 home/.claude/skills/quick-research/SKILL.md
 home/.claude/skills/research/references/style-rules.md
@@ -422,6 +423,7 @@ tests/LifeOsMorning.Tests.ps1
 tests/LifeOsTasks.Tests.ps1
 tests/LifeOsTestVault.ps1
 tests/LineEndings.Tests.ps1
+tests/Look.Tests.ps1
 tests/Manifest.Tests.ps1
 tests/Orientation.Tests.ps1
 tests/PersonalLayer.Tests.ps1

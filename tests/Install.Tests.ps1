@@ -274,7 +274,8 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # restore-models.ps1 in the image skill.
         # 158 measured 2026-11-02: the German folder-name check adds one core file,
         # test_names.py in the vault-lint skill.
-        $files.Count | Should -BeLessThan 159 -Because 'the intended core files were added since 2026-10-25'
+        # 159 measured 2026-11-04: the /look skill adds one core file, scripts/look.ps1.
+        $files.Count | Should -BeLessThan 160 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

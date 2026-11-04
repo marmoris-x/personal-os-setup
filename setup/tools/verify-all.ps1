@@ -1473,6 +1473,7 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/.claude/skills/vault-lint/graph_health.py'; Reason = '2026-11-02 (agent-orders task): the German folder-name check in the system folders, with NFC normalization for decomposed umlauts' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_names.py'; Reason = '2026-11-02 (agent-orders task): the tests for that check, including the decomposed-umlaut case' }
         @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 1): the three PORTKEY_* variables join the service list in the existing prompt style; no other line changes' }
+        @{ Path = 'HOME/.claude/skills/look/scripts/look.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 2): one picture or video and one question to the Portkey quick pool; the refusal list (junctions and short names resolved through the file handle), the 18 MB limit checked before reading, the documented exit codes and German errors, tested against a local fake endpoint (red first, 38 green)' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null
