@@ -1472,6 +1472,7 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/video/SKILL.md'; Reason = '2026-10-29 (comfy-restore): the reinstall section points at the shared restore script and docs/restore-comfyui.md' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/graph_health.py'; Reason = '2026-11-02 (agent-orders task): the German folder-name check in the system folders, with NFC normalization for decomposed umlauts' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_names.py'; Reason = '2026-11-02 (agent-orders task): the tests for that check, including the decomposed-umlaut case' }
+        @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 1): the three PORTKEY_* variables join the service list in the existing prompt style; no other line changes' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

@@ -10,6 +10,14 @@ AfterAll {
     if (Test-Path -LiteralPath $script:tmp) { Remove-Item -LiteralPath $script:tmp -Recurse -Force }
 }
 
+Describe 'the service list' {
+    It 'offers the three Portkey variables' {
+        $services.Keys | Should -Contain 'PORTKEY_API_KEY'
+        $services.Keys | Should -Contain 'PORTKEY_CONFIG_QUICK'
+        $services.Keys | Should -Contain 'PORTKEY_CONFIG_REVIEW'
+    }
+}
+
 Describe 'the Unix key file' {
     It 'writes every known key as an export line and reads it back' {
         $path = Join-Path $script:tmp 'keys.env'

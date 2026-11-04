@@ -7,13 +7,16 @@
 # Empty input = skip this service. Afterwards restart all terminals and Claude Code.
 
 $services = [ordered]@{
-    'YDC_API_KEY'       = 'You.com       -> you.com/platform  (API Keys)'
-    'TAVILY_API_KEY'    = 'Tavily        -> app.tavily.com   (API Keys)'
-    'FIRECRAWL_API_KEY' = 'Firecrawl     -> firecrawl.dev/app/api-keys'
-    'EXA_API_KEY'       = 'Exa           -> dashboard.exa.ai/api-keys'
-    'TINYFISH_API_KEY'  = 'TinyFish      -> agent.tinyfish.ai/api-keys'
-    'SERPER_API_KEY'    = 'Serper/Google -> serper.dev (Dashboard, API Key)'
-    'GROQ_API_KEY'      = 'Groq          -> console.groq.com/keys (API Keys)'
+    'YDC_API_KEY'           = 'You.com       -> you.com/platform  (API Keys)'
+    'TAVILY_API_KEY'        = 'Tavily        -> app.tavily.com   (API Keys)'
+    'FIRECRAWL_API_KEY'     = 'Firecrawl     -> firecrawl.dev/app/api-keys'
+    'EXA_API_KEY'           = 'Exa           -> dashboard.exa.ai/api-keys'
+    'TINYFISH_API_KEY'      = 'TinyFish      -> agent.tinyfish.ai/api-keys'
+    'SERPER_API_KEY'        = 'Serper/Google -> serper.dev (Dashboard, API Key)'
+    'GROQ_API_KEY'          = 'Groq          -> console.groq.com/keys (API Keys)'
+    'PORTKEY_API_KEY'       = 'Portkey       -> app.portkey.ai (API Keys)'
+    'PORTKEY_CONFIG_QUICK'  = 'Portkey config ID of "vision-quick" (pc-...)'
+    'PORTKEY_CONFIG_REVIEW' = 'Portkey config ID of "vision-review" (pc-...)'
 }
 
 function ConvertTo-EnvFileValue {
