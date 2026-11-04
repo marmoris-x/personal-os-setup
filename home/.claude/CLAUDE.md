@@ -113,6 +113,8 @@ is more specific and wins where the two differ. My explicit request in the chat 
 
 ## How to work
 
+- When my message names the files or steps, that list is the boundary: any further file, even
+  one the project rules normally expect (`PROGRESS.md`, a vault hub), waits for my yes first.
 - Size the effort to the task before you start, and say which tier you picked:
   - small (one or two files, describable in one sentence): do it, run one relevant check, no plan, no review.
   - medium (several files or a new script): plan in PROGRESS.md, the project's check command, one review subagent.
