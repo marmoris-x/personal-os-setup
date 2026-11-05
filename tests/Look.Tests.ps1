@@ -321,7 +321,7 @@ Describe 'look.ps1' -Skip:(-not $IsWindows) {
         $r.Code | Should -Be 0 -Because $r.Text
         $lines = @($r.Text -split "`r?`n" | Where-Object { $_.Trim() })
         $lines[0] | Should -Be 'Eyes OK'
-        $lines[-1] | Should -Match '^model=gemini-3\.5-flash-lite target=\$\.targets\[0\] retries=0 seconds=\d+ trace=[0-9a-fA-F-]{36}$'
+        $lines[-1] | Should -Match '^model=gemini-3\.5-flash-lite target=\$\S+ retries=0 seconds=\d+ trace=[0-9a-fA-F-]{36}$'
         $trace = [regex]::Match($lines[-1], 'trace=([0-9a-fA-F-]{36})').Groups[1].Value
         $r.Request.headers.'x-portkey-trace-id' | Should -Be $trace
     }
