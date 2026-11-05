@@ -1,6 +1,6 @@
 # look.ps1 - one picture or video, one question, to the Portkey quick pool.
 #
-#   pwsh look.ps1 -Path <file> [-Ask "<question>"] [-Resolution high|ultra_high]
+#   pwsh look.ps1 -Path <file> [-Ask "<question>"]
 #
 # Exits: 0 ok, 2 bad input, 3 refused path, 4 request over 18 MB after base64,
 #        5 missing environment variable, 6 HTTP/timeout error, 7 another model answered.
@@ -18,7 +18,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$Path,
     [string]$Ask = 'Describe exactly what you see: every object, every text verbatim, colours, layout. Say what you cannot read.',
-    [ValidateSet('high', 'ultra_high')][string]$Resolution = 'high',
     [string]$Endpoint = 'https://api.portkey.ai/v1/chat/completions',
     [ValidateRange(1, 600)][int]$TimeoutSec = 120
 )
@@ -207,9 +206,6 @@ $mediaType = switch ($ext) {
     '.webp' { 'image/webp' }
     '.mp4' { 'video/mp4' }
 }
-$mediaResolution = 'MEDIA_RESOLUTION_HIGH'
-if ($Resolution -eq 'ultra_high') { $mediaResolution = 'MEDIA_RESOLUTION_ULTRA_HIGH' }
-
 $payload = [ordered]@{
     model    = $Model
     messages = @(
@@ -217,9 +213,8 @@ $payload = [ordered]@{
             role    = 'user'
             content = @(
                 [ordered]@{
-                    type             = 'image_url'
-                    image_url        = [ordered]@{ url = "data:$mediaType;base64,$b64" }
-                    media_resolution = $mediaResolution
+                    type      = 'image_url'
+                    image_url = [ordered]@{ url = "data:$mediaType;base64,$b64" }
                 }
                 [ordered]@{ type = 'text'; text = $Ask }
             )

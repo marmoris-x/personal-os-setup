@@ -68,7 +68,7 @@ $exemptRules = @(
     @{ pattern = '^home/\.claude/skills/research/references/style-rules\.md$'; reason = 'style rules for the owner German research texts' },
     @{ pattern = '^home/\.claude/skills/research/scripts/.*\.py$';          reason = 'research tooling with German pattern data' },
     @{ pattern = '^home/\.claude/(skills/[^/]+/SKILL|agents/[^/]+)\.md$';   reason = 'quoted phrases the owner speaks - they trigger the skill' },
-    @{ pattern = '^home/\.claude/CLAUDE\.md$';                              reason = 'quoted trigger phrases the owner speaks (sehr gruendlich, ausfuehrlich)' },
+    @{ pattern = '^home/\.claude/CLAUDE\.md$';                              reason = 'quoted trigger phrases the owner speaks (sehr gruendlich, ausfuehrlich) and his German picture rule (2026-11-05)' },
     @{ pattern = '^home/\.claude/setup/other-harnesses/.*SKILL\.md$';       reason = 'quoted phrases the owner speaks (portable skill copies)' },
     @{ pattern = '^home/\.agents/skills/.*SKILL\.md$';                      reason = 'portable skill copies quote the owner German trigger phrases and report lines' },
     @{ pattern = '^home/\.claude/life-os/project-tracker\.ps1$';            reason = 'writes the owner German project activity and morning report lines' },

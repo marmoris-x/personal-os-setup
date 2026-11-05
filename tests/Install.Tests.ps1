@@ -275,7 +275,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 158 measured 2026-11-02: the German folder-name check adds one core file,
         # test_names.py in the vault-lint skill.
         # 159 measured 2026-11-04: the /look skill adds one core file, scripts/look.ps1.
-        $files.Count | Should -BeLessThan 160 -Because 'the intended core files were added since 2026-10-25'
+        # 161 measured 2026-11-05: the second-opinion hook and the /look SKILL.md add two core
+        # files; the portable twin is not core, like the other portable skills.
+        $files.Count | Should -BeLessThan 162 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

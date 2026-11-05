@@ -423,3 +423,14 @@ The row of 2026-09-29 above ("up to 5,000 requests a month free") is kept as his
 
 **Method note, still valid.** A star count read through a caching fetch layer is not
 evidence. Read it twice, from two hosts, or not at all.
+
+## Picture reading (2026-11-05)
+
+| Layer | Tool | Cost |
+|---|---|---|
+| Manual reading of one picture or video | `/look <path> [question]` -> `~/.claude/skills/look/scripts/look.ps1` -> the owner's Portkey quick config (`gemini-3.5-flash-lite`) | The owner's Portkey quick pool; its limits are the provider's |
+| Second opinion after a picture Read in DeepSeek sessions | `hooks/gemini-second-opinion.ps1` (PostToolUse on `Read`, DeepSeek profile only) | One quick-pool request per picture read; never blocks, gives up after 60 s, skips every refused path |
+
+The measured head-to-head (20 main pictures, a 64-picture ladder, two runs per candidate) and
+the owner's rule - small print, codes and numbers follow Gemini's reading, layout and controls
+follow the session's own - stand in ADR 0023.

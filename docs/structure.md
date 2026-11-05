@@ -207,6 +207,7 @@ docs/decisions/0019-local-image-generation-comfy-cli.md
 docs/decisions/0020-model-specific-orientation-through-profile-hooks.md
 docs/decisions/0021-everything-flows-in-by-itself.md
 docs/decisions/0022-local-video-generation.md
+docs/decisions/0023-vision-for-deepseek-sessions.md
 docs/documents.md
 docs/guards.md
 docs/inspiration.md
@@ -223,6 +224,8 @@ home/.agents/skills/distill-portable/SKILL.md
 home/.agents/skills/docs-import-portable/SKILL.md
 home/.agents/skills/image-portable/agents/openai.yaml
 home/.agents/skills/image-portable/SKILL.md
+home/.agents/skills/look-portable/agents/openai.yaml
+home/.agents/skills/look-portable/SKILL.md
 home/.agents/skills/media-tools-portable/SKILL.md
 home/.agents/skills/quick-research-portable/SKILL.md
 home/.agents/skills/video-portable/agents/openai.yaml
@@ -245,6 +248,7 @@ home/.claude/hooks/block-dangerous.ps1
 home/.claude/hooks/deepseek-orientation.ps1
 home/.claude/hooks/downloads-guard.ps1
 home/.claude/hooks/fetch-guard.ps1
+home/.claude/hooks/gemini-second-opinion.ps1
 home/.claude/hooks/hub-reminder.ps1
 home/.claude/hooks/no-license-files.ps1
 home/.claude/hooks/notification-events.ps1
@@ -325,6 +329,7 @@ home/.claude/skills/image/scripts/restore-models.ps1
 home/.claude/skills/image/SKILL.md
 home/.claude/skills/life-os-morning/SKILL.md
 home/.claude/skills/look/scripts/look.ps1
+home/.claude/skills/look/SKILL.md
 home/.claude/skills/media-tools/SKILL.md
 home/.claude/skills/quick-research/SKILL.md
 home/.claude/skills/research/references/style-rules.md

@@ -721,6 +721,28 @@ if (Test-Selected '10') { try {
         }
         catch { }   # unreadable profile: the file stays reported as not named
     }
+    # The second-opinion hook belongs to the DeepSeek profile too (owner's order 2026-11-05):
+    # PostToolUse with matcher Read only. It adds context and never blocks; other profiles must
+    # not call Gemini. Live profile when present, template in a test target.
+    $profilePostToolUseHooks = @{ 'gemini-second-opinion.ps1' = 'deepseek.json' }
+    foreach ($leaf in @($profilePostToolUseHooks.Keys)) {
+        if (-not $unregistered.Contains($leaf)) { continue }
+        $liveProfile = Join-Path $HomeRoot ('.claude\profiles\' + $profilePostToolUseHooks[$leaf])
+        $templateProfile = Join-Path $HomeRoot ('.claude\profiles-template\' + $profilePostToolUseHooks[$leaf])
+        $useTemplate = -not (Test-Path -LiteralPath $liveProfile -PathType Leaf)
+        $profilePath = if ($useTemplate) { $templateProfile } else { $liveProfile }
+        try {
+            $prof = [IO.File]::ReadAllText($profilePath) | ConvertFrom-Json
+            foreach ($entry in @($prof.hooks.PostToolUse)) {
+                if ([string]$entry.matcher -ne 'Read') { continue }
+                foreach ($h in @($entry.hooks)) {
+                    $parts = @($h.args | ForEach-Object { [string]$_ })
+                    if (($parts -join ' ') -match [regex]::Escape($leaf)) { [void]$unregistered.Remove($leaf) }
+                }
+            }
+        }
+        catch { }   # unreadable profile: the file stays reported as not named
+    }
     foreach ($need in $requiredUnderPreToolUse) {
         if (-not ($preToolUseNames -contains $need)) { $notUnderPreToolUse.Add($need) }
     }
@@ -1435,8 +1457,8 @@ if (Test-Selected 'J') { try {
         @{ Path = 'HOME/.claude/skills/distill/SKILL.md'; Reason = '2026-10-24 (vault-knowledge task, Part 4): the /distill skill - files a finished session back into the vault as one knowledge page, user-invoked only' }
         @{ Path = 'HOME/.agents/skills/distill-portable/SKILL.md'; Reason = '2026-10-24 (Part 4): the portable twin of the /distill skill for OpenCode and Codex, explicit invocation only' }
         @{ Path = 'HOME/.agents/skills/distill-portable/agents/openai.yaml'; Reason = '2026-10-24 (Part 4): Codex policy allow_implicit_invocation false for the portable /distill skill' }
-        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-24 (vault-knowledge task, Parts 1, 2 and 4): the orientation blocks count as the owner''s instructions (Safety exception), Parallel is free without a key with unpublished limits, and /distill is the one exception to "a project session never writes in the vault"; 2026-10-25: the project hub is the second (ADR 0021)' }
-        @{ Path = 'HOME/.claude/profiles-template/deepseek.json'; Reason = '2026-10-23 (Part 8): the DeepSeek profile template carries the SessionStart (startup|clear|compact) and SubagentStart hooks of the orientation file, three parts each; no other profile gets them' }
+        @{ Path = 'HOME/.claude/CLAUDE.md'; Reason = '2026-10-24 (vault-knowledge task, Parts 1, 2 and 4): the orientation blocks count as the owner''s instructions (Safety exception), Parallel is free without a key with unpublished limits, and /distill is the one exception to "a project session never writes in the vault"; 2026-10-25: the project hub is the second (ADR 0021); 2026-11-05: the owner''s German picture rule - Gemini''s reading for small print, codes and numbers, the own for layout and controls, and a plain word when they disagree' }
+        @{ Path = 'HOME/.claude/profiles-template/deepseek.json'; Reason = '2026-10-23 (Part 8): the DeepSeek profile template carries the SessionStart (startup|clear|compact) and SubagentStart hooks of the orientation file, three parts each; no other profile gets them; 2026-11-05 (owner order): every model entry is deepseek-flash[1m], and a PostToolUse hook with matcher Read runs the Gemini second opinion' }
         @{ Path = 'HOME/.claude/life-os/morning-checks.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the token-free helpers of the morning run - why the agent starts, the hint lines the script writes itself, loose notes into Roh, tasks into todo.md, the weekly area hint' }
         @{ Path = 'HOME/.claude/life-os/area-check.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): the safety net for the self-updating area notes - compares with a snapshot taken before the agent and restores every change without a source' }
         @{ Path = 'HOME/.claude/hooks/hub-reminder.ps1'; Reason = '2026-10-25 (Life OS inbox task, ADR 0021): Stop hook that blocks the end of a turn once when the project hub in the vault is older than the repository; fails open' }
@@ -1473,7 +1495,11 @@ if (Test-Selected 'J') { try {
         @{ Path = 'VAULT/.claude/skills/vault-lint/graph_health.py'; Reason = '2026-11-02 (agent-orders task): the German folder-name check in the system folders, with NFC normalization for decomposed umlauts' }
         @{ Path = 'VAULT/.claude/skills/vault-lint/test_names.py'; Reason = '2026-11-02 (agent-orders task): the tests for that check, including the decomposed-umlaut case' }
         @{ Path = 'HOME/.claude/setup/powershell/set-research-keys.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 1): the three PORTKEY_* variables join the service list in the existing prompt style; no other line changes' }
-        @{ Path = 'HOME/.claude/skills/look/scripts/look.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 2): one picture or video and one question to the Portkey quick pool; the refusal list (junctions and short names resolved through the file handle), the 18 MB limit checked before reading, the documented exit codes and German errors, tested against a local fake endpoint (red first, 38 green)' }
+        @{ Path = 'HOME/.claude/skills/look/scripts/look.ps1'; Reason = '2026-11-04 (deepseek vision task, Part 2): one picture or video and one question to the Portkey quick pool; the refusal list (junctions and short names resolved through the file handle), the 18 MB limit checked before reading, the documented exit codes and German errors, tested against a local fake endpoint (red first, 38 green); 2026-11-05: the script sends no media_resolution field, the resolution comes from the Portkey config (owner order)' }
+        @{ Path = 'HOME/.claude/hooks/gemini-second-opinion.ps1'; Reason = '2026-11-05 (owner order): PostToolUse hook on Read for picture files - asks look.ps1 for a second opinion, adds it as additionalContext marked "Gemini (second opinion)", never blocks, gives up after 60 s, skips every refused path; registered in the DeepSeek profile only' }
+        @{ Path = 'HOME/.claude/skills/look/SKILL.md'; Reason = '2026-11-05 (owner order): the /look skill - manual only, German usage lines, the refused-path list with the resolved-real-path rule, the one quick pool, the exit codes, the second-opinion note and the owner rule for small print versus layout' }
+        @{ Path = 'HOME/.agents/skills/look-portable/SKILL.md'; Reason = '2026-11-05 (owner order): the portable twin of /look for OpenCode and Codex, explicit invocation only, same refusals and same answer rule' }
+        @{ Path = 'HOME/.agents/skills/look-portable/agents/openai.yaml'; Reason = '2026-11-05 (owner order): Codex policy allow_implicit_invocation false for the portable /look skill' }
     )
     $target = Join-Path $WorkRoot ('verify-all-j-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Force -Path $target | Out-Null

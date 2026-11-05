@@ -11,9 +11,9 @@
     "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
     "ANTHROPIC_AUTH_TOKEN": "<DEEPSEEK_API_KEY>",
     "ANTHROPIC_API_KEY": "",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro[1m]",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-flash[1m]",
     "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-flash[1m]",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-flash",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-flash[1m]",
     "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-flash[1m]",
     "CLAUDE_CODE_ATTRIBUTION_HEADER": "0",
     "ANTHROPIC_DEFAULT_OPUS_MODEL_SUPPORTED_CAPABILITIES": "effort,max_effort,thinking,interleaved_thinking",
@@ -68,6 +68,25 @@
               "3"
             ],
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PWSH_HOST}}",
+            "args": [
+              "-NoProfile",
+              "-ExecutionPolicy",
+              "Bypass",
+              "-File",
+              "{{HOME_FWD}}/.claude/hooks/gemini-second-opinion.ps1"
+            ],
+            "timeout": 70
           }
         ]
       }

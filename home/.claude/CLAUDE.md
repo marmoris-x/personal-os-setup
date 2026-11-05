@@ -53,6 +53,10 @@ is more specific and wins where the two differ. My explicit request in the chat 
 - Downloads and media scratch go to `{{DEV}}\Temp\media` (scratch); when I say "behalten", move the file into `Downloads\Videos` or `Downloads\Music`; originals of a project go to its `media\raw\` (backed up).
 - To transcribe audio, copy it to the vault's `inbox\audio` and run `~/.claude/life-os/transcribe.ps1` (Groq by default, local as the fallback or when I say "lokal"). Never install another Whisper.
 
+## Pictures
+
+- Bei kleiner Schrift, Codes und Zahlen gilt Geminis Lesung; bei Layout und Bedienelementen die eigene. Weichen beide ab, sag es mir.
+
 ## How to talk to me
 
 - System and technical text (code, comments, commits, config) is English unless the project says

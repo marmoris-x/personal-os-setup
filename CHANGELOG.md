@@ -5,6 +5,20 @@ old Blueprint package (1.x); its `printed-vs-live.ps1` mirroring is from now on 
 `setup/export.ps1` route in this repo. The current version is the newest git tag; there is no
 `VERSION` file any more.
 
+## Unreleased (2026-11-05)
+
+| What | Why |
+|---|---|
+| `home/.claude/skills/look/scripts/look.ps1`: the `-Resolution` parameter and the `media_resolution` field are gone | The owner's order: the resolution comes only from the Portkey quick config; the script sends it no more. `tests/Look.Tests.ps1` asserts the absence (red first, 37 green) |
+| `home/.claude/hooks/gemini-second-opinion.ps1` (new): PostToolUse on `Read` for `.png/.jpg/.jpeg/.webp`, runs `look.ps1`, adds `additionalContext` marked "Gemini (second opinion)", never blocks, 60 s cap, refused paths skipped | The owner's order at stop point 2: Gemini stays a second opinion although it did not win the head-to-head (ADR 0023) |
+| `home/.claude/profiles-template/deepseek.json`: all four model entries are `deepseek-flash[1m]`, and a `PostToolUse` entry with matcher `Read` runs the new hook | The owner's order: every model is flash; no vision guard; the hook belongs to the DeepSeek profile only |
+| `home/.claude/skills/look/SKILL.md`, `home/.agents/skills/look-portable/SKILL.md`, `home/.agents/skills/look-portable/agents/openai.yaml` (new) | Part 5 of the task: `/look` manual only, German usage lines, the refused-path list, the answer rule; portable twin for OpenCode and Codex |
+| `home/.claude/CLAUDE.md`: the "Pictures" rule in the owner's wording | "Bei kleiner Schrift, Codes und Zahlen gilt Geminis Lesung; bei Layout und Bedienelementen die eigene. Weichen beide ab, sag es mir." |
+| `docs/decisions/0023-vision-for-deepseek-sessions.md` (new); `docs/agent-tooling.md`: a "Picture reading" section | The measured table, the decision, the refusals and the owner's override in one record |
+| `setup/tools/verify-all.ps1`: the new hook counts as a profile-only PostToolUse registration (matcher `Read`); check J names the new files and the changed ones | The hook is deliberately absent from the global settings; the acceptance run must see that it is wired in the DeepSeek profile |
+| `tests/Install.Tests.ps1`: core file count 159 -> 161 (`<162`) | The new hook and the `/look` SKILL.md are core files |
+| `setup/tools/check-language.ps1`: the existing `home/.claude/CLAUDE.md` exemption now also names the picture rule | The rule is the owner's German wording, quoted verbatim |
+
 ## Unreleased (2026-11-03)
 
 | What | Why |
