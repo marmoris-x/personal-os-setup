@@ -1,6 +1,6 @@
 ---
 name: aistudio-sources
-description: Resolve the redirect links in a Google AI Studio / Gemini answer (saved as Markdown), add one consistent numbered source list, check every citation against its saved source page with word-for-word evidence, then write a corrected copy: wrong markers are replaced by a source that proves the statement, or the statement is marked `[unzutreffend]`. Manual only - the owner types /aistudio-sources <file>.
+description: Resolve the redirect links in a Google AI Studio / Gemini answer (saved as Markdown), add one consistent numbered source list, check every citation against its saved source page with word-for-word evidence, and produce a finished clean answer plus one separate report in prose. Wrong markers are replaced by a source that proves the statement; statements with no proof lose the marker and are explained in the report only. Manual only - the owner types /aistudio-sources <file>.
 disable-model-invocation: true
 argument-hint: <path to the .md file>
 ---
@@ -17,8 +17,9 @@ hold.
 
 The correction works per statement, never per number: a number that is right for one sentence
 stays there when the same number is wrong for another. The answer's wording is never rewritten -
-only citation markers change (replaced or marked), and the two sections `## Sources` and
-`## Quellenprüfung` are rebuilt.
+only citation markers change. The owner gets two files: a finished answer with plain `[N]`
+markers and one numbered source list, and one separate report in German prose that says what was
+checked and what is not supported. No notes, marks or meta sections in the answer itself.
 
 ## Run it (in this order, nothing else)
 
@@ -157,15 +158,14 @@ source was readable.
 
 The correction works per citation group - the sentence in front of one marker group - never per
 number. A number that is right in one sentence stays where it is right; only the sentence whose
-marker does not hold is changed, replaced or marked. The input file stays as it is; `apply`
-writes `<name> - korrigiert.md` next to it.
+marker does not hold is changed. The input file stays as it is.
 
 Three outcomes per group:
 - another saved page or a web page proves the statement: replace the old marker with that source;
 - at least one marker of the group is already supported: keep only the supported marker;
-- nothing proves the statement: mark it inline - `[unzutreffend]` when a page says the opposite,
-  `[nicht belegt]` when no page carries it, `[nur teilweise belegt]`, `[umstritten]` or
-  `[nicht prüfbar]`.
+- nothing proves the statement: remove the marker; the reason (`nicht_belegt`, `teilweise`,
+  `umstritten`, `nicht_pruefbar`, `unzutreffend`) goes into the separate report, never into the
+  answer. Inline marks exist only in the working copy between `apply` and `finalize`.
 
 #### 8.1 Plan the groups
 
@@ -333,34 +333,53 @@ python -I "$HOME\.claude\skills\aistudio-sources\scripts\correct_sources.py" web
 
 Then repeat the web-verify step for the new batches and validate with `check --web`.
 
-#### 8.5 Apply
+#### 8.5 Apply, then finalize into the two deliverable files
 
 ```powershell
 python -I "$HOME\.claude\skills\aistudio-sources\scripts\correct_sources.py" apply "<path>" --workdir "<workdir>"
 ```
 
-It writes `<name> - korrigiert.md` next to the input, rebuilds `## Sources` and appends a fresh
-`## Quellenprüfung` with the changed places, the new sources and the full audit table. It never
-edits the input. Report its counts to the owner: replaced, `nicht belegt`, `unzutreffend`,
-`nur teilweise belegt`, `umstritten`, `nicht prüfbar`, cleaned, new sources.
+It writes `<name> - korrigiert.md` next to the input - a working copy with the inline marks and
+the audit sections. It never edits the input.
+
+```powershell
+python -I "$HOME\.claude\skills\aistudio-sources\scripts\correct_sources.py" finalize "<name> - korrigiert.md" --out-clean "<name> - fertig.md" --out-report "<name> - Prüfbericht.md" --title "<title>"
+```
+
+`finalize` cuts the working meta sections, strips the inline marks, renumbers the cited sources
+contiguously in first-appearance order, writes plain `[N]` markers in place of the AI Studio
+citations, and builds the final `## Quellen` list. The answer text itself is not changed. In the
+same run it writes the report: one German document in full sentences, with the overall result,
+the replaced references, the unsupported, partially supported and otherwise limited statements,
+and the unchanged remainder. Line numbers refer to the finished file.
+
+Check the two outputs before reporting: the clean file must contain no `## Sources`,
+`## Quellenprüfung`, `Geänderte Stellen`, `Alle Prüfungen` or square-bracket marks such as
+`[nicht belegt]`; its markers run from 1 to the number of sources without gaps; its wording is
+the checked answer's wording. The report must quote whole statements (no mid-word cuts) and name
+only sources from the final numbering.
+
+Report the counts to the owner: replaced, `nicht belegt`, `unzutreffend`, `nur teilweise belegt`,
+`umstritten`, `nicht prüfbar`, cleaned, new sources.
 
 ## Report to the owner
 
 At most 8 lines in German: links replaced, sources, checked claims, verdict counts, corrected
-markers, new sources, the most important remaining marks, and where the corrected file stands.
-Name the fully supported share of the original check and the corrected counts separately; never
-report the higher number as if it were the correctness of the answer. Never print the full table
-in the chat. Name remaining unsupported claims by line number - the owner decides whether the
-answer's wording itself should change.
+markers, new sources, and the paths of the two deliverables (`- fertig.md` and
+`- Prüfbericht.md`). Name the fully supported share of the original check and the corrected counts
+separately; never report the higher number as if it were the correctness of the answer. Never
+print the full table or the report in the chat. Name remaining unsupported claims by line number -
+the owner decides whether the answer's wording itself should change.
 
 ## Rules
 
 - One source page = one number. Never renumber by hand; `resolve_sources.py` does it.
-- Never change the answer's claims, only links, numbers and the two sections. A correction
-  replaces or marks a marker; it never rewrites the sentence.
+- Never change the answer's claims, only links, numbers and the source list. A correction
+  replaces or removes a marker; it never rewrites the sentence.
 - Correct per statement, never per number. The same number can stay in a supported sentence and
   disappear from an unsupported one.
-- Never keep a marker that does not hold when no replacement proves it; mark the sentence.
+- Never keep a marker that does not hold when no replacement proves it. The finished answer carries
+  no inline marks; the reason is written out in the report.
 - A quote that is not found in the saved page is not evidence. Say so; do not soften it.
 - An unreadable source is "nicht prüfbar", never "gestützt".
 - The checking and search agents write only their result file. They never edit the answer, the
@@ -374,7 +393,7 @@ answer's wording itself should change.
 - Google AI Studio reuses citation numbers for one page (measured 2026-11-08: 56 numbers for 44
   pages). `resolve_sources.py` merges them to the first number, collapses the resulting adjacent
   identical markers and leaves gaps in `## Sources`; that is intended, the note under the heading
-  says so. `apply` lists only the sources the corrected text still cites.
+  says so. `apply` and `finalize` list only the sources the corrected text still cites.
 - The content services rate-limit a large first fetch (24 of 44 Reddit URLs failed, all readable
   on retry). `check_sources.py fetch` retries one by one; if pages stay missing, run `fetch`
   again before starting the agents. Never let an agent guess a missing page.
@@ -420,3 +439,18 @@ answer's wording itself should change.
   wins over an older, rejected proposal for the same group.
 - Duplicate-marker cleanup may consume spaces and tabs, never a newline: two identical markers on
   consecutive lines belong to two statements and must stay.
+- The owner rejected the meta sections (`## Sources` note, `## Quellenprüfung`, `Geänderte
+  Stellen`, `Alle Prüfungen`) and inline marks in the answer (2026-11-08). The deliverable is the
+  clean `- fertig.md` plus one prose `- Prüfbericht.md`; `apply` alone is not the end of the run.
+  The working `- korrigiert.md` serves only the audit and the report.
+- `finalize` renumbers the sources by first appearance in the clean answer, so the numbers in the
+  report can differ from the working copy's. The report maps every old number to the final one;
+  never copy an old number into it by hand.
+- Report statements are recovered from the answer line, not from the truncated audit table
+  (`full_statement`); shorten only at a word boundary. Measured 2026-11-08: the table's cut
+  statements produced mid-word quotes in the first report. Table cells are shown as
+  `Label: value`, a Subreddit attribution after a block quote is removed, and an excerpt that
+  starts mid-sentence gets a leading `…`.
+- The report counts must match its own lists: replaced bullets = replacements, removed markers =
+  `nicht_belegt` statements, partial bullets = partial statements. Check these three counts before
+  reporting to the owner.

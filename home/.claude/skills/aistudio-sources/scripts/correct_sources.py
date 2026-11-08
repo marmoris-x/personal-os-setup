@@ -655,6 +655,300 @@ def cmd_merge(args):
     return 0
 
 
+MARK_RE = re.compile(
+    r"[ \t]*\[(?:nur teilweise belegt|nicht belegt|unzutreffend|umstritten|nicht prüfbar)\]")
+
+
+def strip_marks(text):
+    return MARK_RE.sub("", text)
+
+
+def renumber_markers(body):
+    """Number only the sources the text still cites, 1..N in order of first appearance.
+
+    The finished answer uses plain `[N]` markers; the URLs live in `## Quellen` only.
+    """
+    key_to_new = {}
+    order = []
+
+    def sub(m):
+        text = m.group(0)
+        n, url = cites_in(text)[0]
+        key = url_key(url)
+        if key not in key_to_new:
+            key_to_new[key] = len(order) + 1
+            order.append(url)
+        return "[%d]" % key_to_new[key]
+
+    body = CITE_ANY.sub(sub, body)
+    body = re.sub(r"(\[\d+\])(?:[ \t]*\1)+", r"\1", body)
+    return body, order
+
+
+def source_map(marked):
+    out = {}
+    inside = False
+    for line in marked.splitlines():
+        if line.strip() == "## Sources":
+            inside = True
+            continue
+        if inside and line.startswith("## "):
+            break
+        m = re.match(r"(\d+)\. \[[^\]]*\]\((https?://[^)\s]+)\)", line)
+        if m:
+            out[int(m.group(1))] = m.group(2)
+    return out
+
+
+def table_cells(line):
+    s = line.strip()
+    if s.startswith("|"):
+        s = s[1:]
+    if s.endswith("|"):
+        s = s[:-1]
+    return [p.strip().replace("\\|", "|") for p in re.split(r"(?<!\\)\|", s)]
+
+
+def changed_rows(marked):
+    rows = []
+    start = marked.find("### Geänderte Stellen")
+    if start < 0:
+        return rows
+    for line in marked[start:].splitlines()[1:]:
+        if line.startswith("## ") or line.startswith("### "):
+            break
+        if not line.startswith("| G"):
+            continue
+        cells = table_cells(line)
+        if len(cells) < 6:
+            continue
+        rows.append({"gid": cells[0], "line": int(cells[1]), "statement": cells[2],
+                     "old": cells[3], "correction": cells[4], "note": cells[5]})
+    return rows
+
+
+def kept_marker_number(line, statement, old_numbers, old_to_new):
+    """The partial source that stayed in the text, as a clean number."""
+    prefix = statement.rstrip("…").strip()[:50]
+    pos = line.find(prefix)
+    if pos < 0:
+        pos = 0
+    m = re.search(r"\[\[(\d+)\]\([^)]+\)\]", line[pos:])
+    if not m:
+        m = re.search(r"(?<!\[)\[(\d+)\]\([^)]+\)", line[pos:])
+    if not m:
+        return None
+    return old_to_new.get(int(m.group(1)))
+
+
+def full_statement(line, table_statement):
+    """Recover the untruncated statement from the answer line, if it can be found there."""
+    prefix = table_statement.rstrip("…").strip()
+    candidates = [prefix]
+    if ": " in prefix:
+        candidates.append(prefix.split(": ", 1)[1])
+    pos = -1
+    for cand in candidates:
+        pos = line.find(cand[:50])
+        if pos >= 0:
+            break
+    if pos < 0:
+        return None
+    rest = line[pos:]
+    m = re.search(r"\[\[|\]\(|\[(?:nur teilweise belegt|nicht belegt|unzutreffend|"
+                  r"umstritten|nicht prüfbar)\]", rest)
+    if m:
+        text = rest[:m.start()]
+    else:
+        sm = re.search(r"[.!?](?=\s|$)", rest)
+        text = rest[:sm.end()] if sm else rest
+    text = text.strip()
+    text = re.sub(r"^\|\s*", "", text)
+    return text or None
+
+
+def shorten(text, limit=120):
+    text = " ".join(text.split())
+    if text.endswith("…"):
+        text = text[:-1].rstrip()
+        cut = text.rfind(" ")
+        if cut > 0:
+            text = text[:cut].rstrip(" ,;:")
+        return text + " …"
+    if len(text) <= limit:
+        return text
+    cut = text.rfind(" ", 0, limit)
+    return text[:cut if cut > 0 else limit].rstrip(" ,;:") + " …"
+
+
+def build_report(marked, marked_body, order, title, date_text):
+    sources = source_map(marked)
+    key_to_new = {url_key(u): i for i, u in enumerate(order, 1)}
+    old_to_new = {n: key_to_new[url_key(u)] for n, u in sources.items()
+                  if url_key(u) in key_to_new}
+    rows = changed_rows(marked)
+
+    m_total = re.search(r"(\d+) Zitatstellen", marked)
+    m_before = re.search(r"(\d+) gestützt, (\d+) teilweise, (\d+) nicht belegt, "
+                         r"(\d+) unpassend, (\d+) widersprechend", marked)
+    m_cited = re.search(r"(\d+) Quellen zitiert, davon (\d+) neue", marked)
+    m_clean = re.search(r"(\d+) Gruppen ohne Änderung bereinigt", marked)
+    m_unchecked = re.search(r"(\d+) Zitatstellen ohne Prüfergebnis", marked)
+
+    total = int(m_total.group(1)) if m_total else 0
+    good, partial_claims, bad, unrelated, contradicting = (
+        [int(x) for x in m_before.groups()] if m_before else (0, 0, 0, 0, 0))
+    cited, new_sources = ([int(x) for x in m_cited.groups()] if m_cited else (0, 0))
+    cleaned = int(m_clean.group(1)) if m_clean else 0
+    unchecked = int(m_unchecked.group(1)) if m_unchecked else 0
+
+    replaced = sorted((r for r in rows if r["correction"].startswith("ersetzt durch")),
+                      key=lambda r: r["line"])
+    missing = sorted((r for r in rows if r["correction"] == "nicht_belegt"),
+                     key=lambda r: r["line"])
+    partial = sorted((r for r in rows if r["correction"] == "teilweise"),
+                     key=lambda r: r["line"])
+    other = sorted((r for r in rows if r["correction"] in ("umstritten", "nicht_pruefbar",
+                                                           "unzutreffend")),
+                   key=lambda r: r["line"])
+    lines_for_body = marked_body.splitlines()
+
+    def stmt_for(row):
+        line = lines_for_body[row["line"] - 1] if row["line"] <= len(lines_for_body) else ""
+        is_table = line.strip().startswith("|")
+        lookup = line if is_table else re.sub(
+            r"\[\[\d+\]\([^)]*\)\]|\[\d+\](?:\([^)]*\))?", "", line)
+        found = None if is_table else full_statement(lookup, row["statement"])
+        text = found
+        if text is None and is_table:
+            cells = table_cells(line)
+            label = re.sub(r"\*\*|`", "", cells[0]).strip() if cells else ""
+            stmt = row["statement"].strip()
+            if label and stmt.lower().startswith(label.lower()):
+                text = label + ": " + stmt[len(label):].lstrip(": ").strip()
+        text = text or row["statement"]
+        text = re.split(r"\s*\*?\s*[—–]\s*Subreddit\b", text)[0]
+        text = text.rstrip("*\"“” ")
+        if found and not line.strip().startswith(("|", ">")):
+            start = lookup.find(found[:40])
+            before = lookup[:start].rstrip() if start > 0 else ""
+            if before and (text[:1].islower() or before[-1] not in ".!?:;*>—–"):
+                text = "… " + text
+        return shorten(text, 160)
+
+    def domain(url):
+        return urlsplit(url).netloc.lower().removeprefix("www.")
+
+    out = [
+        "# Prüfbericht: %s" % title, "",
+        "Geprüft am %s. Grundlage sind die Antwort und die darin genannten Quellen; die "
+        "Zeilenangaben beziehen sich auf die fertige Datei." % date_text, "",
+        "## Ergebnis", "",
+        "Von %d Aussage-Quelle-Paaren stützten %d die Aussage vollständig, %d nur teilweise "
+        "und %d gar nicht; %d bezogen sich auf ein anderes Thema."
+        % (total, good, partial_claims, bad, unrelated)
+        + (" %d widersprachen der Aussage." % contradicting if contradicting else ""),
+        "",
+        "Im fertigen Text werden %d Quellen zitiert, davon %d neue. %d Verweise wurden ersetzt, "
+        "bei %d Aussagen wurde der Verweis entfernt, weil keine geprüfte Quelle sie belegt, "
+        "und %d Aussagen sind nur teilweise belegt. Bei %d Stellen wurde ein zusätzlicher, "
+        "nicht stützender Verweis entfernt; die Aussage selbst war durch eine andere Quelle "
+        "belegt."
+        % (cited, new_sources, len(replaced), len(missing), len(partial), cleaned),
+        "",
+        "Die Quellen im fertigen Text sind neu von 1 bis %d durchnummeriert; die Nummern in "
+        "diesem Bericht beziehen sich auf diese Zählung." % len(order),
+        "",
+    ]
+
+    if replaced:
+        out += ["## Ersetzte Verweise", ""]
+        for r in replaced:
+            m = re.search(r"ersetzt durch (\d+)", r["correction"])
+            n = old_to_new.get(int(m.group(1))) if m else None
+            url = sources.get(int(m.group(1))) if m else None
+            target = ("Quelle %d (%s)" % (n, domain(url))) if n and url else "eine neue Quelle"
+            out.append("- **Zeile %d:** „%s“ – Die bisherige Quelle belegte die Aussage nicht. "
+                       "Jetzt belegt %s sie."
+                       % (r["line"], stmt_for(r), target))
+        out.append("")
+
+    if missing:
+        out += ["## Nicht belegte Aussagen", ""]
+        for r in missing:
+            out.append("- **Zeile %d:** „%s“ – Keine der geprüften Quellen belegt diese "
+                       "Aussage. Der Verweis wurde entfernt; der Satz steht ohne Quelle im Text."
+                       % (r["line"], stmt_for(r)))
+        out.append("")
+
+    if partial:
+        out += ["## Nur teilweise belegte Aussagen", ""]
+        for r in partial:
+            line_no = r["line"]
+            line = lines_for_body[line_no - 1] if line_no <= len(lines_for_body) else ""
+            n = kept_marker_number(line, r["statement"], r["old"], old_to_new)
+            source = ("Quelle %d" % n) if n else "Eine der bisherigen Quellen"
+            out.append("- **Zeile %d:** „%s“ – Nur teilweise belegt. %s stützt einen Teil der "
+                       "Aussage, die vollständige Behauptung aber nicht."
+                       % (line_no, stmt_for(r), source))
+        out.append("")
+
+    if other:
+        out += ["## Sonstige Einschränkungen", ""]
+        for r in other:
+            label = {"umstritten": "Die Quellen widersprechen sich, die Aussage ist daher "
+                                   "umstritten",
+                     "nicht_pruefbar": "Für diese Aussage ließ sich keine prüfbare Quelle "
+                                       "abrufen",
+                     "unzutreffend": "Die Aussage ist nach den geprüften Quellen "
+                                     "unzutreffend"}.get(r["correction"], r["correction"])
+            out.append("- **Zeile %d:** „%s“ – %s."
+                       % (r["line"], stmt_for(r), label))
+        out.append("")
+
+    if unchecked:
+        out += ["## Ungeprüft", "",
+                "%d Zitatstellen hatten kein Prüfergebnis und blieben unverändert." % unchecked,
+                ""]
+    out += ["## Unverändert", "",
+            "Die übrigen Aussagen waren bereits durch mindestens eine geprüfte Quelle "
+            "vollständig belegt und blieben unverändert.", ""]
+    return "\n".join(out)
+
+
+def cmd_finalize(args):
+    marked_path = Path(args.file)
+    try:
+        marked = read_text_raw(marked_path)
+    except OSError as e:
+        return die(f"Cannot read file: {e}")
+    cut = len(marked)
+    for h in ("## Sources", "## Quellenprüfung"):
+        i = marked.find(h)
+        if i >= 0:
+            cut = min(cut, i)
+    marked_body = marked[:cut].rstrip("\r\n")
+    body = strip_marks(marked_body)
+    body, order = renumber_markers(body)
+    nl = "\r\n" if "\r\n" in marked else "\n"
+    clean = body
+    if order:
+        clean += nl * 2 + "## Quellen" + nl * 2
+        clean += nl.join("%d. [%s](%s)" % (i, urlsplit(u).netloc.lower().removeprefix("www."), u)
+                         for i, u in enumerate(order, 1))
+    clean += nl
+    clean_path = Path(args.out_clean)
+    report_path = Path(args.out_report)
+    clean_path.write_text(clean, encoding="utf-8", newline="")
+    title = args.title or marked_path.stem.replace(" - korrigiert", "")
+    report_path.write_text(
+        build_report(marked, marked_body, order, title, args.date) + "\n",
+        encoding="utf-8", newline="")
+    print("finalize: %d sources, clean -> %s, report -> %s"
+          % (len(order), clean_path, report_path))
+    return 0
+
+
 def cmd_apply(args):
     path = Path(args.file)
     work = Path(args.workdir).resolve()
@@ -663,7 +957,6 @@ def cmd_apply(args):
         raw = read_text_raw(path)
         plan = json.loads((work / "fix" / "plan.json").read_text(encoding="utf-8"))
         clean = json.loads((work / "fix" / "clean.json").read_text(encoding="utf-8"))["groups"]
-        tasks = json.loads((work / "fix" / "tasks.json").read_text(encoding="utf-8"))["tasks"]
         sources = {s["number"]: s["url"] for s in json.loads(
             (work / "sources.json").read_text(encoding="utf-8"))["sources"]}
         verdicts = {r["id"]: r for r in read_jsonl(work / "verdicts.jsonl")}
@@ -680,7 +973,6 @@ def cmd_apply(args):
         if p.is_file():
             for r in read_jsonl(p):
                 results[r["gid"]] = r
-    by_gid = {g["gid"]: g for g in plan["groups"]}
     new_sources = {}
     edits = []
     replaced = marked = partial = clean_count = unchecked = 0
@@ -710,6 +1002,8 @@ def cmd_apply(args):
         else:
             continue
         if action == "replace":
+            if r is None:
+                continue
             if r.get("number"):
                 new_marker = render_group(g, "replace", sources, new_sources,
                                           source_number=r["number"])
@@ -790,7 +1084,8 @@ def cmd_apply(args):
         for d in changed:
             new = d["new"].replace("|", "\\|")
             if d["action"] == "replace":
-                verdict = "ersetzt durch " + re.search(r"\[{1,2}(\d+)\]", new).group(1)
+                m = re.search(r"\[{1,2}(\d+)\]", new)
+                verdict = "ersetzt durch " + (m.group(1) if m else "?")
             else:
                 verdict = d["kind"]
             lines.append("| %s | %d | %s | %s | %s | %s |"
@@ -901,6 +1196,14 @@ def main(argv=None):
     p.add_argument("--workdir", required=True)
     p.add_argument("--out")
     p.set_defaults(func=cmd_apply)
+
+    p = sub.add_parser("finalize")
+    p.add_argument("file")
+    p.add_argument("--out-clean", required=True)
+    p.add_argument("--out-report", required=True)
+    p.add_argument("--title")
+    p.add_argument("--date", default=datetime.now().strftime("%Y-%m-%d"))
+    p.set_defaults(func=cmd_finalize)
 
     args = parser.parse_args(argv)
     return args.func(args)
