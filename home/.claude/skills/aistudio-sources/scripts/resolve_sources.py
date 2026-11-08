@@ -167,6 +167,9 @@ def main():
         return "[%d](%s)" % (target, url)
 
     body = CITE.sub(sub_cite, body)
+    # Two numbers for the same page both became the first number; one marker is enough.
+    # Only spaces/tabs between them may be consumed - a newline starts another statement.
+    body = re.sub(r"((?:\[\[\d+\]\([^)\s]+\)\]|\[\d+\]\([^)\s]+\)))(?:[ \t]*\1)+", r"\1", body)
 
     items = sorted((n, display[key]) for key, n in targets.items())
     domains = {host(u).removeprefix("www.") for _, u in items}

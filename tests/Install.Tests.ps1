@@ -280,7 +280,9 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 163 measured 2026-11-07: the /aistudio-sources skill adds two core files, SKILL.md and
         # resolve_sources.py.
         # 164 measured 2026-11-08: the citation check adds one core file, check_sources.py.
-        $files.Count | Should -BeLessThan 165 -Because 'the intended core files were added since 2026-10-25'
+        # 165 measured 2026-11-08: the citation correction adds one core file,
+        # correct_sources.py.
+        $files.Count | Should -BeLessThan 166 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {
