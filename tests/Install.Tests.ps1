@@ -277,7 +277,10 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 159 measured 2026-11-04: the /look skill adds one core file, scripts/look.ps1.
         # 161 measured 2026-11-05: the second-opinion hook and the /look SKILL.md add two core
         # files; the portable twin is not core, like the other portable skills.
-        $files.Count | Should -BeLessThan 162 -Because 'the intended core files were added since 2026-10-25'
+        # 163 measured 2026-11-07: the /aistudio-sources skill adds two core files, SKILL.md and
+        # resolve_sources.py.
+        # 164 measured 2026-11-08: the citation check adds one core file, check_sources.py.
+        $files.Count | Should -BeLessThan 165 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {
