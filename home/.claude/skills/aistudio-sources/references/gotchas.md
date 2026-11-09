@@ -114,3 +114,10 @@ more than about 150 claims. The main SKILL.md keeps the procedure.
 - Formatting check compares every line outside the edited spans byte for byte, the Markdown
   skeleton of edited lines, line endings and the final newline. A table cell deletion becomes
   `—`; a list item deletion removes its whole line. Never reformat a line to make the check pass.
+- Every checking prompt carries the one-read rule: read each page once, decide all its claims in
+  that turn, write the result file with one Write. Without it an agent greps and rereads per
+  claim, and every request is another full thinking pass (measured 2026-11-09: 50-59 requests in
+  the existing-page and edit agents).
+- A parallel wave starts one agent first and the rest after 10 seconds. Started in the same
+  second, every agent pays the shared system prefix as new text; the head start lets DeepSeek
+  build the cache once (cost task, 2026-11-09).
