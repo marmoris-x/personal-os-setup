@@ -12,11 +12,16 @@ Usage: python -I resolve_sources.py <file.md> [--dry-run]
 Exit codes: 0 ok, 1 some links unresolved, 2 bad input.
 """
 import re
+import shutil
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_sources  # noqa: E402
 
 HEADINGS = ("## Sources", "## Quellenverzeichnis", "## Quellenprüfung", "## Source check")
 HEADING = "## Sources"
@@ -88,8 +93,16 @@ def citation_parts(m):
 def main():
     args = [a for a in sys.argv[1:] if a != "--dry-run"]
     dry = "--dry-run" in sys.argv[1:]
+    workdir = None
+    if "--workdir" in args:
+        i = args.index("--workdir")
+        if i + 1 >= len(args):
+            print("Usage: resolve_sources.py <file.md> [--workdir DIR] [--dry-run]")
+            return 2
+        workdir = args[i + 1]
+        del args[i:i + 2]
     if len(args) != 1 or not args[0].lower().endswith(".md"):
-        print("Usage: resolve_sources.py <file.md> [--dry-run]")
+        print("Usage: resolve_sources.py <file.md> [--workdir DIR] [--dry-run]")
         return 2
     path = args[0]
     try:
@@ -186,6 +199,11 @@ def main():
     else:
         new = raw
     if not dry and items:
+        work = Path(workdir).resolve() if workdir else check_sources.default_workdir(path)
+        work.mkdir(parents=True, exist_ok=True)
+        original = work / "original.md"
+        if not original.exists():
+            shutil.copyfile(path, original)
         open(path, "w", encoding="utf-8", newline="").write(new)
     print("%sresolved %d links, %d citations, %d sources, %d domains, "
           "%d duplicate numbers merged, %d number conflicts, %d unresolved"

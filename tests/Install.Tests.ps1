@@ -282,7 +282,10 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 164 measured 2026-11-08: the citation check adds one core file, check_sources.py.
         # 165 measured 2026-11-08: the citation correction adds one core file,
         # correct_sources.py.
-        $files.Count | Should -BeLessThan 166 -Because 'the intended core files were added since 2026-10-25'
+        # 184 measured 2026-11-09: the statement/check improvement adds 19 core files:
+        # claims.py, packs.py, embed_packs.py, edits.py, the workflow, references/gotchas.md,
+        # and the 13 aistudio-sources test files (testlib.py plus the 12 test_*.py files).
+        $files.Count | Should -BeLessThan 185 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

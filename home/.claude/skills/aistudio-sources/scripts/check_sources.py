@@ -4,6 +4,8 @@ The skill `aistudio-sources` runs this after resolve_sources.py, in four steps:
   prepare   parse the answer into claim/source pairs, write task files for the checking agents
   fetch     save every source page with the research fetcher (with retries); for Reddit also
             add the archived comments from Arctic Shift
+  fix-quotes repair retyped quotes from the page before the recheck
+  packs     cut pages into passages and rank four per statement
   validate  merge the agents' JSONL results and prove every evidence quote word for word
   report    write the section `## Quellenprüfung` into the answer file
 
@@ -35,20 +37,23 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
+HERE = Path(__file__).resolve().parent
 RESEARCH = Path.home() / ".claude" / "skills" / "research" / "scripts"
+sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(RESEARCH))
-from common import locate, normalize, plain_markdown, read_page, utf8_output  # noqa: E402
+from common import locate, normalize, read_page, utf8_output  # noqa: E402
+import claims  # noqa: E402
+import fix_quotes as fq  # noqa: E402
+
+NEGATIONS = {"nicht", "kein", "keine", "keinen", "keiner", "ohne", "nie", "niemals"}
 
 FETCH_PAGE = RESEARCH / "fetch_page.py"
 HEADINGS = ("## Sources", "## Quellenverzeichnis", "## Quellenprüfung", "## Source check")
 SECTION = "## Quellenprüfung"
-CITE = re.compile(r"\[\[(\d+)\]\((https?://[^)\s]+)\)\]|\[(\d+)\]\((https?://[^)\s]+)\)")
-PLAIN_CITE = re.compile(r"(?<!\[)\[(\d+)\](?!\()")
+CITE = claims.CITE_ANY
+PLAIN_CITE = claims.PLAIN_CITE
 SOURCE = re.compile(r"(?m)^\s*(\d+)\.\s+\[([^\]]*)\]\((https?://[^)\s]+)\)\s*$")
-ABBR = re.compile(r"(?:z\.\s?B|bzw|ca|vgl|vs|evtl|ggf|inkl|max|min|Nr|Dr|Prof|Mio|Mrd|Std|S\.)$",
-                  re.I)
-SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ„\"(])")
-TABLE_SEP = re.compile(r"^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$")
+TABLE_SEP = claims.TABLE_SEP
 
 VERDICTS = {
     "gestuetzt": "gestuetzt", "gestützt": "gestuetzt", "supported": "gestuetzt",
@@ -101,24 +106,8 @@ def cite_parts(m):
     return int(m.group(3)), m.group(4), "single"
 
 
-def clean_text(text):
-    text = CITE.sub("", text)
-    text = PLAIN_CITE.sub("", text)
-    text = plain_markdown(text)
-    text = re.sub(r"^\s*>+\s*", "", text)
-    text = re.sub(r"^\s*(?:[-*+]|\d+\.)\s+", "", text)
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def sentences(text):
-    parts = SENT_SPLIT.split(text)
-    merged = []
-    for part in parts:
-        if merged and ABBR.search(merged[-1].rstrip()):
-            merged[-1] += " " + part
-        else:
-            merged.append(part)
-    return merged
+clean_text = claims.clean_text
+sentences = claims.sentences
 
 
 def url_base(url):
@@ -152,70 +141,7 @@ def read_json(path):
 
 def extract_claims(body, sources):
     """All (claim, source number) pairs in document order, duplicates removed."""
-    number_url = {n: s["url"] for n, s in sources.items()}
-    for m in CITE.finditer(body):
-        n, url, _ = cite_parts(m)
-        number_url.setdefault(n, url)
-
-    pairs = []
-    seen = set()
-    duplicates = 0
-    section = ""
-
-    def add(line_no, sentence, numbers):
-        nonlocal duplicates
-        claim = clean_text(sentence)
-        if not claim:
-            return
-        for n in numbers:
-            key = (n, normalize(claim))
-            if key in seen:
-                duplicates += 1
-                continue
-            seen.add(key)
-            url = number_url.get(n)
-            pairs.append({"line": line_no, "number": n, "url": url or "",
-                          "claim": claim, "section": section})
-
-    for line_no, line in enumerate(body.splitlines(), 1):
-        stripped = line.strip()
-        if not stripped or TABLE_SEP.match(stripped):
-            continue
-        h = re.match(r"^#{1,6}\s+(.*)$", stripped)
-        if h:
-            section = h.group(1).strip()
-            continue
-        if stripped.startswith("|"):
-            cells = [c.strip() for c in stripped.strip("|").split("|")]
-            if not cells:
-                continue
-            label = clean_text(cells[0])
-            for cell in cells[1:]:
-                for sentence in sentences(cell):
-                    numbers = []
-                    for m in CITE.finditer(sentence):
-                        numbers.append(cite_parts(m)[0])
-                    numbers += [int(x) for x in PLAIN_CITE.findall(sentence)]
-                    if numbers:
-                        text = (label + ": " + sentence) if label else sentence
-                        add(line_no, text, numbers)
-            continue
-        if stripped.startswith(">"):
-            # A block quote is one claim: its citations support the quoted passage as a whole.
-            text = stripped.lstrip(">").strip()
-            numbers = [cite_parts(m)[0] for m in CITE.finditer(text)]
-            numbers += [int(x) for x in PLAIN_CITE.findall(text)]
-            if numbers:
-                add(line_no, text, numbers)
-            continue
-        for sentence in sentences(stripped):
-            numbers = []
-            for m in CITE.finditer(sentence):
-                numbers.append(cite_parts(m)[0])
-            numbers += [int(x) for x in PLAIN_CITE.findall(sentence)]
-            if numbers:
-                add(line_no, sentence, numbers)
-    return pairs, duplicates
+    return claims.extract_claims(body, sources)
 
 
 def make_batches(sources, per_agent):
@@ -272,6 +198,10 @@ def cmd_prepare(args):
     with open(work / "claims.jsonl", "w", encoding="utf-8", newline="\n") as fh:
         for pair in pairs:
             fh.write(json.dumps(pair, ensure_ascii=False) + "\n")
+    statements = claims.statements(body)
+    with open(work / "statements.jsonl", "w", encoding="utf-8", newline="\n") as fh:
+        for item in statements:
+            fh.write(json.dumps(item, ensure_ascii=False) + "\n")
 
     srcs = source_objects(sources, pairs)
     write_json(work / "sources.json",
@@ -342,7 +272,10 @@ def run_fetch(urls, work, timeout):
 
 
 REDDIT_POST = re.compile(r"reddit\.com(?:/r/[^/]+)?/comments/([a-z0-9]+)", re.I)
-ARCHIVE = "https://arctic-shift.photon-reddit.com/api/comments/search?link_id=%s&limit=100"
+ARCHIVE_TREE = ("https://arctic-shift.photon-reddit.com/api/comments/tree"
+                "?link_id=t3_%s&limit=9999")
+ARCHIVE_SEARCH = ("https://arctic-shift.photon-reddit.com/api/comments/search"
+                  "?link_id=%s&limit=auto")
 
 
 def reddit_post_id(url):
@@ -350,28 +283,64 @@ def reddit_post_id(url):
     return m.group(1) if m else ""
 
 
+def archive_urls(post_id):
+    """The tree endpoint first, the flat search as fallback."""
+    return ARCHIVE_TREE % post_id, ARCHIVE_SEARCH % post_id
+
+
+def flatten_comments(payload):
+    """All comment dicts of an Arctic Shift tree, depth first; collapsed 'more' nodes skipped."""
+    data = payload.get("data") if isinstance(payload, dict) else payload
+    out = []
+
+    def walk(node):
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        if node.get("kind") == "more":
+            return
+        if node.get("body"):
+            out.append(node)
+        inner = node.get("data")
+        if inner is not None:
+            walk(inner)
+        for key in ("replies", "children"):
+            if key in node:
+                walk(node[key])
+
+    walk(data)
+    return out
+
+
 def get_comments(post_id, work):
-    """Comments of one Reddit post from Arctic Shift, cached under work/reddit-comments."""
+    """All comments of one Reddit post from Arctic Shift, cached under work/reddit-comments."""
     cache_dir = Path(work) / "reddit-comments"
     cache_dir.mkdir(exist_ok=True)
     cache = cache_dir / (post_id + ".json")
     if cache.is_file():
         try:
-            return json.loads(cache.read_text(encoding="utf-8")).get("data") or []
+            return flatten_comments(json.loads(cache.read_text(encoding="utf-8")))
         except (OSError, json.JSONDecodeError):
             pass
-    req = urllib.request.Request(ARCHIVE % post_id,
-                                 headers={"User-Agent": "aistudio-sources-check/1.0"})
-    for attempt in range(2):
-        try:
-            with urllib.request.urlopen(req, timeout=25) as resp:
-                raw = resp.read().decode("utf-8", "replace")
-            data = json.loads(raw)
-            cache.write_text(raw, encoding="utf-8")
-            return data.get("data") or []
-        except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, OSError):
-            if attempt == 0:
-                time.sleep(2)
+    for url in archive_urls(post_id):
+        req = urllib.request.Request(url,
+                                     headers={"User-Agent": "aistudio-sources-check/1.0"})
+        for attempt in range(2):
+            try:
+                with urllib.request.urlopen(req, timeout=25) as resp:
+                    raw = resp.read().decode("utf-8", "replace")
+                data = json.loads(raw)
+                rows = flatten_comments(data)
+                if rows:
+                    cache.write_text(raw, encoding="utf-8")
+                    return rows
+                break
+            except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, OSError):
+                if attempt == 0:
+                    time.sleep(2)
     return []
 
 
@@ -425,6 +394,38 @@ def page_header_url(path):
     return header.get("final_url") or header.get("url") or ""
 
 
+def page_identity(path):
+    """The page's own URL with its query; two videos are never one page."""
+    return url_full(page_header_url(path)) or str(path)
+
+
+def assign_pages(srcs, saved):
+    """Match saved pages to sources by header URL; never by position.
+
+    A page whose header lost the query may fill a source only when exactly one source has
+    that base URL; anything else stays unassigned and is reported.
+    """
+    by_full = {}
+    by_base = {}
+    for item in saved:
+        page = item["page"]
+        hurl = page_header_url(page)
+        if hurl:
+            by_full[url_full(hurl)] = page
+            by_base.setdefault(url_base(hurl), []).append(page)
+    base_count = Counter(url_base(s["url"]) for s in srcs)
+    assigned = {}
+    for src in srcs:
+        page = by_full.get(url_full(src["url"]))
+        if not page and base_count[url_base(src["url"])] == 1:
+            candidates = by_base.get(url_base(src["url"])) or []
+            if len(candidates) == 1:
+                page = candidates[0]
+        if page:
+            assigned[src["number"]] = page
+    return assigned
+
+
 def cmd_fetch(args):
     work = Path(args.workdir).resolve()
     try:
@@ -435,20 +436,7 @@ def cmd_fetch(args):
     todo = [s["url"] for s in srcs if s.get("status") != "ok" or not s.get("page")]
     saved, failures = run_fetch(todo, work, args.timeout)
 
-    # Map a saved page to its URL by the header the fetcher writes.
-    by_full, by_base = {}, {}
-    for item in saved:
-        page = item["page"]
-        hurl = page_header_url(page)
-        if hurl:
-            by_full[url_full(hurl)] = page
-            by_base[url_base(hurl)] = page
-
-    assigned = {}
-    for src in srcs:
-        page = by_full.get(url_full(src["url"])) or by_base.get(url_base(src["url"]))
-        if page:
-            assigned[src["number"]] = page
+    assigned = assign_pages(srcs, saved)
 
     # Retry failures one by one; the services rate-limit a large first batch.
     assigned_urls = {s["url"] for s in srcs if s["number"] in assigned}
@@ -458,16 +446,15 @@ def cmd_fetch(args):
             time.sleep(3)
             saved2, _ = run_fetch([url], work, max(120, args.timeout // 4))
             if saved2:
-                page = saved2[0]["page"]
-                assigned.setdefault(next(s["number"] for s in srcs if s["url"] == url), page)
-                break
-    # Last resort: pages that were saved but not matched by header, in input order.
-    unmatched_pages = [p["page"] for p in saved if p["page"] not in assigned.values()]
-    unmatched_srcs = [s for s in srcs if s["number"] not in assigned]
-    if len(unmatched_pages) == len(unmatched_srcs):
-        for src, page in zip(unmatched_srcs, unmatched_pages):
-            assigned[src["number"]] = page
+                src = next((s for s in srcs if s["url"] == url), None)
+                page = None
+                if src is not None:
+                    page = assign_pages([src], saved2).get(src["number"])
+                if page and src is not None:
+                    assigned[src["number"]] = page
+                    break
 
+    unmatched_pages = [p["page"] for p in saved if p["page"] not in assigned.values()]
     seen = {}
     out = []
     for src in srcs:
@@ -475,7 +462,7 @@ def cmd_fetch(args):
         entry = {"number": src["number"], "url": src["url"], "page": page,
                  "status": "ok" if page else "failed", "duplicate_of": None}
         if page:
-            key = url_base(page_header_url(page)) or str(page)
+            key = page_identity(page)
             if key in seen:
                 entry["duplicate_of"] = seen[key]
             else:
@@ -491,7 +478,8 @@ def cmd_fetch(args):
             entry["base_page"] = entry["page"]
             entry["page"] = combined
     write_json(work / "pages.json",
-               {"created": datetime.now().isoformat(timespec="seconds"), "sources": out})
+               {"created": datetime.now().isoformat(timespec="seconds"),
+                "unmatched": unmatched_pages, "sources": out})
     # Put the page paths into the task files the checking agents read.
     page_by_number = {e["number"]: e["page"] for e in out if e["page"]}
     for src in data["sources"]:
@@ -538,20 +526,47 @@ def load_results(work):
                 except json.JSONDecodeError:
                     bad.append(f"{path.name}:{no}")
                     continue
-                if not isinstance(item, dict) or "id" not in item:
+                key = (item.get("id") or item.get("sid")) if isinstance(item, dict) else None
+                if not key:
                     bad.append(f"{path.name}:{no}")
                     continue
                 verdict = verdict_of(item.get("verdict"))
                 if not verdict:
                     bad.append(f"{path.name}:{no}:bad verdict {item.get('verdict')!r}")
                     continue
-                merged[item["id"]] = {
+                merged[key] = {
                     "verdict": verdict,
                     "quote": item.get("quote") or "",
                     "note": item.get("note") or "",
                     "pass": pass_name,
                 }
     return merged, bad
+
+
+def overturned(work, merged, claims):
+    """How many first-pass verdicts the later pass changed (Part 3)."""
+    first = {}
+    for path in sorted((Path(work) / "results").glob("pass1*.jsonl")):
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                try:
+                    item = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                value = verdict_of(item.get("verdict"))
+                if value:
+                    first[item.get("id") or item.get("sid")] = {
+                        "verdict": value, "quote": item.get("quote") or "",
+                        "note": item.get("note") or "", "pass": "pass1"}
+    first, _ = expand_statement_results(work, first, dict(claims))
+    rows = []
+    for cid, before in first.items():
+        after = (merged.get(cid) or {}).get("verdict")
+        if after and after != before["verdict"]:
+            rows.append({"id": cid, "before": before["verdict"], "after": after})
+    return rows
 
 
 def page_index(work):
@@ -578,11 +593,29 @@ def locate_quote(body, quote, offset):
     return locate(body.translate(marks), quote.translate(marks), offset)
 
 
+def quote_word_count(quote):
+    return len(re.findall(r"\S+", quote or ""))
+
+
+def quote_length_state(quote):
+    """The minimum proof length, with the exception for a short fact that carries a digit."""
+    words = quote_word_count(quote)
+    if words > 40:
+        return "too_long"
+    if words < 5 and not re.search(r"\d", quote or ""):
+        return "too_short"
+    return "ok"
+
+
 def evidence_state(verdict, quote, page):
     if not page or not Path(page).is_file():
         return "no_page", None
     if not quote.strip():
         return ("missing" if verdict in NEED_QUOTE else "none"), None
+    if verdict in NEED_QUOTE:
+        length = quote_length_state(quote)
+        if length != "ok":
+            return length, None
     try:
         _, body, offset = read_page(page)
     except (OSError, UnicodeDecodeError):
@@ -593,6 +626,98 @@ def evidence_state(verdict, quote, page):
     return "ok", found[1]
 
 
+def _safe_quote_repair(old, new):
+    """Reject a repair that adds/removes a negation or changes a word's meaning, not its ending."""
+    old_words = [w.casefold() for w in fq.tokens(old)]
+    new_words = [w.casefold() for w in fq.tokens(new)]
+    if (set(old_words) & NEGATIONS) != (set(new_words) & NEGATIONS):
+        return False
+    if len(old_words) != len(new_words):
+        return True
+    for used, original in zip(new_words, old_words):
+        if used == original:
+            continue
+        if not fq.ending_variant(used, original):
+            return False
+    return True
+
+
+def repair_quotes(rows, pages, min_ratio=fq.MIN_RATIO):
+    """Replace a not-found quote with the page's closest span when it is similar enough."""
+    repaired, notes = 0, []
+    for row in rows:
+        if row.get("evidence") != "not_found" or not row.get("quote"):
+            continue
+        page = (pages.get(row.get("number")) or {}).get("page") or row.get("page")
+        if not page or not Path(page).is_file():
+            continue
+        try:
+            _, body, offset = read_page(page)
+        except (OSError, UnicodeDecodeError):
+            continue
+        found = fq.best_evidence_span(body, fq.tokens(row["quote"]), min_ratio)
+        if not found:
+            continue
+        exact, ratio = found
+        if not _safe_quote_repair(row["quote"], exact):
+            continue
+        location = locate_quote(body, exact, offset)
+        if not location:
+            continue
+        notes.append("%s: %.2f -> %s" % (row.get("id", "?"), ratio, exact[:80]))
+        row["quote"] = exact
+        row["evidence"] = "ok"
+        row["quote_line"] = location[1]
+        repaired += 1
+    return repaired, notes
+
+
+def cmd_fix_quotes(args):
+    work = Path(args.workdir).resolve()
+    try:
+        rows = [json.loads(l) for l in open(work / "verdicts.jsonl", encoding="utf-8")
+                if l.strip()]
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read verdicts.jsonl: {e}")
+    repaired, notes = repair_quotes(rows, page_index(work), args.min_ratio)
+    with open(work / "verdicts.jsonl", "w", encoding="utf-8", newline="\n") as fh:
+        for row in rows:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print("fix-quotes: %d repaired, %d still not found"
+          % (repaired, sum(1 for r in rows if r.get("evidence") == "not_found")))
+    counts = Counter(r.get("evidence") or "none" for r in rows)
+    print("evidence: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(counts.items())))
+    for note in notes:
+        print("NOTE quote fixed: " + note)
+    return 0
+
+
+def expand_statement_results(work, merged, claims):
+    """A pack result is keyed by statement sid; give each cited number a claim-sized row."""
+    try:
+        statements = {s["sid"]: s for s in
+                      (json.loads(l) for l in open(work / "statements.jsonl", encoding="utf-8")
+                       if l.strip())}
+    except (OSError, json.JSONDecodeError):
+        return merged, claims
+    for sid in [k for k in merged if k not in claims]:
+        st = statements.get(sid)
+        if st and st.get("numbers"):
+            result = merged[sid]
+            for number in st["numbers"]:
+                cid = next((c["id"] for c in claims.values()
+                            if c.get("line") == st["line"] and c.get("number") == number
+                            and normalize(c.get("claim", "")) == normalize(st["text"])), None)
+                if cid is None:
+                    cid = "%s-N%d" % (sid, number)
+                    claims[cid] = {"id": cid, "line": st["line"], "number": number,
+                                   "claim": st["text"], "url": st.get("url", ""),
+                                   "section": st.get("section", "")}
+                merged.setdefault(cid, dict(result))
+        merged.pop(sid, None)
+    return merged, claims
+
+
 def cmd_validate(args):
     work = Path(args.workdir).resolve()
     try:
@@ -600,6 +725,7 @@ def cmd_validate(args):
     except OSError as e:
         return die(f"Cannot read claims.jsonl: {e}")
     merged, bad = load_results(work)
+    merged, claims = expand_statement_results(work, merged, claims)
     pages = page_index(work)
     out = []
     for cid, claim in claims.items():
@@ -620,6 +746,15 @@ def cmd_validate(args):
           % (len(claims), len(merged), missing, len(bad)))
     print("verdicts: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(counts.items())))
     print("evidence: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(ev.items())))
+    turns = overturned(work, merged, claims)
+    write_json(work / "overturned.json", {"count": len(turns), "rows": turns})
+    print("recheck overturned: %d first-pass verdicts" % len(turns))
+    try:
+        import packs
+        added = packs.update_verdict_cache(work)
+        print("cache: %d final verdicts stored" % added)
+    except (OSError, ValueError, KeyError, ImportError) as e:
+        print("cache: not updated (%s)" % e)
     if bad:
         print("bad result lines: " + ", ".join(bad[:10]))
     return 0
@@ -678,8 +813,66 @@ VERDICT_LABEL = {
 }
 EVIDENCE_LABEL = {
     "ok": "ok", "missing": "Beleg fehlt", "not_found": "Beleg nicht gefunden",
-    "no_page": "Seite fehlt", "none": "—",
+    "no_page": "Seite fehlt", "none": "—", "too_short": "Beleg zu kurz",
+    "too_long": "Beleg zu lang",
 }
+
+
+def _plural(n, singular, plural):
+    return singular if n == 1 else plural
+
+
+def result_sentence(counts):
+    """Only nonzero groups, with correct singular and plural."""
+    parts = []
+    labels = [
+        ("gestuetzt", "wurde gestützt", "wurden gestützt"),
+        ("teilweise", "war nur teilweise belegt", "waren nur teilweise belegt"),
+        ("nicht_belegt", "war nicht belegt", "waren nicht belegt"),
+        ("widerspricht", "widersprach der Aussage", "widersprachen der Aussage"),
+        ("unpassend", "bezog sich auf ein anderes Thema", "bezogen sich auf ein anderes Thema"),
+        ("nicht_pruefbar", "war nicht prüfbar", "waren nicht prüfbar"),
+        ("offen", "blieb ohne Prüfergebnis", "blieben ohne Prüfergebnis"),
+    ]
+    for key, one, many in labels:
+        n = counts.get(key, 0)
+        if n:
+            parts.append("%d %s %s" % (n, _plural(n, "Aussage", "Aussagen"),
+                                       _plural(n, one, many)))
+    if not parts:
+        return "Keine Aussage konnte geprüft werden."
+    return "; ".join(parts) + "."
+
+
+def pair_result_sentence(total, good, partial, bad, unrelated, contradicting=0):
+    """Only nonzero categories, with correct singular and plural (Part 1 step 7)."""
+    if not total:
+        return "Es wurden keine Aussage-Quelle-Paare geprüft."
+    parts = []
+    values = [
+        (good, "stützte die Aussage vollständig", "stützten die Aussage vollständig"),
+        (partial, "stützte sie nur teilweise", "stützten sie nur teilweise"),
+        (bad, "stützte sie gar nicht", "stützten sie gar nicht"),
+        (unrelated, "bezog sich auf ein anderes Thema", "bezogen sich auf ein anderes Thema"),
+        (contradicting, "widersprach der Aussage", "widersprachen der Aussage"),
+    ]
+    for n, one, many in values:
+        if n:
+            parts.append("%d %s %s" % (n, _plural(n, "Paar", "Paare"),
+                                       _plural(n, one, many)))
+    return "Ergebnis der %d Aussage-Quelle-Paare: %s." % (total, "; ".join(parts))
+
+
+def contradiction_lines(verdicts, pages):
+    """For every contradicted statement: page URL and the word-for-word passage."""
+    lines = []
+    for v in verdicts:
+        if v.get("verdict") != "widerspricht":
+            continue
+        page = pages.get(v.get("number")) or {}
+        url = page.get("url") or "(URL fehlt)"
+        lines.append("Quelle %s (%s): „%s“" % (v.get("number"), url, v.get("quote", "")))
+    return lines
 
 
 def cmd_report(args):
@@ -700,7 +893,8 @@ def cmd_report(args):
     unreachable = sorted(n for n in cited if n not in reachable)
     uncited = sorted({s["number"] for s in sources} - cited)
     bad_rows = [v for v in verdicts
-                if v["verdict"] in BAD or v["evidence"] in ("missing", "not_found", "no_page")]
+                if v["verdict"] in BAD or v["evidence"] in (
+                    "missing", "not_found", "no_page", "too_short", "too_long")]
     noted_rows = [v for v in verdicts
                   if v in bad_rows or v["verdict"] == "teilweise"]
     duplicates = [p for p in pages.values() if p.get("duplicate_of")]
@@ -717,17 +911,27 @@ def cmd_report(args):
         "Geprüft am %s · %d Zitatstellen · %d Quellen (%d lesbar)."
         % (datetime.now().strftime("%Y-%m-%d"), total, len(cited), len(reachable)),
         "",
-        "**Ergebnis:** %d gestützt, %d teilweise, %d nicht belegt, %d widersprechend, "
-        "%d unpassend, %d nicht prüfbar, %d offen. "
+        "**Ergebnis:** " + result_sentence(counts),
+        "",
         "Vollständig gestützt: %s %%; gestützt oder teilweise: %s %% der Zitatstellen."
-        % (good, partial, counts.get("nicht_belegt", 0), counts.get("widerspricht", 0),
-           counts.get("unpassend", 0), counts.get("nicht_pruefbar", 0),
-           counts.get("offen", 0), pct_full_text, pct_text),
+        % (pct_full_text, pct_text),
         "",
     ]
-    if ev:
-        lines += ["*Belege: %d wörtlich in der Quelle gefunden, %d nicht gefunden, %d fehlen.*"
-                  % (ev.get("ok", 0), ev.get("not_found", 0), ev.get("missing", 0)), ""]
+    ev_parts = []
+    for key, label in (("ok", "wörtlich gefunden"), ("too_short", "zu kurz"),
+                       ("too_long", "zu lang"), ("not_found", "nicht gefunden"),
+                       ("missing", "fehlen"), ("no_page", "Seite fehlt")):
+        if ev.get(key):
+            ev_parts.append("%d %s" % (ev[key], label))
+    if ev_parts:
+        lines += ["*Belege: " + ", ".join(ev_parts) + ".*", ""]
+    try:
+        turn_data = read_json(work / "overturned.json")
+    except (OSError, json.JSONDecodeError):
+        turn_data = {}
+    if turn_data.get("count"):
+        lines += ["Der Recheck hat %d Urteil(e) der ersten Runde umgedreht."
+                  % turn_data["count"], ""]
     combined = [p for p in pages.values() if p.get("base_page")]
     if combined:
         lines += ["Reddit-Kommentare aus dem Archiv ergänzt: %d Quellen." % len(combined), ""]
@@ -738,6 +942,11 @@ def cmd_report(args):
             "%d = %d" % (p["number"], p["duplicate_of"]) for p in duplicates), ""]
     if uncited:
         lines += ["Nicht zitierte Quellen: %s." % ", ".join(str(n) for n in uncited), ""]
+    contradictions = contradiction_lines(verdicts, pages)
+    if contradictions:
+        lines += ["### Widersprüche", ""]
+        lines += ["- " + x for x in contradictions]
+        lines += [""]
 
     if noted_rows:
         lines += ["### Auffällige Stellen", "",
@@ -745,7 +954,7 @@ def cmd_report(args):
                   "|---|---|---|---|---|---|"]
         for v in sorted(noted_rows, key=lambda x: (x["line"], x["id"])):
             detail = v["note"] or v["quote"] or EVIDENCE_LABEL.get(v["evidence"], "")
-            if v["evidence"] in ("not_found", "missing"):
+            if v["evidence"] in ("not_found", "missing", "too_short", "too_long"):
                 detail = ("Beleg %s. " % EVIDENCE_LABEL[v["evidence"]]) + detail
             lines.append("| %s | %d | %s | %d | %s | %s |"
                          % (v["id"], v["line"], cell(v["claim"], 110), v["number"],
@@ -787,6 +996,28 @@ def cmd_report(args):
     return 1 if bad_rows or unreachable else 0
 
 
+def cmd_packs(args):
+    """Build the passage packs after fetch; the heavy work lives in packs.py."""
+    import packs
+
+    work = Path(args.workdir).resolve()
+    try:
+        if (work / "statements.jsonl").is_file():
+            statements = [json.loads(l) for l in
+                          open(work / "statements.jsonl", encoding="utf-8") if l.strip()]
+        else:
+            statements = [{"sid": p["id"], "text": p["claim"],
+                           "self_contained": p["claim"], "numbers": [p["number"]]}
+                          for p in load_claims(work).values()]
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read statements: {e}")
+    count, passages, batches = packs.build_packs(work, statements, args.per_agent)
+    print("packs: %d statements, %d passages, %d batches (embedding: %s)"
+          % (count, passages, batches,
+             "yes" if (work / "packs" / "embeddings.json").is_file() else "no"))
+    return 0
+
+
 def main(argv=None):
     utf8_output()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -806,6 +1037,16 @@ def main(argv=None):
     p = sub.add_parser("validate")
     p.add_argument("--workdir", required=True)
     p.set_defaults(func=cmd_validate)
+
+    p = sub.add_parser("fix-quotes")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--min-ratio", type=float, default=fq.MIN_RATIO)
+    p.set_defaults(func=cmd_fix_quotes)
+
+    p = sub.add_parser("packs")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=6)
+    p.set_defaults(func=cmd_packs)
 
     p = sub.add_parser("recheck")
     p.add_argument("--workdir", required=True)

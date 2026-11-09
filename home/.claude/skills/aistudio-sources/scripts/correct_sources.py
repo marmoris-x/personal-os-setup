@@ -15,6 +15,13 @@ untouched when it is wrong for another.
   filter            drop replacements the audit did not confirm
   merge             join per-agent JSONL files unchanged
   apply             write `<name> - korrigiert.md` with replaced markers and inline marks
+  statements        extract every statement with its exact span and self-contained form
+  edit-plan         build the minimal-edit tasks for all facts
+  edit-check        validate edit decisions in code
+  edit-verify-plan  build the independent audit of edits
+  edit-filter       drop edits the audit rejected
+  edit-apply        apply checked edits and run the formatting check
+  packs             write the passage packs for the first pass
 
 Decision file (JSONL, one object per citation group):
   {"gid":"G001","action":"replace","source":57,"quote":"...","note":"..."}   existing source
@@ -51,6 +58,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(Path.home() / ".claude" / "skills" / "research" / "scripts"))
 import check_sources as cs  # noqa: E402
+import claims  # noqa: E402
+import edits  # noqa: E402
+import packs  # noqa: E402
 from common import normalize, read_page, utf8_output  # noqa: E402
 
 GROUP = re.compile(r"(?:\[\[(\d+)\]\((https?://[^)\s]+)\)\]|\[(\d+)\]\((https?://[^)\s]+)\))+")
@@ -105,27 +115,12 @@ def body_of(raw):
     return raw[:cut]
 
 
-def clean(text):
-    text = cs.CITE.sub("", text)
-    text = cs.PLAIN_CITE.sub("", text)
-    text = cs.plain_markdown(text)
-    text = re.sub(r"^\s*>+\s*", "", text)
-    text = re.sub(r"^\s*(?:[-*+]|\d+\.)\s+", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+clean = claims.clean_text
 
 
-def statement_before(line, pos, last_end, table_label=""):
-    chunk = line[last_end:pos].rstrip()
-    # AI Studio usually puts the marker directly after the full stop, but a space or a
-    # line with several sentences must not swallow the sentence that carries the claim.
-    if chunk and not re.search(r"[.!?;]\s*$", chunk):
-        cut = max(chunk.rfind(". "), chunk.rfind("! "), chunk.rfind("? "), chunk.rfind("; "))
-        if cut >= 0:
-            chunk = chunk[cut + 2:]
-    chunk = clean(chunk)
-    if table_label and chunk and not chunk.startswith(table_label):
-        chunk = table_label + ": " + chunk
-    return chunk
+def statement_before(line, pos, last_end=0, table_label=""):
+    """Compatibility wrapper around the one parser; the full sentence is the statement."""
+    return claims.statement_for(line, pos, table_label)
 
 
 def url_key(url):
@@ -278,10 +273,18 @@ def cmd_plan(args):
 
 
 def valid_quote(page, quote):
-    if not page or not Path(page).is_file() or not quote:
-        return False
+    """(ok, reason); a quote is proof only when found and long enough (Part 1 step 2)."""
+    if not page or not Path(page).is_file():
+        return False, "Seite fehlt"
+    if not quote:
+        return False, "Beleg fehlt"
+    length = cs.quote_length_state(quote)
+    if length != "ok":
+        return False, cs.EVIDENCE_LABEL[length]
     _header, body, offset = read_page(page)
-    return bool(cs.locate_quote(body, quote, offset))
+    if not cs.locate_quote(body, quote, offset):
+        return False, "Beleg nicht gefunden"
+    return True, ""
 
 
 def cmd_check(args):
@@ -294,7 +297,7 @@ def cmd_check(args):
             (work / "sources.json").read_text(encoding="utf-8"))["sources"]}
         pages = {s["number"]: s.get("page") for s in json.loads(
             (work / "pages.json").read_text(encoding="utf-8"))["sources"]}
-        results = read_jsonl(path)
+        results = read_jsonl(path) if path.is_file() else []
     except (OSError, json.JSONDecodeError) as e:
         return die(f"Cannot read input: {e}")
     by_gid = {g["gid"]: g for g in plan["groups"]}
@@ -321,10 +324,10 @@ def cmd_check(args):
             if url_key(url) in {url_key(u) for u in g.get("urls", [])}:
                 bad.append({**r, "reason": "candidate is an old source"})
                 continue
-            if not valid_quote(page, quote):
-                bad.append({**r, "reason": "quote not found in candidate page"})
+            ok, reason = valid_quote(page, quote)
+            if not ok:
+                bad.append({**r, "reason": reason})
                 continue
-            gid = r["gid"]
             good.append({**r, "number": None})
             continue
         n = r.get("source")
@@ -334,8 +337,9 @@ def cmd_check(args):
         if n in g["numbers"]:
             bad.append({**r, "reason": "replacement is the old source"})
             continue
-        if not valid_quote(pages.get(n), quote):
-            bad.append({**r, "reason": "quote not found in source page"})
+        ok, reason = valid_quote(pages.get(n), quote)
+        if not ok:
+            bad.append({**r, "reason": reason})
             continue
         good.append({**r, "url": sources[n], "number": n})
     out = work / "fix" / ("valid-web.jsonl" if web else "valid-existing.jsonl")
@@ -603,7 +607,8 @@ def cmd_filter(args):
     """Keep only replacements whose quote an independent agent confirmed for the statement."""
     work = Path(args.workdir).resolve()
     try:
-        results = {r["gid"]: r for r in read_jsonl(Path(args.file))}
+        audit_path = Path(args.file)
+        results = {r["gid"]: r for r in (read_jsonl(audit_path) if audit_path.is_file() else [])}
     except (OSError, json.JSONDecodeError) as e:
         return die(f"Cannot read verify results: {e}")
     files = [name for name in ("valid-existing.jsonl", "valid-web.jsonl")
@@ -624,11 +629,16 @@ def cmd_filter(args):
             if not sel or sel[0] != name or sel[1] != idx:
                 continue  # an older proposal for the same group; the later one is used
             v = results.get(r["gid"])
-            ok = bool(v) and v.get("verdict") == "gestuetzt"
+            length = cs.quote_length_state(r.get("quote", ""))
+            ok = bool(v) and v.get("verdict") == "gestuetzt" and length == "ok"
             if ok:
                 keep.append(r)
-            log.append({"gid": r["gid"], "verdict": (v or {}).get("verdict", "fehlt"),
-                        "note": (v or {}).get("note", "")})
+            verdict = (v or {}).get("verdict", "fehlt")
+            note = (v or {}).get("note", "")
+            if length != "ok":
+                verdict = cs.EVIDENCE_LABEL.get(length, length)
+                note = "Beleg %s." % verdict
+            log.append({"gid": r["gid"], "verdict": verdict, "note": note})
         write_jsonl(work / "fix" / name, keep)
     write_jsonl(work / "fix" / "replacement-check.jsonl", log)
     rejected = [x["gid"] for x in log if x["verdict"] != "gestuetzt"]
@@ -781,6 +791,9 @@ def shorten(text, limit=120):
     return text[:cut if cut > 0 else limit].rstrip(" ,;:") + " …"
 
 
+pair_result_sentence = cs.pair_result_sentence
+
+
 def build_report(marked, marked_body, order, title, date_text):
     sources = source_map(marked)
     key_to_new = {url_key(u): i for i, u in enumerate(order, 1)}
@@ -844,10 +857,7 @@ def build_report(marked, marked_body, order, title, date_text):
         "Geprüft am %s. Grundlage sind die Antwort und die darin genannten Quellen; die "
         "Zeilenangaben beziehen sich auf die fertige Datei." % date_text, "",
         "## Ergebnis", "",
-        "Von %d Aussage-Quelle-Paaren stützten %d die Aussage vollständig, %d nur teilweise "
-        "und %d gar nicht; %d bezogen sich auf ein anderes Thema."
-        % (total, good, partial_claims, bad, unrelated)
-        + (" %d widersprachen der Aussage." % contradicting if contradicting else ""),
+        pair_result_sentence(total, good, partial_claims, bad, unrelated, contradicting),
         "",
         "Im fertigen Text werden %d Quellen zitiert, davon %d neue. %d Verweise wurden ersetzt, "
         "bei %d Aussagen wurde der Verweis entfernt, weil keine geprüfte Quelle sie belegt, "
@@ -902,8 +912,15 @@ def build_report(marked, marked_body, order, title, date_text):
                                        "abrufen",
                      "unzutreffend": "Die Aussage ist nach den geprüften Quellen "
                                      "unzutreffend"}.get(r["correction"], r["correction"])
-            out.append("- **Zeile %d:** „%s“ – %s."
-                       % (r["line"], stmt_for(r), label))
+            text = "- **Zeile %d:** „%s“ – %s." % (r["line"], stmt_for(r), label)
+            if r["correction"] == "unzutreffend":
+                number = next((int(x) for x in re.findall(r"\d+", r["old"])), None)
+                url = sources.get(number) if number else None
+                passage = (r["note"] or "").replace("|", " ").strip()
+                if url:
+                    text += " Quelle %d (%s) sagt das Gegenteil: „%s“." % (
+                        number, urlsplit(url).netloc.lower().removeprefix("www."), passage)
+            out.append(text)
         out.append("")
 
     if unchecked:
@@ -941,9 +958,12 @@ def cmd_finalize(args):
     report_path = Path(args.out_report)
     clean_path.write_text(clean, encoding="utf-8", newline="")
     title = args.title or marked_path.stem.replace(" - korrigiert", "")
-    report_path.write_text(
-        build_report(marked, marked_body, order, title, args.date) + "\n",
-        encoding="utf-8", newline="")
+    report_text = build_report(marked, marked_body, order, title, args.date)
+    edit_report = Path(args.edit_report) if args.edit_report else None
+    if edit_report and edit_report.is_file():
+        report_text = report_text.rstrip() + "\n\n" + edit_report.read_text(
+            encoding="utf-8").strip() + "\n"
+    report_path.write_text(report_text, encoding="utf-8", newline="")
     print("finalize: %d sources, clean -> %s, report -> %s"
           % (len(order), clean_path, report_path))
     return 0
@@ -1130,6 +1150,240 @@ def cmd_apply(args):
     return 0
 
 
+def cmd_statements(args):
+    path = Path(args.file)
+    work = Path(args.workdir).resolve()
+    try:
+        raw = read_text_raw(path)
+    except OSError as e:
+        return die(f"Cannot read file: {e}")
+    items = claims.statements(body_of(raw))
+    work.mkdir(parents=True, exist_ok=True)
+    write_jsonl(work / "statements.jsonl", items)
+    cited = sum(1 for x in items if x.get("numbers"))
+    wertung = sum(1 for x in items if x.get("kind") == "wertung")
+    print("statements: %d total, %d cited, %d uncited, %d wertung -> %s"
+          % (len(items), cited, len(items) - cited, wertung, work / "statements.jsonl"))
+    return 0
+
+
+def cmd_edit_plan(args):
+    work = Path(args.workdir).resolve()
+    try:
+        statements = read_jsonl(work / "statements.jsonl")
+        sources = {s["number"]: s for s in json.loads(
+            (work / "sources.json").read_text(encoding="utf-8"))["sources"]}
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    facts = [s for s in statements if s.get("kind") != "wertung"]
+    uncited = [s for s in facts if not s.get("numbers")]
+    tasks = []
+    for s in facts:
+        numbers = s.get("numbers") or []
+        pages = []
+        if numbers:
+            pages = [{"number": n, "page": sources.get(n, {}).get("page"),
+                      "url": sources.get(n, {}).get("url")} for n in numbers]
+        else:
+            pages = [{"number": n, "page": v.get("page"), "url": v.get("url")}
+                     for n, v in sorted(sources.items())]
+        tasks.append({**s, "pages": [p for p in pages if p.get("page")]})
+    outdir = work / "fix" / "edit-tasks"
+    outdir.mkdir(parents=True, exist_ok=True)
+    for old in outdir.glob("batch-*.json"):
+        old.unlink()
+    batches = cs.make_batches(tasks, args.per_agent)
+    for i, batch in enumerate(batches, 1):
+        write_json(outdir / ("batch-%02d.json" % i), {"batch": i, "tasks": batch})
+    print("edit-plan: %d statements (%d uncited, %d wertung excluded), %d batches -> %s"
+          % (len(facts), len(uncited), len(statements) - len(facts), len(batches), outdir))
+    return 0
+
+
+def _page_body(path):
+    if not path or not Path(path).is_file():
+        return ""
+    try:
+        _header, body, _offset = read_page(path)
+    except (OSError, UnicodeDecodeError):
+        return ""
+    return body
+
+
+def cmd_edit_check(args):
+    work = Path(args.workdir).resolve()
+    try:
+        raw = read_text_raw(Path(args.file))
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+        decisions = read_jsonl(Path(args.decisions))
+        sources = {s["number"]: s for s in json.loads(
+            (work / "sources.json").read_text(encoding="utf-8"))["sources"]}
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    good, bad = [], []
+    for d in decisions:
+        st = statements.get(d.get("sid"))
+        if not st:
+            bad.append({**d, "reason": "unknown sid"})
+            continue
+        action = d.get("action")
+        if action == "none":
+            good.append(d)
+            continue
+        if action not in ("replace", "delete"):
+            bad.append({**d, "reason": "unknown action"})
+            continue
+        start = int(d.get("start", st["start"]))
+        end = int(d.get("end", st["end"]))
+        if start < st["start"] or end > st["end"] or end <= start:
+            bad.append({**d, "reason": "span outside the statement"})
+            continue
+        if action == "delete":
+            good.append({**d, "start": start, "end": end})
+            continue
+        number = d.get("number")
+        page = d.get("page") or (sources.get(number) or {}).get("page")
+        body = _page_body(page)
+        ok, reason = edits.validate_edit(st["text"], raw[start:end], d.get("new", ""),
+                                         d.get("quote", ""), body, args.language)
+        if not ok:
+            bad.append({**d, "reason": reason})
+            continue
+        good.append({**d, "start": start, "end": end, "page": page})
+    write_jsonl(work / "fix" / "valid-edits.jsonl", good)
+    write_jsonl(work / "fix" / "rejected-edits.jsonl", bad)
+    print("edit-check: %d valid, %d rejected" % (len(good), len(bad)))
+    for b in bad[:10]:
+        print("REJECT %s | %s" % (b.get("sid"), b.get("reason")))
+    return 0 if good else 1
+
+
+def _delete_span(raw, start, end):
+    """A whole list item or table cell deletion includes the list marker / stays in the cell."""
+    left = raw.rfind("\n", 0, start) + 1
+    right = raw.find("\n", start)
+    if right < 0:
+        right = len(raw)
+    prefix = raw[left:start]
+    if re.fullmatch(r"\s*(?:[-*+]|\d+\.)\s+", prefix):
+        return left, right
+    return start, end
+
+
+def cmd_edit_apply(args):
+    work = Path(args.workdir).resolve()
+    path = Path(args.file)
+    out = Path(args.out) if args.out else path.with_name(path.stem + " - bearbeitet.md")
+    try:
+        raw = read_text_raw(path)
+        rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    decisions, spans = [], []
+    for r in rows:
+        if r.get("action") == "none":
+            continue
+        start, end = int(r["start"]), int(r["end"])
+        if r.get("action") == "delete":
+            start, end = _delete_span(raw, start, end)
+        decisions.append({**r, "start": start, "end": end})
+        spans.append((start, end))
+    edited, changes, rejected = edits.apply_decisions(raw, decisions)
+    ok, reasons = edits.format_check(raw, edited, spans)
+    score = edits.preservation(raw, edited)
+    changed = []
+    for r in rows:
+        if r.get("action") == "none":
+            continue
+        start, end = int(r["start"]), int(r["end"])
+        changed.append({"sid": r.get("sid"), "action": r.get("action"),
+                        "line": (statements.get(r.get("sid")) or {}).get("line"),
+                        "before": raw[start:end], "after": r.get("new", "—"),
+                        "quote": r.get("quote", ""), "note": r.get("note", "")})
+    report = {"changes": changes, "rejected": rejected, "format_ok": ok,
+              "format_reasons": reasons, "preservation": round(score, 4),
+              "changed": changed,
+              "wertung": [s["text"] for s in statements.values()
+                          if s.get("kind") == "wertung"]}
+    write_json(work / "fix" / "edit-report.json", report)
+    prose = ["## Textänderungen", ""]
+    for c in changed:
+        if c["action"] == "delete":
+            prose.append("- Zeile %s: „%s“ wurde gelöscht. %s"
+                         % (c["line"], c["before"], c["note"] or "Keine Quelle belegt sie."))
+        else:
+            prose.append("- Zeile %s: „%s“ -> „%s“. Beleg: „%s“."
+                         % (c["line"], c["before"], c["after"], c["quote"]))
+    if not changed:
+        prose.append("Keine Textänderung.")
+    prose += ["", "Erhaltungsgrad: %.4f." % score, ""]
+    (work / "fix" / "edit-report.md").write_text("\n".join(prose), encoding="utf-8")
+    if not ok:
+        print("edit-apply: REJECTED by formatting check: " + "; ".join(reasons[:5]))
+        return 1
+    out.write_text(edited, encoding="utf-8", newline="")
+    print("edit-apply: %d changes, preservation %.4f -> %s" % (changes, score, out))
+    return 0
+
+
+def cmd_edit_verify_plan(args):
+    work = Path(args.workdir).resolve()
+    try:
+        rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read valid edits: {e}")
+    tasks = [r for r in rows if r.get("action") == "replace"]
+    outdir = work / "fix" / "edit-verify"
+    outdir.mkdir(parents=True, exist_ok=True)
+    for old in outdir.glob("batch-*.json"):
+        old.unlink()
+    batches = cs.make_batches(tasks, args.per_agent)
+    for i, batch in enumerate(batches, 1):
+        write_json(outdir / ("batch-%02d.json" % i), {"batch": i, "tasks": batch})
+    print("edit-verify-plan: %d edits in %d batches -> %s"
+          % (len(tasks), len(batches), outdir))
+    return 0
+
+
+def cmd_edit_filter(args):
+    work = Path(args.workdir).resolve()
+    try:
+        audit_path = Path(args.file)
+        audit = {r["sid"]: r for r in (read_jsonl(audit_path) if audit_path.is_file() else [])}
+        rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read audit: {e}")
+    kept, rejected = [], []
+    for r in rows:
+        if r.get("action") != "replace":
+            kept.append(r)
+            continue
+        verdict = (audit.get(r["sid"]) or {}).get("verdict")
+        if verdict == "gestuetzt":
+            kept.append(r)
+        else:
+            rejected.append(r)
+    write_jsonl(work / "fix" / "valid-edits.jsonl", kept)
+    write_jsonl(work / "fix" / "audit-rejected.jsonl", rejected)
+    print("edit-filter: %d edits kept, %d rejected" % (
+        sum(1 for r in kept if r.get("action") == "replace"), len(rejected)))
+    return 0
+
+
+def cmd_packs(args):
+    work = Path(args.workdir).resolve()
+    try:
+        statements = read_jsonl(work / "statements.jsonl")
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read statements.jsonl: {e}")
+    count, passages, batches = packs.build_packs(work, statements, args.per_agent)
+    print("packs: %d statements, %d passages, %d batches (embedding: %s)"
+          % (count, passages, batches,
+             "yes" if (work / "packs" / "embeddings.json").is_file() else "no"))
+    return 0
+
+
 def main(argv=None):
     utf8_output()
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1202,8 +1456,47 @@ def main(argv=None):
     p.add_argument("--out-clean", required=True)
     p.add_argument("--out-report", required=True)
     p.add_argument("--title")
+    p.add_argument("--edit-report")
     p.add_argument("--date", default=datetime.now().strftime("%Y-%m-%d"))
     p.set_defaults(func=cmd_finalize)
+
+    p = sub.add_parser("statements")
+    p.add_argument("file")
+    p.add_argument("--workdir", required=True)
+    p.set_defaults(func=cmd_statements)
+
+    p = sub.add_parser("edit-plan")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=6)
+    p.set_defaults(func=cmd_edit_plan)
+
+    p = sub.add_parser("edit-check")
+    p.add_argument("file")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--decisions", required=True)
+    p.add_argument("--language", default="de")
+    p.set_defaults(func=cmd_edit_check)
+
+    p = sub.add_parser("edit-apply")
+    p.add_argument("file")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--out")
+    p.set_defaults(func=cmd_edit_apply)
+
+    p = sub.add_parser("edit-verify-plan")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=6)
+    p.set_defaults(func=cmd_edit_verify_plan)
+
+    p = sub.add_parser("edit-filter")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--file", required=True)
+    p.set_defaults(func=cmd_edit_filter)
+
+    p = sub.add_parser("packs")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=6)
+    p.set_defaults(func=cmd_packs)
 
     args = parser.parse_args(argv)
     return args.func(args)

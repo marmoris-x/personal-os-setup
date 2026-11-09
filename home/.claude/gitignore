@@ -35,6 +35,7 @@ profiles/
 **/settings.local.json
 **/privacy-blocklist.txt
 **/__pycache__/
+**/.pytest_cache/
 **/*.pyc
 # skills synced from claude.ai (Anthropic's own, not part of this setup)
 skills/synced/
