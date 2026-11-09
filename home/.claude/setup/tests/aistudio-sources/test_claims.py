@@ -90,6 +90,13 @@ def test_pronoun_is_resolved_from_the_previous_sentence():
     assert got[1]["self_contained"] == "Blender laeuft auf Windows."
 
 
+def test_pronoun_uses_the_subject_without_the_sentence_period():
+    got = claims.statements("Maya erfindet Videos. Es ist teuer.\n")
+    assert got[1]["self_contained"] == "Maya ist teuer."
+    got = claims.statements("Der Bericht nennt Maya. Er ist lang.\n")
+    assert got[1]["self_contained"] == "Bericht ist lang."
+
+
 def test_table_statement_has_label_header_and_exact_span():
     text = "| Produkt | Fokus |\n|---|---|\n| Blender | 3D-Generierung |\n"
     got = claims.statements(text)
@@ -108,4 +115,10 @@ def test_list_item_is_one_statement():
 
 def test_opinion_is_labelled_wertung():
     got = claims.statements("Meiner Meinung nach ist Remotion die beste Wahl.\n")
+    assert got[0]["kind"] == "wertung"
+
+
+def test_an_answers_own_conclusion_is_wertung():
+    got = claims.statements(
+        "Die Einschätzung bezüglich des Themas entspricht dem aktuellen Stand der Forschung.\n")
     assert got[0]["kind"] == "wertung"

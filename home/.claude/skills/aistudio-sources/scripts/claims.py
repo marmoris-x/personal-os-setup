@@ -29,7 +29,9 @@ TABLE_SEP = re.compile(r"^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$")
 OPINION = re.compile(
     r"\b(?:meiner meinung|meiner einschätzung|ich empfehle|empfehlenswert|lohnt sich|"
     r"ist besser|am besten|beste wahl|sollte man|würde ich|ist vorzuziehen|ratsam|"
-    r"fazit|insgesamt|aus meiner sicht)\b", re.I)
+    r"fazit|insgesamt|aus meiner sicht|die einschätzung|die beurteilung|die bewertung|"
+    r"der geäußerte|die optimistische haltung|ist die einzig|einzig realistisch|"
+    r"entspricht dem aktuellen stand|meines erachtens|bleibt abzuwarten)\b", re.I)
 PRONOUN = re.compile(r"^(Es|Er|Sie|Das|Dies|Diese|Dieser|Dabei|Dort|Damit)\b", re.I)
 DETERMINERS = {"der", "die", "das", "ein", "eine", "einer", "eines", "dem", "den", "des",
                "dieser", "diese", "dieses", "es", "er", "sie", "wir", "ich", "man"}
@@ -208,11 +210,26 @@ def extract_claims(body, sources):
     return pairs, duplicates
 
 
+LEADING_WORDS = DETERMINERS | {
+    "laut", "nach", "bei", "mit", "im", "in", "auf", "für", "von", "zum", "zur", "vom",
+    "beim", "am", "ans", "aus", "durch", "gegen", "ohne", "über", "unter", "vor",
+    "während", "trotz", "zudem", "außerdem", "allerdings", "jedoch", "daher", "deshalb",
+    "denn", "doch", "auch", "nur", "so", "damit", "dabei", "dort", "hier", "nun",
+    "heute", "inzwischen", "mittlerweile", "etwa", "rund", "knapp", "über",
+}
+
+
 def _entity(text):
-    """The last name-like word of a text, used to resolve a leading pronoun."""
-    words = re.findall(r"[A-ZÄÖÜ][\wÄÖÜäöüß.-]+", plain_markdown(text))
-    for word in reversed(words):
-        if word.casefold() not in DETERMINERS and len(word) > 2:
+    """The subject-like word of a text: the first name-like word after the sentence start.
+
+    The first candidate is taken, not the last: in "Der Bericht nennt Maya" the subject is
+    "Bericht", while "Maya" is the object. A trailing period is sentence punctuation, never
+    part of the name.
+    """
+    words = re.findall(r"[A-ZÄÖÜ][\wÄÖÜäöüß.-]*", plain_markdown(text))
+    for word in words:
+        word = word.rstrip(".-")
+        if len(word) > 2 and word.casefold() not in LEADING_WORDS:
             return word
     return ""
 

@@ -93,6 +93,19 @@ more than about 150 claims. The main SKILL.md keeps the procedure.
   cache; the uv environment lives in uv's cache. Never install it into the repository.
 - A verdict cache is keyed by SHA-256 of page text and statement. A re-run on the same answer and
   pages reuses unchanged verdicts; a changed page or statement gets a fresh check.
+- A second `prepare` in the same workdir moves the previous run's `results\pass*.jsonl` into
+  `results\previous-<time>\`: the P/S ids are positional, so an old recheck row would otherwise
+  attach to another statement (found in review, 2026-11-09). Never merge files from two runs.
+- An uncited statement that an edit would delete is searched on the web once
+  (`edit-web-plan` / `edit-web-collect` / `edit-web-verify-plan` / `edit-web-filter`). A page that
+  proves it keeps the statement; otherwise the deletion stands. The code path exists because the
+  saved pages may simply not cover an invented-looking sentence.
+- `edit-filter` keeps the audit's reason on a rejected replacement; `edit-apply` reports it and
+  deletes the statement only when the check found no support for the original either. An
+  `unzutreffend` report names the contradicting source and its full quote, never the first old
+  number.
+- The report summary uses singular and plural ("1 Verweis wurde ersetzt", "2 Verweise wurden
+  ersetzt"); a fixture with one replacement caught the old plural-only wording.
 - Part 4 edits are span edits, never rewrites. The code rejects an edit longer than 50 characters
   or half the statement, a new number/name/version/date that is not in the proof quote, a quote
   that is not found or too short, and a change outside the statement's span. A rejected edit

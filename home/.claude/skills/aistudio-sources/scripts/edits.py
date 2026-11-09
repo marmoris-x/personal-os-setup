@@ -24,6 +24,28 @@ def _words(text):
     return [w.casefold() for w in fq.tokens(text)]
 
 
+STOPWORDS = {"der", "die", "das", "und", "oder", "ist", "sind", "war", "waren", "ein", "eine",
+             "einer", "eines", "dem", "den", "des", "auf", "mit", "von", "für", "im", "in",
+             "zu", "zur", "zum", "nicht", "auch", "als", "dass", "diese", "dieser", "dieses",
+             "es", "er", "sie", "wir", "ich", "man", "wird", "werden", "hat", "haben"}
+
+
+def wertung_dependencies(wertung, deleted, max_distance=3):
+    """Deleted statements near a wertung that share a content word with it."""
+    words = {w for w in _words(wertung.get("text", ""))
+             if len(w) > 2 and w not in STOPWORDS}
+    out = []
+    for row in deleted:
+        if abs(int(wertung.get("line", 0)) - int(row.get("line", 0))) > max_distance:
+            continue
+        shared = words & {w for w in _words(row.get("text", ""))
+                          if len(w) > 2 and w not in STOPWORDS}
+        if shared:
+            out.append({"line": row.get("line"), "text": row.get("text", ""),
+                        "shared": sorted(shared)})
+    return out
+
+
 def _is_number(token):
     return bool(re.search(r"\d", token))
 
@@ -170,9 +192,21 @@ def format_check(original, edited, spans):
             if index not in edited_lines:
                 reasons.append("Zeile %d wurde außerhalb der Spanne geändert" % (index + 1))
         if tag == "replace" and (i2 - i1) == (j2 - j1) and not reasons:
-            for old_line, new_line in zip(orig_lines[i1:i2], new_lines[j1:j2]):
-                if skeleton(old_line) != skeleton(new_line):
-                    reasons.append("Markdown-Gerüst in Zeile %d geändert" % (i1 + 1))
+            for k, (old_line, new_line) in enumerate(zip(orig_lines[i1:i2], new_lines[j1:j2])):
+                old_sk = skeleton(old_line)
+                new_sk = skeleton(new_line)
+                # A deleted sentence may take its citation marker with it; only markers
+                # outside the edited spans must survive.
+                line_start = offsets[i1 + k]
+                removed_links = 0
+                for start, end in spans:
+                    a = max(start, line_start) - line_start
+                    b = min(end, line_start + len(old_line)) - line_start
+                    if a < b:
+                        removed_links += old_line[a:b].count("](")
+                adjusted = old_sk[:5] + (old_sk[5] - removed_links,)
+                if adjusted != new_sk:
+                    reasons.append("Markdown-Gerüst in Zeile %d geändert" % (i1 + k + 1))
                     break
     return not reasons, reasons
 

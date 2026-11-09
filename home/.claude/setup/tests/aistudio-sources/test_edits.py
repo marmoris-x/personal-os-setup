@@ -93,6 +93,25 @@ def test_format_check_catches_a_change_outside_the_span():
     assert any("Zeile 2" in r for r in reasons)
 
 
+def test_deleting_a_sentence_may_take_its_citation_marker():
+    raw = "Erster Satz. Zweiter Satz[[1](https://example.org/a)].\n"
+    start = raw.index("Zweiter")
+    end = raw.index(")]", start) + 2
+    out, changes, rejected = edits.apply_decisions(
+        raw, [{"action": "delete", "start": start, "end": end}])
+    assert not rejected and changes == 1
+    ok, reasons = edits.format_check(raw, out, [(start, end)])
+    assert ok, reasons
+
+
+def test_wertung_names_the_deleted_fact_it_rested_on():
+    deps = edits.wertung_dependencies(
+        {"line": 5, "text": "Maya ist eindeutig die beste Wahl."},
+        [{"line": 4, "text": "Maya erfindet Videos."},
+         {"line": 20, "text": "Blender ist kostenlos."}])
+    assert deps == [{"line": 4, "text": "Maya erfindet Videos.", "shared": ["maya"]}]
+
+
 def test_preservation_score_is_one_for_identical_text():
     assert edits.preservation("gleich", "gleich") == 1.0
     assert edits.preservation("gleich", "anders") < 1.0

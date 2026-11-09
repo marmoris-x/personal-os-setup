@@ -17,3 +17,16 @@ def test_statement_verdict_becomes_one_row_per_number(tmp_path):
     merged, claims = cs.expand_statement_results(tmp_path, merged, claims)
     assert set(merged) == {"P001", "P002"}
     assert all(v["verdict"] == "gestuetzt" for v in merged.values())
+
+
+def test_uncited_statement_verdict_is_kept_visible(tmp_path):
+    (tmp_path / "statements.jsonl").write_text(json.dumps({
+        "sid": "S004", "line": 9, "text": "Eine unzitierte Aussage.", "numbers": []}) + "\n",
+        encoding="utf-8")
+    merged = {"S004": {"verdict": "nicht_belegt", "quote": "", "note": "", "pass": "pass1"}}
+    merged, claims = cs.expand_statement_results(tmp_path, merged, {})
+    assert merged == {}
+    rows = [json.loads(l) for l in
+            (tmp_path / "uncited-verdicts.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["sid"] == "S004"
+    assert rows[0]["verdict"] == "nicht_belegt"

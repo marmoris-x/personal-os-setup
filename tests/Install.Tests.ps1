@@ -285,7 +285,8 @@ Describe 'install -> verify -> reinstall -> restore (test target)' {
         # 184 measured 2026-11-09: the statement/check improvement adds 19 core files:
         # claims.py, packs.py, embed_packs.py, edits.py, the workflow, references/gotchas.md,
         # and the 13 aistudio-sources test files (testlib.py plus the 12 test_*.py files).
-        $files.Count | Should -BeLessThan 185 -Because 'the intended core files were added since 2026-10-25'
+        # 185 measured 2026-11-09: the review adds test_prepare_archive.py.
+        $files.Count | Should -BeLessThan 186 -Because 'the intended core files were added since 2026-10-25'
     }
 
     It '-DryRun on a fresh target exits 0, writes no tree file, keeps previews in .install-state' {

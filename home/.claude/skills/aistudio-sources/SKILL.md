@@ -77,6 +77,11 @@ numbers kept) and ranks them for each statement: exact numbers/versions/names, B
 and optionally a multilingual embedding. Each pack holds the statement and its four best passages.
 A cited statement is ranked within its cited pages; an uncited one within all saved pages.
 
+Measured 2026-11-09 on the real answer: the pack path agreed with the old whole-page path on
+36 of 40 statements (90.0%) and 61 of 72 claims (84.7%), below the owner's 95% rule. Packs are
+therefore **not adopted** and stay off by default; enable them only for an experiment and report
+the comparison first. The disagreements are in the task report.
+
 A re-run on the same answer reuses a stored verdict when the page text and the statement are
 unchanged: `validate` writes `verdict-cache.json` keyed by SHA-256 of (page text, statement), and
 `packs` writes cached verdicts to `results\pass0-cache.jsonl` instead of asking again. The pack
@@ -88,16 +93,19 @@ Without a model the pack says `signals: ["exact","bm25"]`. For the third signal 
 uv run --script "$HOME\.claude\skills\aistudio-sources\scripts\embed_packs.py" --workdir "<workdir>"
 ```
 
-fastembed runs `intfloat/multilingual-e5-small` (MIT, 117.7M parameters, about 470 MB ONNX,
-quantized about 118 MB) without PyTorch; the model lives in the Hugging Face cache and the
-environment in uv's cache. Never install it into the repository. If the command is not possible,
-continue with two signals and say so.
+The script runs `intfloat/multilingual-e5-small` (MIT, 117.7M parameters, 384 dimensions, about
+470 MB ONNX, quantized about 118 MB) through ONNX Runtime without PyTorch: fastembed's
+`TextEmbedding` registry does not list this model, so the script feeds the tokenizer and the ONNX
+session directly and applies E5's mean pooling. The model lives in the Hugging Face cache and the
+environment in uv's cache. Never install it into the repository. Measured 2026-11-09 on Windows:
+3 passages and 3 statements, 384 dimensions, exit 0. If the command is not possible, continue
+with two signals and say so.
 
 ## 4. Check every claim
 
-Count `batches\batch-*.json`. Spawn one plain subagent per batch, in parallel, with the prompt
-below. Before spawning, tell the owner in one line how many agents and roughly how long. Over
-eight batches, run them in two waves.
+Count `packs\batch-*.json` when packs exist, otherwise `batches\batch-*.json`. Spawn one plain
+subagent per batch, in parallel, with the prompt below. Before spawning, tell the owner in one
+line how many agents and roughly how long. Over eight batches, run them in two waves.
 
 If packs exist, the agent reads only its pack: one Read, one Write, no Grep and no page. If not,
 it reads the batch's pages as before.
@@ -337,17 +345,15 @@ python -I "...\correct_sources.py" filter --workdir "<workdir>" --file "<audit r
 
 A rejected replacement falls back to a mark. Never apply on the search agent's own note.
 
-### 8.5 Apply and finalize
+### 8.5 Apply
 
 ```powershell
 python -I "...\correct_sources.py" apply "<path>" --workdir "<workdir>"
-python -I "...\correct_sources.py" finalize "<name> - bearbeitet.md" --out-clean "<name> - fertig.md" --out-report "<name> - Prüfbericht.md" --title "<title>" --edit-report "<workdir>\fix\edit-report.md"
 ```
 
-`apply` writes the working copy with the audit sections. `finalize` strips marks, renumbers
-contiguously, writes plain `[N]` markers and `## Quellen`, and builds the German prose report.
-Check: no `## Quellenprüfung`, `Geänderte Stellen`, `Alle Prüfungen` or `[nicht belegt]` in the
-clean file; markers 1..N without gaps; wording outside edits identical.
+`apply` writes `<name> - korrigiert.md` with the corrected markers and the temporary audit
+sections. It is not the final file: the text edits of step 9 run on this copy, and `finalize`
+(steps 9.4/9.5) writes the two deliverables from the edited copy.
 
 ## 9. Minimal, checked text edits (Part 4)
 
@@ -393,10 +399,23 @@ word for word from the page. Opinion/recommendation (`wertung`) -> none.
 
 ```powershell
 python -I "...\correct_sources.py" edit-check "<path>" --workdir "<workdir>" --decisions "<decisions.jsonl>"
+python -I "...\correct_sources.py" edit-web-plan --workdir "<workdir>"
+python -I "...\correct_sources.py" edit-web-collect --workdir "<workdir>" --file "<raw>" ...
+python -I "...\correct_sources.py" edit-web-verify-plan --workdir "<workdir>"
+python -I "...\correct_sources.py" edit-web-filter --workdir "<workdir>" --file "<edit web results>"
 python -I "...\correct_sources.py" edit-verify-plan --workdir "<workdir>"
 python -I "...\correct_sources.py" edit-filter --workdir "<workdir>" --file "<audit results>"
 python -I "...\correct_sources.py" edit-apply "<path>" --workdir "<workdir>"
 ```
+
+`edit-web-plan` collects the uncited statements an edit would delete; before the web search tell
+the owner how many there are and the expected cost. Spawn one `web-researcher` per
+`fix\edit-web-tasks\batch-*.json` with the 8.3 prompt (each task has sid, statement,
+self_contained, section; write `{"sid","url","title","lang","type","why"}` to
+`fix\edit-web-raw-0N.jsonl`). After `edit-web-collect`, spawn one agent per
+`fix\edit-web-verify\batch-*.json` with the 8.3 verification rule and the verdict
+`gestuetzt|abgelehnt` to `fix\edit-web-results-0N.jsonl`. `edit-web-filter` changes a deletion
+to "none" when a page proves the statement; otherwise the deletion stands.
 
 The code rejects: an edit outside the statement's span; more than 50 characters or half the
 statement; a new number, proper name, version or date that is not in the proof quote; a quote
@@ -406,12 +425,21 @@ lines keep their Markdown skeleton, line endings and the final newline are uncha
 citation marker is valid. It writes `<name> - bearbeitet.md`, reports the RARR preservation
 score and lists the changes with their quotes.
 
-### 9.5 Final report
+### 9.5 Finalize and report
 
-`finalize` writes the German prose report. For Part 4 it names every changed statement as
-"vorher -> nachher" with source and quote, every deletion with its reason, every `wertung` that
-lost its basis, and the preservation score. A rejected edit leaves the statement as it was and
-goes into the report; a fallback deletion happens only when nothing supports the original either.
+```powershell
+python -I "...\correct_sources.py" finalize "<name> - bearbeitet.md" --out-clean "<name> - fertig.md" --out-report "<name> - Prüfbericht.md" --title "<title>" --edit-report "<workdir>\fix\edit-report.md"
+```
+
+`finalize` strips the temporary marks, renumbers the markers contiguously, writes plain `[N]`
+markers with one `## Quellen` list, and builds the German prose report. Check: no
+`## Quellenprüfung`, `Geänderte Stellen`, `Alle Prüfungen` or `[nicht belegt]` in the clean file;
+markers 1..N without gaps; wording outside edits identical.
+
+For Part 4 the report names every changed statement as "vorher -> nachher" with source and
+quote, every deletion with its reason, every `wertung` that lost its basis, and the preservation
+score. A rejected edit leaves the statement as it was and goes into the report; a fallback
+deletion happens only when nothing supports the original either.
 
 ## 10. Report to the owner
 

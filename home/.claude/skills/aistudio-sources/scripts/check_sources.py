@@ -194,6 +194,15 @@ def cmd_prepare(args):
     (work / "batches").mkdir(parents=True, exist_ok=True)
     (work / "results").mkdir(exist_ok=True)
     (work / "recheck").mkdir(exist_ok=True)
+    # A second prepare in the same workdir must not merge the previous run's verdicts: the
+    # P/S ids are positional, so an old pass2 row would land on a different statement.
+    stale = sorted((work / "results").glob("pass*.jsonl"))
+    if stale:
+        archive = work / "results" / ("previous-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
+        archive.mkdir(parents=True, exist_ok=True)
+        for old in stale:
+            old.replace(archive / old.name)
+        print("previous results moved: %d -> %s" % (len(stale), archive))
 
     with open(work / "claims.jsonl", "w", encoding="utf-8", newline="\n") as fh:
         for pair in pairs:
@@ -666,7 +675,10 @@ def repair_quotes(rows, pages, min_ratio=fq.MIN_RATIO):
             continue
         notes.append("%s: %.2f -> %s" % (row.get("id", "?"), ratio, exact[:80]))
         row["quote"] = exact
-        row["evidence"] = "ok"
+        # The repaired span must pass the same length rule as any other quote; a joined
+        # hyphen can leave three words where the original had six.
+        state = quote_length_state(exact)
+        row["evidence"] = "ok" if state == "ok" else state
         row["quote_line"] = location[1]
         repaired += 1
     return repaired, notes
@@ -700,6 +712,7 @@ def expand_statement_results(work, merged, claims):
                        if l.strip())}
     except (OSError, json.JSONDecodeError):
         return merged, claims
+    uncited = []
     for sid in [k for k in merged if k not in claims]:
         st = statements.get(sid)
         if st and st.get("numbers"):
@@ -714,7 +727,18 @@ def expand_statement_results(work, merged, claims):
                                    "claim": st["text"], "url": st.get("url", ""),
                                    "section": st.get("section", "")}
                 merged.setdefault(cid, dict(result))
+        elif st:
+            # An uncited statement has no source page to recheck against; keep its pack
+            # verdict visible instead of dropping it silently (the edit path checks it
+            # against all pages).
+            uncited.append({"sid": sid, "line": st.get("line"), "text": st.get("text"),
+                            "verdict": merged[sid].get("verdict", ""),
+                            "quote": merged[sid].get("quote", "")})
         merged.pop(sid, None)
+    if uncited:
+        with open(work / "uncited-verdicts.jsonl", "w", encoding="utf-8", newline="\n") as fh:
+            for row in uncited:
+                fh.write(json.dumps(row, ensure_ascii=False) + "\n")
     return merged, claims
 
 
@@ -746,6 +770,13 @@ def cmd_validate(args):
           % (len(claims), len(merged), missing, len(bad)))
     print("verdicts: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(counts.items())))
     print("evidence: " + ", ".join("%s=%d" % (k, v) for k, v in sorted(ev.items())))
+    uncited_file = work / "uncited-verdicts.jsonl"
+    if uncited_file.is_file():
+        try:
+            n_uncited = sum(1 for line in open(uncited_file, encoding="utf-8") if line.strip())
+            print("uncited statement verdicts: %d (kept in %s)" % (n_uncited, uncited_file))
+        except OSError:
+            pass
     turns = overturned(work, merged, claims)
     write_json(work / "overturned.json", {"count": len(turns), "rows": turns})
     print("recheck overturned: %d first-pass verdicts" % len(turns))

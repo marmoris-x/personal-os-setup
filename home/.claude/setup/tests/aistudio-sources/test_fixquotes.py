@@ -37,3 +37,14 @@ def test_more_than_thirty_percent_different_is_left_alone(tmp_path):
     rows = [row("Voellig andere Worte ohne jeden Bezug zur Seite.")]
     repaired, _ = cs.repair_quotes(rows, {1: {"page": str(p)}})
     assert repaired == 0
+
+
+def test_a_repair_that_joins_words_stays_too_short(tmp_path):
+    text = ('---\nurl: "https://example.org/x"\n---\n'
+            "Blender is free-and-open-source today.\n")
+    p = page(tmp_path, "joined.md", text)
+    rows = [row("Blender is free and open source")]
+    repaired, _ = cs.repair_quotes(rows, {1: {"page": str(p)}})
+    assert repaired == 1
+    assert rows[0]["quote"] == "Blender is free-and-open-source"
+    assert rows[0]["evidence"] == "too_short"

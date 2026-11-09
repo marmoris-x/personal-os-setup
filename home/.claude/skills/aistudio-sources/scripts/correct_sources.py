@@ -20,6 +20,10 @@ untouched when it is wrong for another.
   edit-check        validate edit decisions in code
   edit-verify-plan  build the independent audit of edits
   edit-filter       drop edits the audit rejected
+  edit-web-plan     build the web search for uncited statements an edit would delete
+  edit-web-collect  save up to two candidate pages per uncited statement
+  edit-web-verify-plan  build the check whether a page proves the uncited statement
+  edit-web-filter   keep a statement a web page proves; otherwise the deletion stands
   edit-apply        apply checked edits and run the formatting check
   packs             write the passage packs for the first pass
 
@@ -794,6 +798,29 @@ def shorten(text, limit=120):
 pair_result_sentence = cs.pair_result_sentence
 
 
+def report_summary(cited, new_sources, replaced, missing, partial, cleaned):
+    """One German summary paragraph with correct singular and plural forms."""
+    parts = [
+        ("Im fertigen Text wird 1 Quelle zitiert" if cited == 1 else
+         "Im fertigen Text werden %d Quellen zitiert" % cited)
+        + ", davon %d neue." % new_sources,
+        ("1 Verweis wurde ersetzt." if replaced == 1 else
+         "%d Verweise wurden ersetzt." % replaced) if replaced else
+        "Keine Verweise wurden ersetzt.",
+        ("Bei 1 Aussage wurde der Verweis entfernt, weil keine geprüfte Quelle sie belegt."
+         if missing == 1 else
+         "Bei %d Aussagen wurden die Verweise entfernt, weil keine geprüfte Quelle sie belegt."
+         % missing) if missing else "",
+        ("1 Aussage ist nur teilweise belegt." if partial == 1 else
+         "%d Aussagen sind nur teilweise belegt." % partial) if partial else "",
+        ("Bei 1 Stelle wurde ein zusätzlicher, nicht stützender Verweis entfernt; die Aussage "
+         "selbst war durch eine andere Quelle belegt." if cleaned == 1 else
+         "Bei %d Stellen wurden zusätzliche, nicht stützende Verweise entfernt; die Aussagen "
+         "selbst waren durch eine andere Quelle belegt." % cleaned) if cleaned else "",
+    ]
+    return " ".join(x for x in parts if x)
+
+
 def build_report(marked, marked_body, order, title, date_text):
     sources = source_map(marked)
     key_to_new = {url_key(u): i for i, u in enumerate(order, 1)}
@@ -812,6 +839,8 @@ def build_report(marked, marked_body, order, title, date_text):
     good, partial_claims, bad, unrelated, contradicting = (
         [int(x) for x in m_before.groups()] if m_before else (0, 0, 0, 0, 0))
     cited, new_sources = ([int(x) for x in m_cited.groups()] if m_cited else (0, 0))
+    # The final list has one entry per unique URL; two old numbers can point to one page.
+    cited = len(order) if order else cited
     cleaned = int(m_clean.group(1)) if m_clean else 0
     unchecked = int(m_unchecked.group(1)) if m_unchecked else 0
 
@@ -852,20 +881,15 @@ def build_report(marked, marked_body, order, title, date_text):
     def domain(url):
         return urlsplit(url).netloc.lower().removeprefix("www.")
 
+    summary_text = report_summary(cited, new_sources, len(replaced), len(missing),
+                                  len(partial), cleaned)
     out = [
         "# Prüfbericht: %s" % title, "",
         "Geprüft am %s. Grundlage sind die Antwort und die darin genannten Quellen; die "
         "Zeilenangaben beziehen sich auf die fertige Datei." % date_text, "",
         "## Ergebnis", "",
         pair_result_sentence(total, good, partial_claims, bad, unrelated, contradicting),
-        "",
-        "Im fertigen Text werden %d Quellen zitiert, davon %d neue. %d Verweise wurden ersetzt, "
-        "bei %d Aussagen wurde der Verweis entfernt, weil keine geprüfte Quelle sie belegt, "
-        "und %d Aussagen sind nur teilweise belegt. Bei %d Stellen wurde ein zusätzlicher, "
-        "nicht stützender Verweis entfernt; die Aussage selbst war durch eine andere Quelle "
-        "belegt."
-        % (cited, new_sources, len(replaced), len(missing), len(partial), cleaned),
-        "",
+        "", summary_text, "",
         "Die Quellen im fertigen Text sind neu von 1 bis %d durchnummeriert; die Nummern in "
         "diesem Bericht beziehen sich auf diese Zählung." % len(order),
         "",
@@ -914,12 +938,9 @@ def build_report(marked, marked_body, order, title, date_text):
                                      "unzutreffend"}.get(r["correction"], r["correction"])
             text = "- **Zeile %d:** „%s“ – %s." % (r["line"], stmt_for(r), label)
             if r["correction"] == "unzutreffend":
-                number = next((int(x) for x in re.findall(r"\d+", r["old"])), None)
-                url = sources.get(number) if number else None
-                passage = (r["note"] or "").replace("|", " ").strip()
-                if url:
-                    text += " Quelle %d (%s) sagt das Gegenteil: „%s“." % (
-                        number, urlsplit(url).netloc.lower().removeprefix("www."), passage)
+                passage = (r["note"] or "").strip()
+                if passage and passage != "—":
+                    text += " " + passage
             out.append(text)
         out.append("")
 
@@ -1046,11 +1067,23 @@ def cmd_apply(args):
         old_text = raw[g["start"]:g["end"]]
         if new_marker != old_text:
             edits.append((g["start"], g["end"], new_marker))
+        counter = None
+        if kind == "unzutreffend":
+            for cid in (g.get("claim_ids") or []):
+                v = verdicts.get(cid) or {}
+                if v.get("verdict") == "widerspricht" and v.get("quote"):
+                    number = v.get("number")
+                    url = sources.get(number, "") if number is not None else ""
+                    host = urlsplit(url).netloc.lower().removeprefix("www.") if url else ""
+                    counter = "Quelle %s%s sagt das Gegenteil: „%s“." % (
+                        number if number is not None else "?",
+                        (" (%s)" % host) if host else "", v["quote"])
+                    break
         details.append({"gid": g["gid"], "line": g["line"], "statement": g["statement"],
                         "old": ", ".join(map(str, g["numbers"])),
                         "action": action, "kind": kind or "",
                         "new": new_marker, "quote": (r or {}).get("quote", ""),
-                        "note": (r or {}).get("note", "")})
+                        "note": (r or {}).get("note", ""), "counter": counter})
     body = body_of(raw)
     for start, end, repl in sorted(edits, reverse=True):
         # A mark like " [unzutreffend]" needs its own space only when the marker is
@@ -1111,7 +1144,8 @@ def cmd_apply(args):
             lines.append("| %s | %d | %s | %s | %s | %s |"
                          % (d["gid"], d["line"], cs.cell(d["statement"], 100),
                             d["old"] or "—", verdict,
-                            cs.cell(d["quote"] or d["note"], 180)))
+                            cs.cell(d.get("counter") or d["quote"] or d["note"],
+                                    600 if d.get("counter") else 180)))
         lines.append("")
     if new_sources:
         lines += ["### Neue Quellen", ""]
@@ -1221,10 +1255,15 @@ def cmd_edit_check(args):
     except (OSError, json.JSONDecodeError) as e:
         return die(f"Cannot read input: {e}")
     good, bad = [], []
+    skipped = 0
     for d in decisions:
         st = statements.get(d.get("sid"))
         if not st:
             bad.append({**d, "reason": "unknown sid"})
+            continue
+        if st.get("kind") == "wertung":
+            # An opinion, recommendation or the answer's own conclusion is not fact-checked.
+            skipped += 1
             continue
         action = d.get("action")
         if action == "none":
@@ -1252,7 +1291,8 @@ def cmd_edit_check(args):
         good.append({**d, "start": start, "end": end, "page": page})
     write_jsonl(work / "fix" / "valid-edits.jsonl", good)
     write_jsonl(work / "fix" / "rejected-edits.jsonl", bad)
-    print("edit-check: %d valid, %d rejected" % (len(good), len(bad)))
+    print("edit-check: %d valid, %d rejected%s"
+          % (len(good), len(bad), (", %d wertung not checked" % skipped) if skipped else ""))
     for b in bad[:10]:
         print("REJECT %s | %s" % (b.get("sid"), b.get("reason")))
     return 0 if good else 1
@@ -1278,8 +1318,29 @@ def cmd_edit_apply(args):
         raw = read_text_raw(path)
         rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
         statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+        sources = {s["number"]: s.get("url", "") for s in json.loads(
+            (work / "sources.json").read_text(encoding="utf-8"))["sources"]}
     except (OSError, json.JSONDecodeError) as e:
         return die(f"Cannot read input: {e}")
+
+    def optional(name):
+        p = work / "fix" / name
+        if not p.is_file():
+            return []
+        try:
+            return read_jsonl(p)
+        except (OSError, json.JSONDecodeError):
+            return []
+
+    rejected_code = optional("rejected-edits.jsonl")
+    rejected_audit = optional("audit-rejected.jsonl")
+    web_report = None
+    web_path = work / "fix" / "edit-web-report.json"
+    if web_path.is_file():
+        try:
+            web_report = json.loads(web_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            web_report = None
     decisions, spans = [], []
     for r in rows:
         if r.get("action") == "none":
@@ -1289,6 +1350,34 @@ def cmd_edit_apply(args):
             start, end = _delete_span(raw, start, end)
         decisions.append({**r, "start": start, "end": end})
         spans.append((start, end))
+    # A replacement the independent audit rejected leaves the statement as it was, unless
+    # nothing supports the original either: then the whole statement is deleted (Part 4.6).
+    fallback = []
+    if rejected_audit:
+        try:
+            verdicts = [json.loads(l) for l in open(work / "verdicts.jsonl", encoding="utf-8")
+                        if l.strip()]
+        except (OSError, json.JSONDecodeError):
+            verdicts = []
+
+        def is_supported(st):
+            return any(v.get("line") == st.get("line")
+                       and (not st.get("numbers") or v.get("number") in st["numbers"])
+                       and v.get("verdict") in ("gestuetzt", "teilweise")
+                       for v in verdicts)
+
+        for r in rejected_audit:
+            st = statements.get(r.get("sid"))
+            if not st or r.get("action") != "replace" or is_supported(st):
+                continue
+            start, end = int(st["start"]), int(st["end"])
+            start, end = _delete_span(raw, start, end)
+            decisions.append({"sid": st["sid"], "action": "delete", "start": start,
+                              "end": end, "note": "Ersatz verworfen; auch der ursprüngliche "
+                                                  "Satz ist nicht belegt."})
+            spans.append((start, end))
+            fallback.append({"sid": st["sid"], "line": st.get("line"),
+                             "before": st.get("text", "")})
     edited, changes, rejected = edits.apply_decisions(raw, decisions)
     ok, reasons = edits.format_check(raw, edited, spans)
     score = edits.preservation(raw, edited)
@@ -1299,11 +1388,29 @@ def cmd_edit_apply(args):
         start, end = int(r["start"]), int(r["end"])
         changed.append({"sid": r.get("sid"), "action": r.get("action"),
                         "line": (statements.get(r.get("sid")) or {}).get("line"),
-                        "before": raw[start:end], "after": r.get("new", "—"),
-                        "quote": r.get("quote", ""), "note": r.get("note", "")})
+                        "before": strip_marks(raw[start:end]), "after": r.get("new", "—"),
+                        "quote": r.get("quote", ""), "note": r.get("note", ""),
+                        "number": r.get("number"),
+                        "source": sources.get(r.get("number"), "") or r.get("page", "")})
+    for f in fallback:
+        changed.append({"sid": f["sid"], "action": "delete", "line": f["line"],
+                        "before": strip_marks(f["before"]), "after": "—", "quote": "",
+                        "note": "Der Ersatz wurde vom Audit verworfen; auch der ursprüngliche "
+                                "Satz ist nicht belegt.", "source": ""})
+    deleted = [{"line": c["line"], "text": c["before"]} for c in changed
+               if c["action"] == "delete"]
+    wertung_lost = []
+    for s in statements.values():
+        if s.get("kind") != "wertung":
+            continue
+        deps = edits.wertung_dependencies(s, deleted)
+        if deps:
+            wertung_lost.append({"wertung": strip_marks(s["text"]), "line": s["line"], "removed": deps})
     report = {"changes": changes, "rejected": rejected, "format_ok": ok,
               "format_reasons": reasons, "preservation": round(score, 4),
-              "changed": changed,
+              "changed": changed, "wertung_lost": wertung_lost,
+              "rejected_code": rejected_code, "rejected_audit": rejected_audit,
+              "fallback_deletes": fallback, "web": web_report,
               "wertung": [s["text"] for s in statements.values()
                           if s.get("kind") == "wertung"]}
     write_json(work / "fix" / "edit-report.json", report)
@@ -1313,10 +1420,47 @@ def cmd_edit_apply(args):
             prose.append("- Zeile %s: „%s“ wurde gelöscht. %s"
                          % (c["line"], c["before"], c["note"] or "Keine Quelle belegt sie."))
         else:
-            prose.append("- Zeile %s: „%s“ -> „%s“. Beleg: „%s“."
-                         % (c["line"], c["before"], c["after"], c["quote"]))
+            source = (" Quelle: %s." % c["source"]) if c.get("source") else ""
+            prose.append("- Zeile %s: „%s“ -> „%s“. Beleg: „%s“.%s"
+                         % (c["line"], c["before"], c["after"], c["quote"], source))
     if not changed:
         prose.append("Keine Textänderung.")
+    if rejected_audit:
+        prose += ["", "## Vom Audit abgelehnte Änderungen", ""]
+        for r in rejected_audit:
+            st = statements.get(r.get("sid")) or {}
+            before = raw[int(r["start"]):int(r["end"])] if r.get("start") is not None else ""
+            prose.append("- Zeile %s: „%s“ -> „%s“ blieb unverändert. %s"
+                         % (st.get("line", "?"), before, r.get("new", ""),
+                            r.get("reason") or r.get("note")
+                            or "Das Audit hat den Beleg nicht bestätigt."))
+    if rejected_code:
+        prose += ["", "## Vom Code abgelehnte Änderungen", ""]
+        for r in rejected_code:
+            st = statements.get(r.get("sid")) or {}
+            before = raw[int(r["start"]):int(r["end"])] if r.get("start") is not None else ""
+            prose.append("- Zeile %s: „%s“ blieb unverändert. %s"
+                         % (st.get("line", "?"), before, r.get("reason", "")))
+    if wertung_lost:
+        prose += ["", "## Wertungen ohne Grundlage", ""]
+        for w in wertung_lost:
+            for d in w["removed"]:
+                prose.append(
+                    "- Zeile %s: Die Wertung „%s“ stützt sich auf die gelöschte Aussage "
+                    "„%s“ und ist ohne sie nicht mehr belegt."
+                    % (w.get("line"), w.get("wertung"), d.get("text")))
+    if web_report:
+        prose += ["", "## Webprüfung unzitierter Aussagen", ""]
+        checked = web_report.get("checked", 0)
+        prose.append(("1 unzitierte Aussage wurde zusätzlich im Web geprüft."
+                      if checked == 1 else
+                      "%d unzitierte Aussagen wurden zusätzlich im Web geprüft." % checked))
+        for k in web_report.get("kept") or []:
+            prose.append("- Zeile %s: „%s“ bleibt stehen; eine Webseite stützt sie. %s"
+                         % (k.get("line"), strip_marks(k.get("statement", "")), k.get("note", "")))
+        for d in web_report.get("deleted") or []:
+            prose.append("- Zeile %s: „%s“ wurde gelöscht; auch die Webprüfung fand keinen "
+                         "Beleg. %s" % (d.get("line"), strip_marks(d.get("statement", "")), d.get("note", "")))
     prose += ["", "Erhaltungsgrad: %.4f." % score, ""]
     (work / "fix" / "edit-report.md").write_text("\n".join(prose), encoding="utf-8")
     if not ok:
@@ -1334,6 +1478,12 @@ def cmd_edit_verify_plan(args):
     except (OSError, json.JSONDecodeError) as e:
         return die(f"Cannot read valid edits: {e}")
     tasks = [r for r in rows if r.get("action") == "replace"]
+    try:
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+    except (OSError, json.JSONDecodeError):
+        statements = {}
+    tasks = [{**r, "statement": (statements.get(r.get("sid")) or {}).get("text", "")}
+             for r in tasks]
     outdir = work / "fix" / "edit-verify"
     outdir.mkdir(parents=True, exist_ok=True)
     for old in outdir.glob("batch-*.json"):
@@ -1343,6 +1493,150 @@ def cmd_edit_verify_plan(args):
         write_json(outdir / ("batch-%02d.json" % i), {"batch": i, "tasks": batch})
     print("edit-verify-plan: %d edits in %d batches -> %s"
           % (len(tasks), len(batches), outdir))
+    return 0
+
+
+def cmd_edit_web_plan(args):
+    """Web-search the uncited statements an edit agent wants to delete (Part 4 step 3)."""
+    work = Path(args.workdir).resolve()
+    try:
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+        rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    tasks = []
+    for r in rows:
+        st = statements.get(r.get("sid"))
+        if r.get("action") == "delete" and st and not st.get("numbers"):
+            tasks.append({"sid": st["sid"], "statement": st["text"],
+                          "self_contained": st.get("self_contained", ""),
+                          "section": st.get("section", "")})
+    outdir = work / "fix" / "edit-web-tasks"
+    outdir.mkdir(parents=True, exist_ok=True)
+    for old in outdir.glob("batch-*.json"):
+        old.unlink()
+    batches = cs.make_batches(tasks, args.per_agent)
+    for i, batch in enumerate(batches, 1):
+        write_json(outdir / ("batch-%02d.json" % i), {"batch": i, "tasks": batch})
+    print("edit-web-plan: %d uncited deletions in %d batches -> %s"
+          % (len(tasks), len(batches), outdir))
+    return 0
+
+
+def cmd_edit_web_collect(args):
+    """Collect the search lines and save up to two candidate pages per statement."""
+    work = Path(args.workdir).resolve()
+    grouped = {}
+    try:
+        for name in args.file:
+            for line in Path(name).read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line.startswith("{"):
+                    continue
+                try:
+                    r = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                sid, url = r.get("sid"), r.get("url")
+                if not sid or not url or not str(url).startswith("http"):
+                    continue
+                urls = grouped.setdefault(sid, [])
+                if url not in urls:
+                    urls.append(url)
+    except OSError as e:
+        return die(f"Cannot read search results: {e}")
+    candidates = [{"sid": s, "urls": u[:2]} for s, u in sorted(grouped.items())]
+    write_jsonl(work / "fix" / "edit-web-candidates.jsonl", candidates)
+    outdir = work / "fix" / "edit-web-pages"
+    outdir.mkdir(exist_ok=True)
+    mapping = {}
+    for cand in candidates:
+        sid = cand["sid"]
+        urls = cand["urls"]
+        saved, _failures = cs.run_fetch(urls, work, args.timeout)
+        by_base = {url_key(cs.page_header_url(item["page"])): item["page"]
+                   for item in saved}
+        pages = []
+        for i, url in enumerate(urls, 1):
+            page = by_base.get(url_key(url))
+            if not page:
+                continue
+            target = outdir / ("%s-%d.md" % (sid, i))
+            shutil.copyfile(page, target)
+            pages.append({"url": url, "page": str(target)})
+        if pages:
+            mapping[sid] = pages
+    write_json(work / "fix" / "edit-web-pages.json", mapping)
+    print("edit-web-collect: %d statements, %d with a saved page"
+          % (len(candidates), len(mapping)))
+    return 0
+
+
+def cmd_edit_web_verify_plan(args):
+    work = Path(args.workdir).resolve()
+    try:
+        pages = json.loads((work / "fix" / "edit-web-pages.json").read_text(encoding="utf-8"))
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    tasks = []
+    for sid, candidates in sorted(pages.items()):
+        st = statements.get(sid)
+        if not st:
+            continue
+        tasks.append({"sid": sid, "statement": st["text"],
+                      "self_contained": st.get("self_contained", ""),
+                      "candidates": candidates})
+    outdir = work / "fix" / "edit-web-verify"
+    outdir.mkdir(parents=True, exist_ok=True)
+    for old in outdir.glob("batch-*.json"):
+        old.unlink()
+    batches = cs.make_batches(tasks, args.per_agent)
+    for i, batch in enumerate(batches, 1):
+        write_json(outdir / ("batch-%02d.json" % i), {"batch": i, "tasks": batch})
+    print("edit-web-verify-plan: %d statements in %d batches -> %s"
+          % (len(tasks), len(batches), outdir))
+    return 0
+
+
+def cmd_edit_web_filter(args):
+    """A web page that proves the statement keeps it; otherwise the deletion stands."""
+    work = Path(args.workdir).resolve()
+    try:
+        audit_path = Path(args.file)
+        audit = {r["sid"]: r for r in (read_jsonl(audit_path) if audit_path.is_file() else [])}
+        rows = read_jsonl(work / "fix" / "valid-edits.jsonl")
+        statements = {s["sid"]: s for s in read_jsonl(work / "statements.jsonl")}
+        pages = json.loads((work / "fix" / "edit-web-pages.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        return die(f"Cannot read input: {e}")
+    kept, deleted, untouched = [], [], 0
+    for r in rows:
+        st = statements.get(r.get("sid"))
+        if (r.get("action") != "delete" or not st or st.get("numbers")
+                or r.get("sid") not in pages):
+            untouched += 1
+            continue
+        result = audit.get(r["sid"]) or {}
+        if result.get("verdict") not in ("gestuetzt", "abgelehnt"):
+            # No verdict is not a rejection: keep the edit agent's decision.
+            untouched += 1
+            continue
+        if result.get("verdict") == "gestuetzt":
+            kept.append({"sid": r["sid"], "line": st.get("line"),
+                         "statement": st.get("text"), "note": result.get("note", "")})
+            r["action"] = "none"
+            r["note"] = "Eine Webseite stützt die Aussage; sie bleibt stehen."
+        else:
+            deleted.append({"sid": r["sid"], "line": st.get("line"),
+                            "statement": st.get("text"),
+                            "note": result.get("note", "")})
+    write_jsonl(work / "fix" / "valid-edits.jsonl", rows)
+    write_json(work / "fix" / "edit-web-report.json", {
+        "checked": len(kept) + len(deleted), "kept": kept, "deleted": deleted,
+        "untouched": untouched})
+    print("edit-web-filter: %d checked, %d kept, %d deleted"
+          % (len(kept) + len(deleted), len(kept), len(deleted)))
     return 0
 
 
@@ -1363,7 +1657,7 @@ def cmd_edit_filter(args):
         if verdict == "gestuetzt":
             kept.append(r)
         else:
-            rejected.append(r)
+            rejected.append({**r, "reason": (audit.get(r["sid"]) or {}).get("note", "")})
     write_jsonl(work / "fix" / "valid-edits.jsonl", kept)
     write_jsonl(work / "fix" / "audit-rejected.jsonl", rejected)
     print("edit-filter: %d edits kept, %d rejected" % (
@@ -1442,7 +1736,7 @@ def main(argv=None):
 
     p = sub.add_parser("merge")
     p.add_argument("--out", required=True)
-    p.add_argument("--file", required=True, action="append")
+    p.add_argument("--file", action="append", default=[])
     p.set_defaults(func=cmd_merge)
 
     p = sub.add_parser("apply")
@@ -1492,6 +1786,27 @@ def main(argv=None):
     p.add_argument("--workdir", required=True)
     p.add_argument("--file", required=True)
     p.set_defaults(func=cmd_edit_filter)
+
+    p = sub.add_parser("edit-web-plan")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=5)
+    p.set_defaults(func=cmd_edit_web_plan)
+
+    p = sub.add_parser("edit-web-collect")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--file", action="append", default=[])
+    p.add_argument("--timeout", type=int, default=40)
+    p.set_defaults(func=cmd_edit_web_collect)
+
+    p = sub.add_parser("edit-web-verify-plan")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--per-agent", type=int, default=5)
+    p.set_defaults(func=cmd_edit_web_verify_plan)
+
+    p = sub.add_parser("edit-web-filter")
+    p.add_argument("--workdir", required=True)
+    p.add_argument("--file", required=True)
+    p.set_defaults(func=cmd_edit_web_filter)
 
     p = sub.add_parser("packs")
     p.add_argument("--workdir", required=True)

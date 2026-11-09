@@ -47,3 +47,22 @@ def test_contradiction_names_page_and_passage():
     assert len(lines) == 1
     assert "https://example.org/blender" in lines[0]
     assert "Blender ist nicht kostenlos." in lines[0]
+
+
+def test_report_summary_uses_singular_for_one():
+    import correct_sources as csrc
+    text = csrc.report_summary(1, 0, 1, 1, 1, 1)
+    assert "wird 1 Quelle zitiert" in text
+    assert "1 Verweis wurde ersetzt" in text
+    assert "Bei 1 Aussage wurde der Verweis entfernt" in text
+    assert "1 Aussage ist nur teilweise belegt" in text
+    assert "Bei 1 Stelle wurde" in text
+
+
+def test_report_summary_uses_plural_for_many():
+    import correct_sources as csrc
+    text = csrc.report_summary(3, 1, 2, 2, 2, 2)
+    assert "werden 3 Quellen zitiert" in text
+    assert "2 Verweise wurden ersetzt" in text
+    assert "Bei 2 Aussagen wurden die Verweise entfernt" in text
+    assert "2 Aussagen sind nur teilweise belegt" in text

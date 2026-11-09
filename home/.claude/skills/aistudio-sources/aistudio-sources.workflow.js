@@ -46,6 +46,7 @@ const PREP_SCHEMA = {
     statements: { type: 'integer' },
     pages: { type: 'integer' },
     packs: { type: 'boolean' },
+    cached: { type: 'integer' },
     summary: { type: 'string' },
   },
   required: ['batches', 'statements', 'pages', 'packs', 'summary'],
@@ -106,12 +107,13 @@ if (SKIP_PREPARE) {
     'Work in an existing folder. Do not change the answer text. ' + commands.join('\n\n') +
     '\nThen list the files in ' + WORK + '\\packs (if packs were built) or ' + WORK +
     '\\batches, and return their absolute paths in batches, the number of statements from ' +
-    'statements.jsonl, the number of pages.json sources, packs true/false, and one summary line. ' +
+    'statements.jsonl, the number of pages.json sources, packs true/false, the line count of ' +
+    WORK + '\\results\\pass0-cache.jsonl as cached (0 when absent), and one summary line. ' +
     'If a command fails, stop and put the exact failure in summary.',
     { schema: PREP_SCHEMA, model: 'haiku', effort: 'low', label: 'prepare', phase: 'Prepare' })
 }
-if (!prep || !prep.batches || !prep.batches.length) {
-  return { status: 'failed', reason: 'prepare produced no batches', prep: prep }
+if (!prep || ((!prep.batches || !prep.batches.length) && !(USE_PACKS && prep.cached > 0))) {
+  return { status: 'failed', reason: 'prepare produced no batches and no cached verdicts', prep: prep }
 }
 log('prepared: ' + prep.summary)
 
@@ -134,12 +136,13 @@ const checkPrompt = (batch, outFile, recheck) =>
     : '') +
   'Write one JSON object per statement or claim, each id exactly once, to ' + outFile + '. ' +
   'Then return batch, results and summary.'
-const checked = await parallel(prep.batches.map((batch, index) => () =>
+const checkBatches = prep.batches || []
+const checked = await parallel(checkBatches.map((batch, index) => () =>
   agent(checkPrompt(batch, WORK + '\\results\\pass1-' + stemOf(batch) + '.jsonl', false), {
     schema: BATCH_SCHEMA, model: 'haiku', effort: 'low',
     label: 'check-' + (index + 1), phase: 'Check',
   })))
-log('check: ' + checked.filter(Boolean).length + ' of ' + prep.batches.length + ' batches done')
+log('check: ' + checked.filter(Boolean).length + ' of ' + checkBatches.length + ' batches done')
 
 phase('Recheck')
 const pre = await agent(
@@ -274,14 +277,57 @@ if (editPlan && editPlan.batches && editPlan.batches.length) {
       { schema: BATCH_SCHEMA, model: 'haiku', effort: 'low',
         label: 'edit-' + (index + 1), phase: 'Edit' })))
 }
-await agent(
+const editChecked = await agent(
   'Merge every ' + WORK + '\\fix\\edit-results-*.jsonl into ' + WORK + '\\fix\\edit-results.jsonl ' +
     'with correct_sources.py merge (list the files first). Then run: ' +
   shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-check "' + MARKED + '" --workdir "' + WORK +
     '" --decisions "' + WORK + '\\fix\\edit-results.jsonl"') +
-  '\n' + shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-verify-plan --workdir "' + WORK + '"') +
-  '\nList ' + WORK + '\\fix\\edit-verify\\batch-*.json and return their paths and the summary.',
+  '\n' + shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-web-plan --workdir "' + WORK + '"') +
+  '\nList ' + WORK + '\\fix\\edit-web-tasks\\batch-*.json and return their paths and the summary.',
   { schema: PLAN_SCHEMA, model: 'haiku', effort: 'low', label: 'edit-check', phase: 'Edit' })
+if (editChecked && editChecked.batches && editChecked.batches.length) {
+  const editSearch = await parallel(editChecked.batches.map((batch, index) => () =>
+    agent(
+      'You find web pages that can prove statements from a German answer. Task file: ' + batch +
+      '. Each task has sid, statement, self_contained and section. Use Parallel first, Exa ' +
+      'second; at most 8 calls; never repeat a query. At most 2 candidates per statement. Write ' +
+      'one JSON object per line to ' + WORK + '\\fix\\edit-web-raw-' + (index + 1) + '.jsonl: ' +
+      '{"sid":"S001","url":"https://...","title":"...","lang":"en","type":"primary","why":"..."}. ' +
+      'Return batch, results, summary.',
+      { agentType: 'web-researcher', schema: BATCH_SCHEMA, model: 'haiku', effort: 'low',
+        label: 'edit-web-' + (index + 1), phase: 'Edit' })))
+  log('uncited web search: ' + editSearch.filter(Boolean).length + ' batches done')
+  const editVerify = await agent(
+    'Run these commands in order. For the collect, first list every file matching ' + WORK +
+    '\\fix\\edit-web-raw-*.jsonl and pass each as --file.\n' +
+    shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-web-collect --workdir "' + WORK + '"') +
+    '\n' + shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-web-verify-plan --workdir "' + WORK + '"') +
+    '\nList ' + WORK + '\\fix\\edit-web-verify\\batch-*.json and return their paths and the summary.',
+    { schema: PLAN_SCHEMA, model: 'haiku', effort: 'low', label: 'edit-web-verify-plan', phase: 'Edit' })
+  if (editVerify && editVerify.batches && editVerify.batches.length) {
+    const editVerified = await parallel(editVerify.batches.map((batch, index) => () =>
+      agent(
+        'You check whether a saved page proves an uncited statement from a German answer. Task ' +
+        'file: ' + batch + '. Read every candidate; "gestuetzt" only when the page states the ' +
+        'whole substance in context, otherwise "abgelehnt". Write one JSON object per statement ' +
+        'to ' + WORK + '\\fix\\edit-web-results-' + (index + 1) + '.jsonl: {"sid","verdict",' +
+        '"note"}. Return batch, results, summary.',
+        { schema: BATCH_SCHEMA, model: 'haiku', effort: 'low',
+          label: 'edit-web-check-' + (index + 1), phase: 'Edit' })))
+    log('uncited web check: ' + editVerified.filter(Boolean).length + ' batches done')
+    await agent(
+      'Merge every ' + WORK + '\\fix\\edit-web-results-*.jsonl into ' + WORK +
+        '\\fix\\edit-web-results.jsonl with correct_sources.py merge (list the files first). ' +
+      shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-web-filter --workdir "' + WORK +
+        '" --file "' + WORK + '\\fix\\edit-web-results.jsonl"') +
+      ' Return the printed summaries.', { model: 'haiku', effort: 'low',
+        label: 'edit-web-filter', phase: 'Edit' })
+  }
+}
+const editAudit = await agent(
+  shell(PY + SKILL + '\\scripts\\correct_sources.py" edit-verify-plan --workdir "' + WORK + '"') +
+  '\nList ' + WORK + '\\fix\\edit-verify\\batch-*.json and return their paths and the summary.',
+  { schema: PLAN_SCHEMA, model: 'haiku', effort: 'low', label: 'edit-audit-plan', phase: 'Edit' })
   .then(async (audit) => {
     if (!audit || !audit.batches || !audit.batches.length) return
     await parallel(audit.batches.map((batch, index) => () =>
