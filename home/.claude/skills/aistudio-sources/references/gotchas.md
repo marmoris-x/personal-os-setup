@@ -121,3 +121,7 @@ more than about 150 claims. The main SKILL.md keeps the procedure.
 - A parallel wave starts one agent first and the rest after 10 seconds. Started in the same
   second, every agent pays the shared system prefix as new text; the head start lets DeepSeek
   build the cache once (cost task, 2026-11-09).
+- A `gestuetzt` verdict is sent to the recheck again when the claim is a value judgment or carries
+  an absolute word (`ABSOLUTE_WORDS` in `check_sources.py`: ausschließlich, vollständig, immer,
+  nie, kollabiert, Gesetze, ignoriert, fundamental and similar). The first pass must not mark a
+  strong judgment as supported unless the page says it just as strongly (owner, 2026-11-10).

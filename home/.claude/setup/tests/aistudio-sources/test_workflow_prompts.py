@@ -35,3 +35,8 @@ def test_every_agent_wave_waits_for_the_first_agent():
 def test_long_output_stays_out_of_the_main_conversation():
     assert "never read back into the main conversation" in SKILL_MD
     assert "write the output file with one Write" in WORKFLOW
+
+
+def test_supported_needs_every_element_and_the_judgment():
+    assert "states every element of the statement" in WORKFLOW
+    assert "states every element of the statement" in SKILL_MD

@@ -144,9 +144,11 @@ const checkPrompt = (batch, outFile, recheck) =>
   'Task file: ' + batch + '\n' +
   'If it is a pack (statements + passages), judge every statement: gestuetzt, teilweise, ' +
   'nicht_belegt, widerspricht, unpassend or nicht_pruefbar. A keyword is not support; the ' +
-  'passage must state the substance, in context. For gestuetzt/teilweise/widerspricht copy ' +
-  'ONE contiguous 8-40 word quote word for word from the passages. If it is a source batch, ' +
-  'do the same for every claim against its whole page. ' +
+  'passage must state the substance, in context. gestuetzt only when the passage ' +
+  'states every element of the statement and, for a value judgment, makes that judgment ' +
+  'itself just as strongly. For gestuetzt/teilweise/widerspricht copy ONE contiguous 8-40 ' +
+  'word quote word for word from the passages. If it is a source batch, do the same for ' +
+  'every claim against its whole page. ' +
   (recheck
     ? 'This is a re-check: a first pass reached the prior verdict in the task file. Check ' +
       'independently and overturn it if the page supports the statement. Read the whole page, ' +

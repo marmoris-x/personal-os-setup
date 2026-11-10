@@ -138,7 +138,9 @@ For every statement:
    - "unpassend": the passages are about a different subject.
    - "nicht_pruefbar": the page is missing or unreadable.
 2. Context matters: who writes it, same product and version, opinion or fact. A keyword is not
-   support. For an evaluative statement the passage itself must make the judgment.
+   support. For an evaluative statement the passage itself must make the judgment. "gestuetzt"
+   only when the page states every element of the statement and makes a value judgment itself
+   just as strongly.
 3. For "gestuetzt", "teilweise" and "widerspricht": copy ONE contiguous passage from the pack
    word for word, 8-40 words. No paraphrase, no ellipsis across sentences.
 4. "note": one short German sentence saying what is missing; empty when fully supported.

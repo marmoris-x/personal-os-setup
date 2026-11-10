@@ -791,14 +791,36 @@ def cmd_validate(args):
     return 0
 
 
+ABSOLUTE_WORDS = (
+    "ausschließlich", "ausschliesslich", "vollständig", "vollstaendig", "einhellig",
+    "ausnahmslos", "sämtliche", "samtliche", "immer", "stets", "nie", "niemals",
+    "standardmäßig", "standardmaessig", "kollabiert", "kollabieren", "kollabierte",
+    "gesetz", "gesetze", "gesetzes", "gesetzen", "ignoriert", "ignorieren", "ignorierte",
+    "fundamental",
+)
+ABSOLUTE = re.compile(r"\b(?:%s)\b" % "|".join(re.escape(word) for word in ABSOLUTE_WORDS),
+                      re.IGNORECASE)
+
+
+def has_absolute_word(text):
+    return bool(ABSOLUTE.search(text or ""))
+
+
+def needs_recheck(verdict):
+    """A supported verdict is not trusted when the claim is a judgment or an absolute."""
+    if verdict.get("verdict") != "gestuetzt" or verdict.get("evidence") not in ("ok", "none"):
+        return True
+    claim = verdict.get("claim") or ""
+    return claims._is_opinion(claim) or has_absolute_word(claim)
+
+
 def cmd_recheck(args):
     work = Path(args.workdir).resolve()
     try:
         verdicts = [json.loads(l) for l in open(work / "verdicts.jsonl", encoding="utf-8") if l.strip()]
     except OSError as e:
         return die(f"Cannot read verdicts.jsonl: {e}")
-    problems = [v for v in verdicts
-                if v["verdict"] != "gestuetzt" or v["evidence"] not in ("ok", "none")]
+    problems = [v for v in verdicts if needs_recheck(v)]
     if not problems:
         print("recheck: nothing to re-check")
         return 0
