@@ -791,20 +791,27 @@ def cmd_validate(args):
     return 0
 
 
-ABSOLUTE_WORDS = (
-    "ausschließ", "ausschliess", "vollständig", "vollstaendig", "einhellig", "ausnahmslos",
-    "sämtliche", "samtliche", "immer", "stets", "nie", "niemals", "standardmäßig",
-    "standardmaessig", "kollabier", "gesetz", "ignorier", "fundamental",
-    "alle", "aller", "allen", "alles", "kein", "keine", "keiner", "jede", "jeder", "je",
-    "völlig", "voellig", "gänzlich", "gaenzlich", "grundsätzlich", "grundsaetzlich",
-    "unmöglich", "unmoeglich", "garantiert", "zwangsläufig", "zwangslaeufig", "monopol",
+ABSOLUTE_STEMS = (
+    "ausschließ", "ausschliess", "vollständig", "vollstaendig", "fundamental", "gesetz",
+    "kollabier", "ignorier", "einhellig", "ausnahmslos", "standardmäßig", "standardmaessig",
+    "grundsätzlich", "grundsaetzlich", "zwangsläufig", "zwangslaeufig", "unmöglich",
+    "unmoeglich", "garantiert", "völlig", "voellig", "gänzlich", "gaenzlich", "monopol",
 )
-ABSOLUTE = re.compile(r"\b(?:%s)\w*" % "|".join(re.escape(word) for word in ABSOLUTE_WORDS),
-                      re.IGNORECASE)
+ABSOLUTE_WORDS = (
+    "je", "nie", "niemals", "immer", "stets",
+    "alle", "aller", "allen", "alles",
+    "kein", "keine", "keiner", "keines", "keinem", "keinen",
+    "jede", "jeder", "jedes", "jedem", "jeden",
+)
+ABSOLUTE_STEM_RE = re.compile(
+    r"\b(?:%s)\w*" % "|".join(re.escape(word) for word in ABSOLUTE_STEMS), re.IGNORECASE)
+ABSOLUTE_WORD_RE = re.compile(
+    r"\b(?:%s)\b" % "|".join(re.escape(word) for word in ABSOLUTE_WORDS), re.IGNORECASE)
 
 
 def has_absolute_word(text):
-    return bool(ABSOLUTE.search(text or ""))
+    text = text or ""
+    return bool(ABSOLUTE_STEM_RE.search(text) or ABSOLUTE_WORD_RE.search(text))
 
 
 def needs_recheck(verdict):

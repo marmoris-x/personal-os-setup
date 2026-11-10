@@ -54,6 +54,24 @@ def test_absolute_list_matches_word_stems():
     assert not cs.has_absolute_word("Die Nische ist klein.")
 
 
+def test_short_absolutes_match_only_as_whole_words():
+    assert cs.has_absolute_word("je mehr, desto besser")
+    assert cs.has_absolute_word("alle Nutzer")
+    assert cs.has_absolute_word("keiner der Fälle")
+    assert cs.has_absolute_word("jedes Mal")
+    for lookalike in ("jedoch", "allerdings", "allein", "niedrig"):
+        assert not cs.has_absolute_word(lookalike), lookalike
+
+
+def test_four_lookalikes_do_not_send_supported_to_recheck(tmp_path):
+    assert run(tmp_path, [
+        row("P1", "Das Tool ist jedoch langsam."),
+        row("P2", "Das Tool ist allerdings langsam."),
+        row("P3", "Das Tool ist allein schon wegen der Lizenz gut."),
+        row("P4", "Die Schwelle ist niedrig."),
+    ]) == []
+
+
 def test_colon_or_semicolon_sends_supported_to_recheck(tmp_path):
     assert sorted(run(tmp_path, [
         row("P1", "Das Tool ist schnell; es ist auch stabil."),

@@ -122,11 +122,12 @@ more than about 150 claims. The main SKILL.md keeps the procedure.
   second, every agent pays the shared system prefix as new text; the head start lets DeepSeek
   build the cache once (cost task, 2026-11-09).
 - A `gestuetzt` verdict is sent to the recheck again when the claim is a value judgment, carries
-  an absolute word, or has a semicolon or colon (several sub-claims). `ABSOLUTE_WORDS` in
-  `check_sources.py` holds word stems, matched with `\b(stem)\w*` and case-insensitive:
-  ausschließ-, vollständig, einhellig, immer, nie, kollabier-, gesetz-, ignorier-, fundamental,
-  alle/aller/allen, kein/keine/keiner, jede/jeder, je, völlig, gänzlich, grundsätzlich,
-  unmöglich, garantiert, zwangsläufig, Monopol and similar. The first pass must not mark a
-  strong judgment as supported unless the page says it just as strongly (owner, 2026-11-10).
-  Stem matching also catches `Niemand` (from `nie`) and `allerdings`/`allein` (from `alle`);
-  that over-recheck is accepted because a wrong `gestuetzt` costs more than a second look.
+  an absolute word, or has a semicolon or colon (several sub-claims). `check_sources.py` splits
+  the list: `ABSOLUTE_STEMS` (long words: ausschließ-, vollständig, fundamental, gesetz,
+  kollabier-, ignorier-, einhellig, ausnahmslos, standardmäßig, grundsätzlich, zwangsläufig,
+  unmöglich, garantiert, völlig, gänzlich, monopol) matches as `\b(stem)\w*`; `ABSOLUTE_WORDS`
+  (short words: je, nie, niemals, immer, stets, alle/aller/allen/alles, kein/keine/keiner/
+  keines/keinem/keinen, jede/jeder/jedes/jedem/jeden) matches as a whole word only. So
+  `jedoch`, `allerdings`, `allein` and `niedrig` do not trigger; `vollständige`, `Gesetzen`,
+  `kollabiert` still do. The first pass must not mark a strong judgment as supported unless the
+  page says it just as strongly (owner, 2026-11-10).
