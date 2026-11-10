@@ -792,13 +792,14 @@ def cmd_validate(args):
 
 
 ABSOLUTE_WORDS = (
-    "ausschließlich", "ausschliesslich", "vollständig", "vollstaendig", "einhellig",
-    "ausnahmslos", "sämtliche", "samtliche", "immer", "stets", "nie", "niemals",
-    "standardmäßig", "standardmaessig", "kollabiert", "kollabieren", "kollabierte",
-    "gesetz", "gesetze", "gesetzes", "gesetzen", "ignoriert", "ignorieren", "ignorierte",
-    "fundamental",
+    "ausschließ", "ausschliess", "vollständig", "vollstaendig", "einhellig", "ausnahmslos",
+    "sämtliche", "samtliche", "immer", "stets", "nie", "niemals", "standardmäßig",
+    "standardmaessig", "kollabier", "gesetz", "ignorier", "fundamental",
+    "alle", "aller", "allen", "alles", "kein", "keine", "keiner", "jede", "jeder", "je",
+    "völlig", "voellig", "gänzlich", "gaenzlich", "grundsätzlich", "grundsaetzlich",
+    "unmöglich", "unmoeglich", "garantiert", "zwangsläufig", "zwangslaeufig", "monopol",
 )
-ABSOLUTE = re.compile(r"\b(?:%s)\b" % "|".join(re.escape(word) for word in ABSOLUTE_WORDS),
+ABSOLUTE = re.compile(r"\b(?:%s)\w*" % "|".join(re.escape(word) for word in ABSOLUTE_WORDS),
                       re.IGNORECASE)
 
 
@@ -811,7 +812,8 @@ def needs_recheck(verdict):
     if verdict.get("verdict") != "gestuetzt" or verdict.get("evidence") not in ("ok", "none"):
         return True
     claim = verdict.get("claim") or ""
-    return claims._is_opinion(claim) or has_absolute_word(claim)
+    return (claims._is_opinion(claim) or has_absolute_word(claim)
+            or ";" in claim or ":" in claim)
 
 
 def cmd_recheck(args):
